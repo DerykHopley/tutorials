@@ -19,8 +19,13 @@ mechanics of each live in [LESSON-FORMAT.md](./LESSON-FORMAT.md); the *reasons* 
   part as it's added, and make every stage runnable. Stated why: "I would like to
   understand what each part is doing while building up to completion." A finished
   artifact teaches recognition; watching it become necessary teaches causation.
-- **Leave the working files at the *start* state of the next unbuilt lesson**, never the
-  end state. Deryk does the work themselves — that's the point.
+- **`main` stays pristine; Deryk works on a branch** (2026-08-16). `main` holds the
+  scaffold a *new* learner starts from — never anyone's completed lesson code — because
+  it may be published for others. Deryk's progress lives as commits on a
+  `work/<topic>-<tutorial>` branch on top of it.
+  **Never commit lesson solutions to `main`, and never modify the working files on
+  Deryk's branch** — doing the work is the entire point. Write the lesson; leave the code
+  alone.
 - **Single self-contained HTML files.** Nothing loaded from disk at runtime. Authored
   from `assets/` and inlined by `python3 build.py`.
 - **Highlight must-do details** that are easy to skim past, and put them *before* the

@@ -32,7 +32,28 @@ build.py                  inlines assets into every document
 Nothing here is auto-discovered by filename convention except the documents `build.py`
 inlines — anything under a `lessons/` or `reference/` directory, at any depth.
 
-## Working on it
+## Working through a tutorial
+
+**`main` is the starting line, not a solution.** Every project on `main` sits in the
+state a new learner begins from — the bare scaffold, before lesson 1. Finished lesson
+code is never committed here, so anyone can clone this and start from zero.
+
+Do the work on a branch:
+
+```sh
+git switch -c work/rust-text-editor-gui   # one branch per tutorial
+```
+
+Your progress becomes commits on top of `main`. Because `main` never touches the project
+files after the initial scaffold, pulling later lessons and fixes into your branch won't
+disturb anything you've written:
+
+```sh
+git switch work/rust-text-editor-gui
+git merge main
+```
+
+## Working on the materials
 
 ```sh
 python3 build.py      # after editing anything in an assets/ directory

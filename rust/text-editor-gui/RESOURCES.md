@@ -12,6 +12,13 @@
 - [The Rust Programming Language — official](https://doc.rust-lang.org/book/)
   The canonical text by Klabnik, Nichols & Krycho. Use for: checking that the Brown
   fork hasn't drifted, and for chapters the fork doesn't enhance.
+- [The Rust Programming Language, Ch. 9 — Error Handling](https://rust-book.cs.brown.edu/ch09-00-error-handling.html)
+  9.1 is `panic!` (what `unwrap()` triggers); 9.2 is `Result` and the `?` operator.
+  Use for: anything about failure. Primary source for lesson 2.
+- [`std::fs` API docs](https://doc.rust-lang.org/std/fs/)
+  Use for: `read_to_string`, `write`, and what each one can fail at.
+- [`std::io::Error` API docs](https://doc.rust-lang.org/std/io/struct.Error.html)
+  Use for: `ErrorKind`, and matching on *why* a read failed rather than just that it did.
 - [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
   Runnable snippets. Use for: "what does the syntax for X look like", fast.
 - [The Cargo Book](https://doc.rust-lang.org/cargo/)

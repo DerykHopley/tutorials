@@ -30,16 +30,24 @@ Rust *through* the editor rather than before it — each lesson introduces exact
 language concept the next editor feature demands.
 
 1. ✅ Window + owned `String` state + `&mut self` — the immediate-mode loop
-   _(Deryk is partway through; repo sits at the stage they've reached)_
-2. Struct design: the `Editor` state, `Vec<String>` of lines, and why
-3. Ownership/borrowing, felt through a real double-borrow error
-4. File I/O + `Result` + error handling without `unwrap()`
-5. Cursor as (line, col) — the index-vs-grapheme problem appears here
+   _(Deryk completed it 2026-08-16)_
+2. ✅ Opening a real file — `Result`, `match`, why not `unwrap()`
+   _(written 2026-08-16; ends at 45 lines with `Editor::open(path)`)_
+3. Saving + the `?` operator + `main`'s deferred boilerplate (promised in lesson 1)
+4. Cursor as (line, col) — the index-vs-grapheme problem appears here
+5. Struct design pressure: what the `Editor` state needs to become
 6. Custom painting: stop using `TextEdit`, draw our own text and caret
 7. Feel `String` insertion hurt on a large file → introduce `ropey`
 8. Multiple buffers → `Vec<Buffer>`, tabs, and borrow-checker pressure
 9. Syntax highlighting
 10. Polish, README, release build
+
+## Plan revisions
+
+- **2026-08-16:** lesson 2 was going to be "struct design, `Vec<String>` of lines".
+  Dropped — `TextEdit` binds to a `&mut String`, so a line-vector can't work until we
+  paint text ourselves. A lines-based buffer is a lesson-6-or-later idea, and lesson 1's
+  own footer already promised file opening. Teach the thing the code can actually do.
 
 ## Things to watch for
 

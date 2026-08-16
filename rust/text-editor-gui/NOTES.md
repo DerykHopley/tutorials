@@ -33,8 +33,9 @@ language concept the next editor feature demands.
    _(Deryk completed it 2026-08-16)_
 2. ✅ Opening a real file — `Result`, `match`, why not `unwrap()`
    _(written 2026-08-16; ends at 45 lines with `Editor::open(path)`)_
-3. Saving + the `?` operator + `main`'s deferred boilerplate (promised in lesson 1)
-4. Cursor as (line, col) — the index-vs-grapheme problem appears here
+3. ✅ Saving — `#[must_use]`, `?`, `if let`, Ctrl+S, and `main`'s deferred boilerplate
+   _(written 2026-08-16; ends at 65 lines; lesson 1's promise now paid)_
+4. Cursor as (line, col) — `Option`, and the index-vs-grapheme problem
 5. Struct design pressure: what the `Editor` state needs to become
 6. Custom painting: stop using `TextEdit`, draw our own text and caret
 7. Feel `String` insertion hurt on a large file → introduce `ropey`
@@ -55,7 +56,15 @@ language concept the next editor feature demands.
   Prioritise *runnable at every step* over correct architecture.
 - Watch for copy-paste comprehension. The mission says "can explain every line in an
   interview" — quiz on code written two lessons ago, not just today's.
-- Lesson 3 owes an explanation of `main`'s boilerplate (`NativeOptions`, `Box::new`,
-  the `|_cc|` closure, `..Default::default()`). Lesson 1 explicitly promises this.
+- ~~Lesson 3 owes an explanation of `main`'s boilerplate~~ — paid in lesson 3's
+  "The boilerplate lesson 1 deferred" section.
+- **The editor can now write to disk.** Lesson 3 points it at `editor/scratch.md`
+  precisely so a stray keystroke can't overwrite `src/main.rs`. Never move it back to
+  opening its own source now that saving exists.
+- Lesson 3 uses a let-chain (`if a && let Err(e) = ...`), which clippy asked for. It is
+  edition-2024 syntax; if Deryk finds it alien, the nested form plus an extracted
+  `save_and_report` method is the fallback — it compiles clean too, at 75 lines.
+- `?` earns its place in lesson 3 because `save` does a fallible write *then* a
+  follow-up. Don't retro-fit `?` into single-operation functions just to show it off.
 - Lesson 6 owes the immediate-mode performance reckoning — lesson 1 promises a fight
   with egui when a 50,000-line file meets a naive redraw.

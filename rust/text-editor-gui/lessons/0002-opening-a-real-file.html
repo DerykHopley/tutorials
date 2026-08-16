@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 2 — Opening a Real File</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+.stage > h3::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 02 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~25 minutes</p>
+  <h1>Opening a Real File</h1>
+  <p class="subtitle">Four stages, ending with your editor displaying its own source code.</p>
+</header>
+
+<p>Lesson 1 gave you a window with a <code>String</code> in it. That string was a
+greeting you typed into the source. An editor that can only edit text it invented isn't
+an editor — so this lesson reads a file off disk.</p>
+
+<p>Reading a file can fail. The file might not exist, or you might not be allowed to read
+it, or it might not be valid UTF-8. Rust will not let you pretend otherwise, and that
+refusal is the entire lesson.</p>
+
+<div class="thesis">
+  In Rust, failure is a value, not an event.<br>
+  Reading a file doesn't hand you a <code>String</code> — it hands you a box that contains
+  either a <code>String</code> or an error, and you cannot get at the contents without
+  saying what to do about both.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Your <code>editor/src/main.rs</code> should be the 40 lines you finished lesson 1 with.
+If you're not sure, check it against
+<a href="0001-your-first-window.html#where-you-ended-up">lesson 1's checkpoint</a>.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-1">
+<h3>Reach for a file, and get refused</h3>
+
+<p class="goal">The compiler rejects your code — and tells you exactly what's wrong.</p>
+
+<p>Two edits. First, bring the filesystem module into scope:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
+<pre><code><span class="dim"><span class="k">use</span> eframe::egui;</span>
+<span class="add"><span class="k">use</span> std::fs;</span></code></pre>
+
+<p><code>std</code> is Rust's standard library, always available, nothing to install.
+<code>fs</code> is its filesystem module. A <code>use</code> line doesn't import code so
+much as shorten a name — without it you'd write
+<code>std::fs::read_to_string(…)</code> every time.</p>
+
+<p>Second, swap the hardcoded greeting for a file read:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Default::default</span></p>
+<pre><code><span class="dim">        <span class="t">Self</span> {</span>
+<span class="del">            text: <span class="s">"Hello, editor.\n"</span>.<span class="f">to_owned</span>(),</span>
+<span class="add">            text: fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>),</span>
+<span class="dim">        }</span></code></pre>
+
+<p class="run">cargo check</p>
+
+<p>It doesn't compile. Verbatim:</p>
+
+<pre class="error"><code><span class="c">error[E0308]</span>: mismatched types
+  <span class="c">--&gt;</span> src/main.rs:11:19
+   |
+11 |             text: fs::read_to_string("src/main.rs"),
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ <span class="c">expected `String`, found `Result&lt;String, Error&gt;`</span>
+   |
+   = <span class="c">note: expected struct</span> `String`
+                <span class="c">found enum</span> `std::result::Result&lt;String, std::io::Error&gt;`
+<span class="c">help: consider using `Result::expect` to unwrap the `Result` value, panicking if the value is a `Result::Err`</span>
+   |
+11 |             text: fs::read_to_string("src/main.rs").expect("REASON"),
+   |                                                    +++++++++++++++++</code></pre>
+
+<details class="recall">
+  <summary>Before reading on: your field wants a <code>String</code>, and the function returned <code>Result&lt;String, Error&gt;</code>. What is the language forcing you to do?</summary>
+  <p>Account for the failure. The <code>String</code> you want is <em>inside</em> the
+  <code>Result</code>, and the only way to get it out is to also say what happens when
+  there isn't one.</p>
+</details>
+
+<p>This is the central move. In many languages, reading a missing file throws an
+exception — an invisible second exit from the function that you can ignore until it
+surprises you in production. Rust has no exceptions. Failure comes back as an ordinary
+<em>return value</em>, of type <code>Result</code>, and the type system won't let you
+mistake it for the success case.</p>
+
+<p><code>Result&lt;String, Error&gt;</code> reads as: <em>either a <code>String</code>,
+or an <code>Error</code></em>. It's an <strong>enum</strong> — a type that is exactly one
+of a fixed set of shapes. This one has two:</p>
+
+<table id="result-shape">
+  <tr><th>Variant</th><th>Means</th><th>Holds</th></tr>
+  <tr><td><code>Ok(v)</code></td><td>It worked</td><td>The value you wanted — here, the file's contents</td></tr>
+  <tr><td><code>Err(e)</code></td><td>It didn't</td><td>Why not — here, an <code>io::Error</code></td></tr>
+</table>
+
+<p class="sidenote">Note what the compiler suggested: <code>.expect("REASON")</code>. That
+compiles, and it's wrong here — stage 3 shows what it actually does. The
+<code>help:</code> line is usually right, but it optimises for "make this compile", not
+"make this good."</p>
+</section>
+
+<section class="stage" id="stage-2">
+<h3>Say what to do about both</h3>
+
+<p class="goal">Your editor opens, showing its own source code.</p>
+
+<p>Replace the whole body of <code>default</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Default::default</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">default</span>() -&gt; <span class="t">Self</span> {</span>
+<span class="del">        <span class="t">Self</span> {</span>
+<span class="del">            text: fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>),</span>
+<span class="del">        }</span>
+<span class="add">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>) {
+            <span class="t">Ok</span>(contents) =&gt; contents,
+            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open src/main.rs\n\n{error}"</span>),
+        };
+        <span class="t">Self</span> { text }</span>
+<span class="dim">    }</span></code></pre>
+
+<p><strong><code>match</code></strong> takes a value apart. You list every shape it could
+have, and what to produce for each. It's exhaustive: delete the <code>Err</code> arm and
+the compiler rejects the program, because you'd have left a possible shape unhandled.
+That exhaustiveness is why Rust programs rarely die of an unconsidered case.</p>
+
+<p>Read the arms as: <em>if it's <code>Ok</code>, name the contents
+<code>contents</code> and use them; if it's <code>Err</code>, name the problem
+<code>error</code> and build a message instead.</em> Either way the <code>match</code>
+evaluates to a <code>String</code>, which is what <code>text</code> needs.</p>
+
+<p><code>format!</code> is <code>println!</code>'s sibling — same macro, but it returns
+the string instead of printing it. <code>{error}</code> drops the variable straight into
+the text.</p>
+
+<p class="sidenote"><code>Self { text }</code> is shorthand. When a variable's name is
+already the field's name, you write it once instead of <code>text: text</code>. Rust
+leans on this constantly.</p>
+
+<p class="run">cargo run<br>
+→ your editor, showing the source code of your editor</p>
+
+<div class="callout key">
+  <span class="label">Take a second with this</span>
+  You are looking at <code>main.rs</code> inside a program compiled from
+  <code>main.rs</code>. Scroll down in the window and you'll find the very
+  <code>fs::read_to_string</code> call that put it there. Edit the text and the buffer
+  changes — it won't save yet, that's lesson 3.
+</div>
+
+<div class="callout warn">
+  <span class="label">Two things we're deliberately leaving crooked</span>
+  The path <code>"src/main.rs"</code> is now written twice, and <code>default()</code> is
+  doing file I/O, which is not what "default" means to a Rust reader. Both are fixed in
+  stage 4 — noticing them now is the point.
+</div>
+</section>
+
+<section class="stage" id="stage-3">
+<h3>Break it on purpose</h3>
+
+<p class="goal">Point at a file that doesn't exist. The editor still opens.</p>
+
+<p>Misspell the filename — <code>mian</code> instead of <code>main</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Default::default</span></p>
+<pre><code><span class="del">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>) {</span>
+<span class="add">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(<span class="s">"src/mian.rs"</span>) {</span></code></pre>
+
+<p class="run">cargo run<br>
+→ a window containing:
+<br><br>could not open src/main.rs<br><br>No such file or directory (os error 2)</p>
+
+<p>No crash. The <code>Err</code> arm ran, produced a <code>String</code> like any other,
+and the program carried on. Your editor degraded instead of dying — which for a tool
+someone else might run is the difference between "handled that badly" and "handled that".</p>
+
+<h3 id="unwrap">What the compiler suggested instead</h3>
+
+<p>Back in stage 1, <code>rustc</code> offered you <code>.expect("REASON")</code>. It has
+a shorter sibling, <code>.unwrap()</code>. Both mean: <em>give me the
+<code>String</code>, and if it's an <code>Err</code>, kill the program.</em> Had you
+written <code>fs::read_to_string("src/mian.rs").unwrap()</code>, this is what you'd have
+got instead of a window:</p>
+
+<pre class="error"><code>thread 'main' panicked at src/main.rs:10:38:
+called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound,
+message: "No such file or directory" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace</code></pre>
+
+<p>That's a <strong>panic</strong>: the program aborts immediately. It's one line of code
+instead of four, which is exactly why it's tempting and why it's everywhere in tutorials.
+Your mission says no <code>unwrap()</code> in the hot path, and this is why — a text
+editor that vanishes because a path was mistyped is not a text editor.</p>
+
+<p class="sidenote"><code>unwrap()</code> is not forbidden, it's a claim. It says "this
+cannot fail, and I accept a crash if I'm wrong." That's fine in a test or a throwaway
+script. In code a reviewer is reading as a work sample, every <code>unwrap()</code> is a
+claim you'd better be able to defend.</p>
+
+<div class="callout note">
+  <span class="label">Put it back before moving on</span>
+  Change <code>src/mian.rs</code> back to <code>src/main.rs</code>. Stage 4 builds on the
+  working version, and it's easy to carry the typo forward and spend ten minutes
+  wondering why the next stage looks broken.
+</div>
+</section>
+
+<section class="stage" id="stage-4">
+<h3>Give it a name</h3>
+
+<p class="goal">Same behaviour, but the code now says what it does.</p>
+
+<p>Two edits. <code>default()</code> is the wrong home for this: a Rust reader expects
+<code>Default</code> to hand back a cheap, obvious starting value, not to touch the disk.
+And the path is written twice, so the two copies can drift apart. Both problems disappear
+if the file-opening gets a name and a parameter.</p>
+
+<p>First edit — replace the entire <code>impl Default</code> block:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">replacing impl Default for Editor</span></p>
+<pre><code><span class="del"><span class="k">impl</span> <span class="t">Default</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">default</span>() -&gt; <span class="t">Self</span> {
+        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>) {
+            <span class="t">Ok</span>(contents) =&gt; contents,
+            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open src/main.rs\n\n{error}"</span>),
+        };
+        <span class="t">Self</span> { text }
+    }
+}</span>
+<span class="add"><span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="c">/// Open a file into a new editor. A failure becomes the buffer contents,</span>
+    <span class="c">/// so the window always opens.</span>
+    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {
+        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="t">Ok</span>(contents) =&gt; contents,
+            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open {path}\n\n{error}"</span>),
+        };
+        <span class="t">Self</span> { text }
+    }
+}</span></code></pre>
+
+<p><code>impl Editor</code> — no <code>for</code>. Lesson 1's <code>impl Default for
+Editor</code> was fulfilling somebody else's contract. This one just attaches a function
+of your own to your own type. Same keyword, two different jobs, and the
+<code>for</code> is the tell.</p>
+
+<p>The parameter is <code>&amp;str</code>, not <code>String</code> — a borrowed view of
+text, because <code>open</code> only needs to <em>read</em> the path, not own it. That's
+the same distinction from
+<a href="0001-your-first-window.html#stage-4">lesson 1, stage 4</a>, now paying rent:
+take the borrowed type and callers can pass a literal without allocating anything.</p>
+
+<p class="sidenote">Those <code>///</code> lines are a <strong>doc comment</strong>. Not
+decoration — <code>cargo doc --open</code> turns them into real documentation, and a
+reviewer will look for them.</p>
+
+<p>Second edit — <code>Editor::default()</code> no longer exists, so <code>main</code>
+has to call the new name:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
+<pre><code><span class="dim">    eframe::<span class="f">run_native</span>(
+        <span class="s">"editor"</span>,
+        options,</span>
+<span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">default</span>()))),</span>
+<span class="add">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(<span class="s">"src/main.rs"</span>)))),</span>
+<span class="dim">    )</span></code></pre>
+
+<p class="run">cargo run<br>
+→ identical to stage 2 — and that's the point<br>
+<span class="note">Then: cargo fmt &amp;&amp; cargo clippy — both should be silent.</span></p>
+
+<div class="callout key">
+  <span class="label">The path is now in exactly one place</span>
+  Both the read and the error message use <code>path</code>. Change the argument in
+  <code>main</code> and both follow. That's not tidiness for its own sake — duplicated
+  literals are how error messages end up lying about what actually happened.
+</div>
+
+<p class="sidenote">Relative to what? <code>cargo run</code> starts your program with the
+working directory set to the crate root — <code>editor/</code> — so
+<code>"src/main.rs"</code> resolves. Run the binary straight out of
+<code>target/debug/</code> instead and it won't, because the working directory is
+wherever you were standing. Lesson 3 takes the path from the command line and the
+question stops mattering.</p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>45 lines. Yours should match this after <code>cargo fmt</code>.</p>
+
+<p class="filename">editor/src/main.rs</p>
+<pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
+<span class="l"><span class="k">use</span> std::fs;</span>
+<span class="l"></span>
+<span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
+<span class="l">    text: <span class="t">String</span>,</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="c">/// Open a file into a new editor. A failure becomes the buffer contents,</span></span>
+<span class="l">    <span class="c">/// so the window always opens.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {</span>
+<span class="l">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
+<span class="l">            <span class="t">Ok</span>(contents) =&gt; contents,</span>
+<span class="l">            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open {path}\n\n{error}"</span>),</span>
+<span class="l">        };</span>
+<span class="l">        <span class="t">Self</span> { text }</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
+<span class="l">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="l">            ui.<span class="f">heading</span>(<span class="s">"editor"</span>);</span>
+<span class="l">            ui.<span class="f">add</span>(</span>
+<span class="l">                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="l">                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="l">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),</span>
+<span class="l">            );</span>
+<span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="l">        });</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
+<span class="l">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span>
+<span class="l">        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),</span>
+<span class="l">        ..<span class="t">Default</span>::<span class="f">default</span>()</span>
+<span class="l">    };</span>
+<span class="l"></span>
+<span class="l">    eframe::<span class="f">run_native</span>(</span>
+<span class="l">        <span class="s">"editor"</span>,</span>
+<span class="l">        options,</span>
+<span class="l">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(<span class="s">"src/main.rs"</span>)))),</span>
+<span class="l">    )</span>
+<span class="l">}</span></code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<p>Two of these are about today; one is about lesson 1, on purpose. Coming back to older
+material after a gap is what turns it into something you still have in six months. Each
+explanation links back to where the idea was taught.</p>
+
+<div class="quiz">
+  <p class="q"><code>fs::read_to_string</code> returns <code>Result&lt;String, Error&gt;</code>. What does that type actually tell you?</p>
+  <ul class="options">
+    <li data-correct>Exactly one of those two, never both</li>
+    <li>A string, plus an error code beside it</li>
+    <li>A string that may be empty on failure</li>
+    <li>A string, and errors raised as exceptions</li>
+  </ul>
+  <p class="why"><code>Result</code> is an enum, so a value is <em>either</em>
+  <code>Ok(String)</code> <em>or</em> <code>Err(Error)</code> — one shape at a time. Rust
+  has no exceptions; failure travels as an ordinary return value, which is why the
+  compiler can force you to deal with it.
+  <a class="review" href="#result-shape">↑ Review: the two shapes of Result (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">You replace the <code>match</code> with <code>.unwrap()</code> and the file is missing. What happens?</p>
+  <ul class="options">
+    <li data-correct>The program panics and stops immediately</li>
+    <li>The buffer holds an empty string instead</li>
+    <li>The compiler refuses to build the program</li>
+    <li>The error appears inside the editor window</li>
+  </ul>
+  <p class="why"><code>unwrap()</code> compiles fine — that's what makes it dangerous. On
+  an <code>Err</code> it panics and the process dies, so the window never opens at all.
+  The <code>match</code> keeps the failure as data you can show the user.
+  <a class="review" href="#unwrap">↑ Review: what unwrap does (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">From lesson 1: why does <code>TextEdit::multiline</code> need <code>&amp;mut self.text</code> rather than <code>&amp;self.text</code>?</p>
+  <ul class="options">
+    <li data-correct>Typing has to change the stored text</li>
+    <li>Widgets always take ownership of data</li>
+    <li>Immediate mode forbids all shared borrows</li>
+    <li>The struct field is declared as mutable</li>
+  </ul>
+  <p class="why">A shared borrow is read-only and cannot be upgraded. A text box writes
+  into your buffer when a key is pressed, so it needs exclusive access — which you can
+  only hand out because <code>ui</code> takes <code>&amp;mut self</code>.
+  <a class="review" href="0001-your-first-window.html#borrows">↑ Review: the two kinds of borrow (lesson 1, stage 5)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 3</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://rust-book.cs.brown.edu/ch09-00-error-handling.html">
+<em>The Rust Programming Language</em>, Chapter 9 — Error Handling</a>
+(Brown University interactive edition). Read 9.1 and 9.2.</p>
+
+<p>9.1 covers <code>panic!</code> — what <code>unwrap()</code> triggers, and when
+crashing is genuinely the right answer. 9.2 is <code>Result</code> proper, including the
+<code>?</code> operator, which collapses a <code>match</code> like today's into one
+character. We'll use <code>?</code> in lesson 3 when saving gives us a function that can
+fail; you'll get much more out of it having written the long form first.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> Stage 4 changed working code
+  without changing what it does, which is a strange thing to do when you're new — if that
+  felt like busywork rather than an improvement, say so and I'll make the case properly.
+  Same for anything the compiler said that didn't land.
+</div>
+
+<nav class="footer-nav">
+  <a href="0001-your-first-window.html">← Lesson 1: Your First Window</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <span>Next: Lesson 3 — saving, and the <code>?</code> operator</span>
+</nav>
+
+</body>
+</html>

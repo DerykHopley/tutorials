@@ -116,6 +116,11 @@ Every block colour is a CSS variable (`--code-*`, `--tok-*`, `--err-*`), and
 on paper and the syntax colours muddy. **Never hardcode a colour inside a `pre` rule**,
 or it will survive into print and break the flip.
 
+**A stage has exactly one `<h3>`.** The stage number is generated from it, so a second
+`<h3>` inside the same `<section class="stage">` renders a duplicate "Stage N" label.
+Subsections within a stage are `<h4>`. (The stylesheet now scopes the label to
+`:first-of-type` so the damage is contained, but the markup should still be right.)
+
 **One code block, one edit site.** If a stage touches two places in the file, that is two
 blocks with their own file tab, location hint, and sentence of prose — never one block
 with a `… and elsewhere:` comment in the middle. The second edit in such a block reliably

@@ -110,6 +110,16 @@ h3 {
   letter-spacing: 0.01em;
 }
 
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
 .subtitle {
   font-size: 1.15rem;
   font-style: italic;
@@ -162,7 +172,7 @@ a code { color: var(--chip-ink); }
 
 /* Headings set their own scale and weight; a boxed chip fights them.
    Use colour alone to mark code here. */
-h1 code, h2 code, h3 code,
+h1 code, h2 code, h3 code, h4 code,
 .subtitle code, .thesis code,
 .recall > summary code {
   font-size: 0.86em;
@@ -432,7 +442,9 @@ body { counter-reset: stage; }
   font-size: 1.2rem;
   font-weight: 400;
 }
-.stage > h3::before {
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
   content: "Stage " counter(stage);
   position: absolute;
   left: 0;

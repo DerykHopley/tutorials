@@ -1,0 +1,50 @@
+# Working Notes — workspace-wide
+
+Everything here applies to **every** topic in this workspace. Topic-specific notes
+live in `<topic>/<tutorial>/NOTES.md`.
+
+## About Deryk
+
+- Machine: Fedora-based atomic desktop (rpm-ostree, `/var/home` layout), kernel 7.1.8,
+  Wayland. Prefer per-user toolchains in `$HOME` over `rpm-ostree install` — layering
+  packages onto the base image is the wrong move on an atomic desktop.
+- Started this workspace 2026-08-16.
+
+## Teaching preferences
+
+These were earned through real friction and generalise past any one topic. The
+mechanics of each live in [LESSON-FORMAT.md](./LESSON-FORMAT.md); the *reasons* live here.
+
+- **Never show finished work up front** (2026-08-16). Build it in stages, explain each
+  part as it's added, and make every stage runnable. Stated why: "I would like to
+  understand what each part is doing while building up to completion." A finished
+  artifact teaches recognition; watching it become necessary teaches causation.
+- **Leave the working files at the *start* state of the next unbuilt lesson**, never the
+  end state. Deryk does the work themselves — that's the point.
+- **Single self-contained HTML files.** Nothing loaded from disk at runtime. Authored
+  from `assets/` and inlined by `python3 build.py`.
+- **Highlight must-do details** that are easy to skim past, and put them *before* the
+  thing they apply to. Prompted 2026-08-16 by missing a renamed parameter that was
+  mentioned only in prose after the code block.
+- **One block, one change.** Two edits in one block means the second gets lost.
+  Prompted 2026-08-16 by an "… and at the bottom of main:" comment doing exactly that.
+- **Prefers structural navigation over line numbers** — and was right about why. See
+  the reasoning in [LESSON-FORMAT.md](./LESSON-FORMAT.md); it generalises to any topic
+  where instructions point into a larger artifact.
+- **Wants a fast way back to the source material** from a self-test they got wrong.
+
+## How I should verify things
+
+Deryk has caught me shipping claims I hadn't checked, and the checks keep finding real
+bugs. Standing rules:
+
+- **Never trust parametric memory for an API.** Compile it, run it, or fetch the docs.
+  The egui `App` trait signature changed in a way my priors got wrong.
+- **Render the document and look at it.** Screenshot the actual output rather than
+  reasoning about the CSS. This caught illegible chips, a white scrollbar on a dark
+  block, and a line-count mismatch.
+- **Extract code back out of the rendered lesson and compile *that*.** It checks what
+  Deryk will actually read, not what I meant to write.
+- **Verify interactive behaviour by driving the page**, not by reading the JS.
+- **Never touch Deryk's in-progress working files** to run a check. Use a scratch
+  target and delete it.

@@ -1,0 +1,7 @@
+# Python bytecode from build.py
+__pycache__/
+*.pyc
+
+# Editor/OS cruft
+.DS_Store
+*.swp

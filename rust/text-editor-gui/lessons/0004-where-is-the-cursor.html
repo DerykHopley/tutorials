@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lesson 3 — Saving Your Work</title>
+<title>Lesson 4 — Where Is the Cursor?</title>
 <!-- @assets:style.css,quiz.css,quiz.js -->
 <style>
 /* ---- generated from assets/style.css — do not edit here ---- */
@@ -867,30 +867,29 @@ th {
 <body>
 
 <header class="masthead">
-  <p class="eyebrow">Lesson 03 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~30 minutes</p>
-  <h1>Saving Your Work</h1>
-  <p class="subtitle">Four stages to Ctrl+S — and the boilerplate lesson 1 owed you.</p>
+  <p class="eyebrow">Lesson 04 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~30 minutes</p>
+  <h1>Where Is the Cursor?</h1>
+  <p class="subtitle">Three stages to a Ln/Col readout — and the counting bug hiding underneath it.</p>
 </header>
 
-<p>Reading was the easy direction. Writing is where an editor can do damage: it can put
-the wrong bytes in the right file, or the right bytes in the wrong one, and either way
-somebody's work is gone.</p>
+<p>Every code editor you've used shows the cursor position in a corner somewhere.
+<strong>Ln 42, Col 7.</strong> It looks like the most trivial feature in the product.
+It isn't, and the reason it isn't is the reason text editing is hard.</p>
 
-<p>So this lesson is about the unhappy path again — but from the other side. Lesson 2 was
-"you must handle the failure." This one is "you must not <em>silently</em> handle it,"
-and Rust has a specific mechanism to stop you.</p>
+<p>egui knows where the cursor is. It will tell you — as a single number, an offset into
+the text. Turning that number into a line and a column is your job, and doing it right
+means being precise about what the number counts.</p>
 
 <div class="thesis">
-  A <code>Result</code> you ignore is a bug you've already written.<br>
-  Rust marks it <code>#[must_use]</code>, so throwing one away isn't a decision you can
-  make by accident — only on purpose, in writing.
+  A position in text is not one number, it's three.<br>
+  Byte offset, character offset, and screen column are all different — and using the
+  wrong one is how editors corrupt files.
 </div>
 
 <h2>Where you're starting</h2>
 
-<p>Your <code>editor/src/main.rs</code> should be lesson 2's 45 lines, ending with
-<code>Editor::open("src/main.rs")</code>. Check it against
-<a href="0002-opening-a-real-file.html#where-you-ended-up">lesson 2's checkpoint</a> if
+<p>Lesson 3's 65 lines, saving with Ctrl+S. Check against
+<a href="0003-saving-your-work.html#where-you-ended-up">lesson 3's checkpoint</a> if
 you're unsure.</p>
 
 <p class="legend">
@@ -900,339 +899,214 @@ you're unsure.</p>
 </p>
 
 <section class="stage" id="stage-1">
-<h3>Point it somewhere safe</h3>
+<h3>Ask egui what it knows</h3>
 
-<p class="goal">The editor opens a scratch file instead of its own source.</p>
+<p class="goal">The editor reports the cursor's raw offset — or says there isn't one.</p>
+
+<p>So far you've drawn the text box with <code>ui.add(…)</code>, which hands back only
+whether it was clicked. <code>TextEdit</code> has a richer door: <code>.show(ui)</code>
+returns everything it learned while drawing. <strong>Two edits.</strong></p>
+
+<p>First — swap <code>ui.add</code> for <code>.show</code> and keep the result:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the text box</span></p>
+<pre><code><span class="del">            ui.<span class="f">add</span>(</span>
+<span class="del">                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="del">                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="del">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),</span>
+<span class="del">            );</span>
+<span class="add">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
+                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                .<span class="f">show</span>(ui);</span></code></pre>
 
 <div class="callout note">
-  <span class="label">Do this before you write any save code</span>
-  Right now your editor opens <code>src/main.rs</code>. In two stages it will start
-  <em>writing</em> to whatever it opened. Aim that at your own source and the first
-  mistyped keystroke overwrites the program you're building — with a version that no
-  longer compiles, while you're running it. Point it at a throwaway file first. This is a
-  habit, not a one-off: when you give a tool the power to destroy something, take the
-  valuable thing out of range before you test it.
+  <span class="label">Two things moved, not one</span>
+  The widget is no longer wrapped in <code>ui.add(…)</code>, so the surrounding
+  parentheses and the trailing <code>);</code> are gone, and the whole chain dedents by
+  four spaces. It's the same builder chain with <code>.show(ui)</code> on the end instead
+  of being passed to <code>add</code>. Run <code>cargo fmt</code> if the indentation
+  drifts.
 </div>
 
-<p class="run">cd editor<br>
-printf 'scratch file\n\nedit me freely\n' &gt; scratch.md</p>
+<p>Second — report what came back, just below it:</p>
 
-<p>One edit — open that instead:</p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, under the text box</span></p>
+<pre><code><span class="add">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {
+                <span class="t">Some</span>(range) =&gt; <span class="f">format!</span>(<span class="s">"offset {}"</span>, range.primary.index.<span class="s">0</span>),
+                <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),
+            };
+</span><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
 
-<p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
-<pre><code><span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(<span class="s">"src/main.rs"</span>)))),</span>
-<span class="add">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(<span class="s">"scratch.md"</span>)))),</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the byte-count label</span></p>
+<pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
+
+<h4 id="option">The other enum</h4>
+
+<p><code>cursor_range</code> is an <code>Option&lt;CCursorRange&gt;</code>, and
+<code>Option</code> is <code>Result</code>'s sibling. Same idea — an enum with two
+variants, the compiler forcing you through both — but for absence rather than failure:</p>
+
+<table id="option-vs-result">
+  <tr><th>Type</th><th>Variants</th><th>Answers</th></tr>
+  <tr><td><code>Result&lt;T, E&gt;</code></td><td><code>Ok(T)</code> / <code>Err(E)</code></td><td>Did it work?</td></tr>
+  <tr><td><code>Option&lt;T&gt;</code></td><td><code>Some(T)</code> / <code>None</code></td><td>Is there one?</td></tr>
+</table>
+
+<p>There genuinely might not be a cursor — click outside the text box and it loses focus,
+and there is nothing to report. Languages with null pointers express that by handing you a
+value that looks fine until you touch it. Rust makes you name the empty case before it
+will let you at the full one.</p>
+
+<p class="sidenote"><code>range.primary.index.0</code> — <code>primary</code> is the
+moving end of a selection (<code>secondary</code> is the anchor), and the <code>.0</code>
+unwraps a one-field wrapper type. Stage 2 explains why that wrapper exists; it turns out
+to be the most important thing on this page.</p>
 
 <p class="run">cargo run<br>
-→ a window showing <em>scratch file / edit me freely</em></p>
+→ click in the text: <em>offset 34 · 61 bytes</em><br>
+→ click outside it: <em>no cursor · 61 bytes</em></p>
 </section>
 
 <section class="stage" id="stage-2">
-<h3>Remember which file</h3>
+<h3>Turn one number into two</h3>
 
-<p class="goal">The window shows the name of the file you're editing.</p>
+<p class="goal">A real <strong>Ln / Col</strong> readout that tracks your cursor.</p>
 
-<p><code>open</code> takes a <code>path</code>, uses it, and forgets it. To save, the
-editor has to still know where the text came from — so the path has to become part of the
-editor's state, not just an argument that passes through. <strong>Three edits.</strong></p>
+<p>An offset is where the cursor is; a line and column is where it <em>feels</em> like it
+is. Converting means walking the text and counting newlines. <strong>Two edits.</strong></p>
 
-<p>First — give the struct somewhere to keep it:</p>
+<p>First — a method, after <code>save</code> in your <code>impl Editor</code> block:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
-<pre><code><span class="dim"><span class="k">struct</span> <span class="t">Editor</span> {</span>
-<span class="add">    path: <span class="t">String</span>,</span>
-<span class="dim">    text: <span class="t">String</span>,
-}</span></code></pre>
-
-<p><code>String</code>, not <code>&amp;str</code>. The editor has to <em>own</em> its path
-— it must stay alive for as long as the editor does, and a borrowed
-<code>&amp;str</code> would be tied to whatever it was borrowed from.</p>
-
-<p>Second — fill it in:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
-<pre><code><span class="dim">        };</span>
-<span class="del">        <span class="t">Self</span> { text }</span>
-<span class="add">        <span class="t">Self</span> {
-            path: path.<span class="f">to_owned</span>(),
-            text,
-        }</span>
-<span class="dim">    }</span></code></pre>
-
-<p>The parameter is still <code>&amp;str</code> — borrowed, so callers can pass a literal
-— and <code>to_owned()</code> makes the editor's own copy. Note the two styles side by
-side: <code>path: path.to_owned()</code> spells out the field, while <code>text</code>
-uses the shorthand from lesson 2 because the variable already has the field's name.</p>
-
-<p>Third — show it, replacing the hardcoded heading:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">in fn ui</span></p>
-<pre><code><span class="del">            ui.<span class="f">heading</span>(<span class="s">"editor"</span>);</span>
-<span class="add">            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);</span></code></pre>
-
-<p class="run">cargo run<br>
-→ the window is now headed <strong>scratch.md</strong></p>
-</section>
-
-<section class="stage" id="stage-3">
-<h3>Write it back — and get told off</h3>
-
-<p class="goal">Ctrl+S changes the file on disk. The compiler is not happy about how.</p>
-
-<p><strong>Three edits.</strong> First, one more module:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
-<pre><code><span class="dim"><span class="k">use</span> eframe::egui;
-<span class="k">use</span> std::fs;</span>
-<span class="add"><span class="k">use</span> std::io;</span></code></pre>
-
-<p>Second — teach the editor to write. Put this inside your existing
-<code>impl Editor</code> block, just after <code>open</code>:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">in impl Editor, after open</span></p>
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, after save</span></p>
 <pre><code><span class="dim">    }</span>
 <span class="add">
-    <span class="c">/// Write the buffer back to the file it came from.</span>
-    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
-        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)
+    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {
+        <span class="k">let</span> <span class="k">mut</span> line = <span class="s">1</span>;
+        <span class="k">let</span> <span class="k">mut</span> column = <span class="s">1</span>;
+        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">chars</span>().<span class="f">take</span>(char_index) {
+            <span class="k">if</span> ch == <span class="s">'\n'</span> {
+                line += <span class="s">1</span>;
+                column = <span class="s">1</span>;
+            } <span class="k">else</span> {
+                column += <span class="s">1</span>;
+            }
+        }
+        (line, column)
     }</span>
 <span class="dim">}</span></code></pre>
 
-<p><code>io::Result&lt;()&gt;</code> is the same <code>Result</code> from lesson 2 with
-the error type already filled in — <code>io::Result&lt;T&gt;</code> is just a shorthand
-for <code>Result&lt;T, io::Error&gt;</code>. The <code>()</code> is the
-<strong>unit type</strong>: "succeeded, and there's no value to give you." A write either
-worked or it didn't; there's nothing to hand back.</p>
+<p>The return type <code>(usize, usize)</code> is a <strong>tuple</strong> — two values
+travelling together without inventing a struct for them. <code>usize</code> is the
+unsigned integer type used for sizes and indices; it's as wide as a pointer on your
+machine.</p>
 
-<p>There's no <code>match</code> here and no semicolon on that last line. The function
-just <em>returns</em> whatever <code>fs::write</code> returned — success or failure,
-untouched, straight up to whoever called it.</p>
+<p><code>self.text.chars()</code> is an <strong>iterator</strong> over characters, and
+<code>.take(char_index)</code> stops it after that many. So the loop walks exactly the
+text before the cursor, counting newlines. Lines and columns start at 1 because that's
+what every editor and compiler shows — including the <code>src/main.rs:39:17</code> in
+the errors you've been reading.</p>
 
-<p>Third — trigger it. Add this as the first thing inside the panel closure:</p>
+<p>Second — use it:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
-<pre><code><span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
-<span class="add">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));
-            <span class="k">if</span> save_requested {
-                <span class="k">self</span>.<span class="f">save</span>();
-            }
-</span><span class="dim">            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the position match</span></p>
+<pre><code><span class="dim">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {</span>
+<span class="del">                <span class="t">Some</span>(range) =&gt; <span class="f">format!</span>(<span class="s">"offset {}"</span>, range.primary.index.<span class="s">0</span>),</span>
+<span class="add">                <span class="t">Some</span>(range) =&gt; {
+                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);
+                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
+                }</span>
+<span class="dim">                <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),
+            };</span></code></pre>
 
-<p><code>ui.input(…)</code> hands you this frame's input state to ask questions of.
-<code>modifiers.command</code> is Ctrl on Linux and Windows, ⌘ on macOS — one check for
-both. <code>key_pressed</code> is true only on the frame the key went down, not while
-it's held, which is what stops one keystroke from saving sixty times a second.</p>
+<p><code>let (line, column) = …</code> is <strong>destructuring</strong>: the tuple comes
+back and is immediately taken apart into two named values. Same pattern-matching machinery
+as <code>Some(range)</code> on the line above, used for a happier purpose.</p>
 
 <p class="run">cargo run<br>
-→ type something, press <strong>Ctrl+S</strong>, then in another terminal:<br>
-cat editor/scratch.md<br>
-<span class="note">Your edits are there. It genuinely saved.</span></p>
+→ move the cursor around: <em>Ln 2, Col 5 · 61 bytes</em></p>
 
-<p>It works. It also produces this:</p>
+<div class="callout key">
+  <span class="label">You just built the thing in the corner of every editor</span>
+  It is genuinely this: read an offset, walk the text, count newlines. What separates a
+  toy from a real editor isn't the idea — it's that a real one does this correctly for
+  text that isn't English, and does it fast enough on a file with a million lines. Stage 3
+  is the first of those. The second is lesson 7.
+</div>
+</section>
 
-<pre class="error"><code><span class="c">warning</span>: unused `std::result::Result` that must be used
-  <span class="c">--&gt;</span> src/main.rs:39:17
-   |
-39 |                 self.save();
-   |                 ^^^^^^^^^^^
-   |
-   = <span class="c">note: this `Result` may be an `Err` variant, which should be handled</span>
-   = <span class="c">note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default</span>
-<span class="c">help: use `let _ = ...` to ignore the resulting value</span></code></pre>
+<section class="stage" id="stage-3">
+<h3>The bug you can't see in English</h3>
+
+<p class="goal">Understand why <code>char_index</code> is not <code>self.text[..i]</code>.</p>
+
+<p>No code change in this stage — this one is about a mistake you haven't made yet, so
+that you don't. Put a non-English character in your scratch file:</p>
+
+<p class="run">printf 'let x = 1;\nlet café = 2;\nlet y = 3;\n' &gt; editor/scratch.md<br>
+→ run, and click just after the <strong>é</strong></p>
+
+<p>Look at the two numbers you're now showing. That text is:</p>
+
+<pre class="error"><code>bytes = 37, chars = 36</code></pre>
+
+<p>Thirty-seven bytes, thirty-six characters. The <code>é</code> takes two bytes. Rust
+strings are UTF-8, where a character is one to four bytes depending on what it is —
+ASCII is one, accented Latin is two, most CJK is three, emoji are four.</p>
+
+<p>So there are <em>two</em> numbers you could call "the position", and they disagree the
+moment text stops being English:</p>
+
+<table id="byte-vs-char">
+  <tr><th>Index kind</th><th>Counts</th><th>Who uses it</th></tr>
+  <tr><td>Byte offset</td><td>Bytes of UTF-8</td><td><code>text.len()</code>, slicing <code>&amp;text[a..b]</code>, files on disk</td></tr>
+  <tr><td>Char offset</td><td><code>char</code> values</td><td><code>text.chars()</code>, egui's cursor</td></tr>
+</table>
 
 <details class="recall">
-  <summary>Before reading on: the program runs and the file saves. So what exactly is the compiler worried about?</summary>
-  <p>The save that <em>doesn't</em> work. <code>self.save();</code> throws away the
-  answer to "did that succeed?", so a failed write looks exactly like a successful one —
-  from inside the program, and from where you're sitting. The bug isn't visible today
-  because the write happened to succeed.</p>
+  <summary>Before reading on: egui hands you char offset 20. What happens if you treat it as a byte offset and write <code>&amp;self.text[..20]</code>?</summary>
+  <p>On that sample you get 19 characters instead of 20 — silently wrong, because the
+  <code>é</code> ate an extra byte. And if the offset had landed <em>inside</em> a
+  multi-byte character rather than after it, the program would have crashed outright.</p>
 </details>
 
-<p><code>Result</code> is marked <code>#[must_use]</code>, an attribute that tells the
-compiler to complain if a value is dropped on the floor. Very few types carry it. This
-one does because a discarded <code>Result</code> is almost always a mistake — it's an
-error that was <em>reported</em> to you and that you didn't read.</p>
+<p>The silent version is bad. The loud version looks like this — and it's a
+<em>panic</em>, at runtime, on your user's machine:</p>
 
-<p class="sidenote">Note the <code>help:</code> line: <code>let _ = …</code> silences it.
-That's the escape hatch for when ignoring really is right, and it's deliberately
-something you have to type. The point isn't that you can never discard a
-<code>Result</code> — it's that you can't do it <em>silently</em>.</p>
+<pre class="error"><code>thread 'main' panicked at src/main.rs:9:18:
+end byte index 8 is not a char boundary; it is inside 'é' (bytes 7..9 of string)</code></pre>
+
+<p>This is why <code>line_col</code> takes <code>self.text.chars()</code> and never
+slices. It counts the same units egui counts, so the two can't drift apart.</p>
+
+<h4 id="newtype">Why the API made you write <code>.0</code></h4>
+
+<p>Remember <code>range.primary.index.0</code>, and that odd <code>.0</code>. Here's how
+egui declares that field:</p>
+
+<pre><code><span class="c">/// Character offset (NOT byte offset!).</span>
+<span class="k">pub</span> index: <span class="t">CharIndex</span>,
+
+<span class="c">// …where CharIndex is:</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="t">CharIndex</span>(<span class="k">pub</span> <span class="k">usize</span>);</code></pre>
+
+<p>It's a <code>usize</code> in a wrapper that exists purely to have a different name.
+That's a <strong>newtype</strong>, and the point is that a <code>CharIndex</code> won't
+compile where a byte index is expected, even though both are just numbers underneath. The
+capital-letters comment tells you the library authors have been bitten; the type makes
+sure you can't be, at least not by accident.</p>
+
+<p class="sidenote">There's a third number this lesson is quietly ignoring: what the user
+sees as a column. A tab may render as eight spaces, and a family emoji is several
+<code>char</code> values that draw as one glyph. "Column" in a real editor means grapheme
+clusters, not chars. We'll take that on when we paint text ourselves.</p>
 </section>
-
-<section class="stage" id="stage-4">
-<h3>Say what happened</h3>
-
-<p class="goal">A status line reports every save — including the ones that fail.</p>
-
-<p><strong>Four edits</strong>, and the file won't compile until all four are in.</p>
-
-<p>First and second — the editor needs somewhere to put a message, and
-<code>open</code> has to start it empty:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
-<pre><code><span class="dim"><span class="k">struct</span> <span class="t">Editor</span> {
-    path: <span class="t">String</span>,
-    text: <span class="t">String</span>,</span>
-<span class="add">    status: <span class="t">String</span>,</span>
-<span class="dim">}</span></code></pre>
-
-<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
-<pre><code><span class="dim">        <span class="t">Self</span> {
-            path: path.<span class="f">to_owned</span>(),
-            text,</span>
-<span class="add">            status: <span class="t">String</span>::<span class="f">new</span>(),</span>
-<span class="dim">        }</span></code></pre>
-
-<p>Third — <code>save</code> gains a second job, and that's where <code>?</code>
-arrives:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">in impl Editor</span></p>
-<pre><code><span class="del">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {</span>
-<span class="del">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)</span>
-<span class="add">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
-        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;
-        <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"saved {} bytes to {}"</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);
-        <span class="t">Ok</span>(())</span>
-<span class="dim">    }</span></code></pre>
-
-<p>That <code>?</code> is the whole idea of this lesson. Read it as: <em>if this is an
-<code>Err</code>, stop here and return it to my caller; otherwise unwrap the
-<code>Ok</code> and carry on.</em> It's the same <code>match</code> you wrote in lesson 2,
-compressed into one character:</p>
-
-<table id="question-mark">
-  <tr><th>Written long</th><th>Written with <code>?</code></th></tr>
-  <tr>
-    <td><code>match fs::write(…) { Ok(v) =&gt; v, Err(e) =&gt; return Err(e), }</code></td>
-    <td><code>fs::write(…)?</code></td>
-  </tr>
-</table>
-
-<p>The point isn't brevity — it's <em>who decides</em>. <code>save</code> has no idea
-whether a failed write should show a message, retry, or quit; it isn't the part of the
-program that knows. So it doesn't decide. It hands the failure upward and lets the caller,
-which has the context, do something sensible. That's <strong>propagation</strong>, and
-it's why the status line only gets set on the success path — a failed write returns before
-it ever gets there.</p>
-
-<p class="sidenote">Also note <code>&amp;self</code> became <code>&amp;mut self</code>:
-<code>save</code> now modifies <code>status</code>, and by
-<a href="0001-your-first-window.html#borrows">lesson 1's rule</a> that needs an exclusive
-borrow. Miss this edit and the compiler will tell you, in almost the same words as lesson 1.</p>
-
-<p>Fourth — the caller, which <em>does</em> know what to do, plus somewhere to show it:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
-<pre><code><span class="dim">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
-<span class="del">            <span class="k">if</span> save_requested {</span>
-<span class="del">                <span class="k">self</span>.<span class="f">save</span>();</span>
-<span class="del">            }</span>
-<span class="add">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="t">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
-                <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"save failed: {error}"</span>);
-            }</span></code></pre>
-
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, below the byte counter</span></p>
-<pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
-<span class="add">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span></code></pre>
-
-<p><code>if … let Err(error) = self.save()</code> is a <strong>let-chain</strong>: run the
-save only if a save was asked for, and take the branch only if the result matched
-<code>Err</code>. The <code>let Err(error) = …</code> half is <code>if let</code> — a
-<code>match</code> when you only care about one shape and want to ignore the rest. You
-could write it as a two-armed <code>match</code> with an empty <code>Ok</code> arm;
-<code>if let</code> says the same thing without the ceremony.</p>
-
-<p class="sidenote">I didn't choose this shape — <code>clippy</code> did. The obvious
-version nests an <code>if let</code> inside an <code>if</code>, and clippy answers
-<em>"this <code>if</code> statement can be collapsed"</em>. Run <code>cargo clippy</code>
-often enough and it will teach you the idioms without you going looking for them.</p>
-
-<p class="run">cargo run<br>
-→ press <strong>Ctrl+S</strong>: <em>saved 31 bytes to scratch.md</em><br>
-<span class="note">And the warning is gone — cargo clippy should now be silent.</span></p>
-
-<h4 id="prove-the-failure">Now make it fail</h4>
-
-<p>A status line that only ever says nice things proves nothing. Take away your own
-permission to write the file:</p>
-
-<p class="run">chmod 444 editor/scratch.md<br>
-→ run again, edit, Ctrl+S: <em>save failed: Permission denied (os error 13)</em><br>
-<span class="note">Then give it back: chmod 644 editor/scratch.md</span></p>
-
-<p>The editor stayed open, kept your text, and told you what went wrong. Compare that with
-the two alternatives you've now seen: <code>unwrap()</code> would have killed the process
-mid-edit and lost the buffer, and the ignored <code>Result</code> from stage 3 would have
-told you it saved when it hadn't — which is worse than crashing, because you'd have closed
-the window believing your work was on disk.</p>
-</section>
-
-<h2 id="boilerplate">The boilerplate lesson 1 deferred</h2>
-
-<p>Lesson 1 said <code>main</code>'s setup used four language features that wouldn't be
-useful to you yet, and promised to come back. You now know enough for it to be
-interesting rather than intimidating. Here it is, token by token:</p>
-
-<p class="filename">editor/src/main.rs<span class="where">the whole of main</span></p>
-<pre><code><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {
-    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {
-        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),
-        ..<span class="t">Default</span>::<span class="f">default</span>()
-    };
-
-    eframe::<span class="f">run_native</span>(
-        <span class="s">"editor"</span>,
-        options,
-        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(<span class="s">"scratch.md"</span>)))),
-    )
-}</code></pre>
-
-<table>
-  <tr><th>Construct</th><th>What it is</th></tr>
-  <tr>
-    <td><code>-&gt; eframe::Result</code></td>
-    <td>The same <code>Result</code> you've been handling all lesson. <code>main</code>
-    is allowed to return one: if it ends up <code>Err</code>, Rust prints it and exits
-    non-zero. That's why there's no semicolon on the <code>run_native</code> call — it
-    <em>is</em> the return value, propagating failure exactly like <code>?</code> does.</td>
-  </tr>
-  <tr>
-    <td><code>..Default::default()</code></td>
-    <td><strong>Struct update syntax.</strong> "Set <code>viewport</code> as written; take
-    every other field from the default." <code>NativeOptions</code> has dozens of fields
-    and you care about one. Same <code>Default</code> trait your <code>Editor</code>
-    implemented until lesson 2.</td>
-  </tr>
-  <tr>
-    <td><code>|_cc| …</code></td>
-    <td>A <strong>closure</strong> — the same anonymous-function syntax as
-    <code>|ui|</code> in the panel and <code>|i|</code> in the input check. It takes a
-    creation context you don't need, so the name is underscored. It's a closure rather
-    than a value because eframe has to build your app <em>after</em> it has a window and
-    a GPU, not before.</td>
-  </tr>
-  <tr>
-    <td><code>Box::new(…)</code></td>
-    <td>Puts a value on the <strong>heap</strong> and hands you a pointer to it. Needed
-    here because eframe accepts <em>any</em> type implementing <code>App</code>, and
-    different types have different sizes — so it can't hold one directly. Boxing makes
-    every app the same size: one pointer. The inner <code>Box</code> wraps your
-    <code>Editor</code>; the outer one wraps the closure, for the same reason.</td>
-  </tr>
-  <tr>
-    <td><code>Ok(…)</code></td>
-    <td>The closure returns a <code>Result</code> too, so an app that fails to start can
-    say so instead of panicking. Yours can't fail, so it's always <code>Ok</code>.</td>
-  </tr>
-</table>
-
-<p>Nothing there is exotic. It's <code>Result</code>, <code>Default</code>, closures, and
-one allocation — and you'd already met three of the four by the end of lesson 1. That's
-usually how deferred complexity turns out.</p>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>65 lines, after <code>cargo fmt</code>.</p>
+<p>89 lines, after <code>cargo fmt</code>.</p>
 
 <p class="filename">editor/src/main.rs</p>
 <pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
@@ -1266,6 +1140,21 @@ usually how deferred complexity turns out.</p>
 <span class="l">        <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"saved {} bytes to {}"</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);</span>
 <span class="l">        <span class="t">Ok</span>(())</span>
 <span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    <span class="c">/// Turn a character offset into a 1-based line and column.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {</span>
+<span class="l">        <span class="k">let</span> <span class="k">mut</span> line = <span class="s">1</span>;</span>
+<span class="l">        <span class="k">let</span> <span class="k">mut</span> column = <span class="s">1</span>;</span>
+<span class="l">        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">chars</span>().<span class="f">take</span>(char_index) {</span>
+<span class="l">            <span class="k">if</span> ch == <span class="s">'\n'</span> {</span>
+<span class="l">                line += <span class="s">1</span>;</span>
+<span class="l">                column = <span class="s">1</span>;</span>
+<span class="l">            } <span class="k">else</span> {</span>
+<span class="l">                column += <span class="s">1</span>;</span>
+<span class="l">            }</span>
+<span class="l">        }</span>
+<span class="l">        (line, column)</span>
+<span class="l">    }</span>
 <span class="l">}</span>
 <span class="l"></span>
 <span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
@@ -1277,12 +1166,21 @@ usually how deferred complexity turns out.</p>
 <span class="l">            }</span>
 <span class="l"></span>
 <span class="l">            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);</span>
-<span class="l">            ui.<span class="f">add</span>(</span>
-<span class="l">                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
-<span class="l">                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
-<span class="l">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),</span>
-<span class="l">            );</span>
-<span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="l">                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="l">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
+<span class="l">                .<span class="f">show</span>(ui);</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {</span>
+<span class="l">                <span class="t">Some</span>(range) =&gt; {</span>
+<span class="l">                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
+<span class="l">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)</span>
+<span class="l">                }</span>
+<span class="l">                <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),</span>
+<span class="l">            };</span>
+<span class="l"></span>
+<span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
 <span class="l">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
 <span class="l">        });</span>
 <span class="l">    }</span>
@@ -1303,82 +1201,76 @@ usually how deferred complexity turns out.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 
-<p>Two on today, one reaching back to lesson 2. Each explanation links to where the idea
-was taught.</p>
-
 <div class="quiz">
-  <p class="q">Why does the compiler warn about <code>self.save();</code> when the program runs fine?</p>
+  <p class="q">Why is <code>cursor_range</code> an <code>Option</code> rather than a plain value?</p>
   <ul class="options">
-    <li data-correct>A failed save would look exactly like a good one</li>
-    <li>The function must be called with an explicit type</li>
-    <li>Saving inside a closure needs an exclusive borrow</li>
-    <li>Every method returning a value must be assigned</li>
+    <li data-correct>The text box may not have focus at all</li>
+    <li>Cursors are expensive to compute each frame</li>
+    <li>Selections can span more than a single line</li>
+    <li>Immediate mode discards widget state yearly</li>
   </ul>
-  <p class="why"><code>Result</code> is <code>#[must_use]</code>. Discarding it throws
-  away the only report of whether the write worked, so a failure becomes silent — the
-  worst kind, because you'd close the window believing your work was saved.
-  <a class="review" href="#stage-3">↑ Review: the must_use warning (stage 3)</a>
+  <p class="why">Click outside the text box and there is genuinely no cursor to report.
+  <code>Option</code> makes that case a thing you must name before the compiler lets you
+  at the value — the same trick <code>Result</code> plays with failure.
+  <a class="review" href="#option-vs-result">↑ Review: Option vs Result (stage 1)</a>
   </p>
 </div>
 
 <div class="quiz">
-  <p class="q">What does <code>?</code> do when <code>fs::write</code> returns an <code>Err</code>?</p>
+  <p class="q">Your text is <code>"let café = 2;"</code>. How do <code>len()</code> and <code>chars().count()</code> compare?</p>
   <ul class="options">
-    <li data-correct>Returns it to the caller straight away</li>
-    <li>Panics with the message inside it</li>
+    <li data-correct><code>len()</code> is larger — é takes two bytes</li>
+    <li>They agree; both count characters in order</li>
+    <li><code>len()</code> is smaller because it skips accents</li>
+    <li>They agree unless the string contains any emoji</li>
+  </ul>
+  <p class="why"><code>len()</code> returns <em>bytes</em>. Rust strings are UTF-8, so a
+  character is one to four bytes; <code>é</code> is two. That's why the sample measures 37
+  bytes but 36 chars, and why mixing the two indices silently misplaces the cursor.
+  <a class="review" href="#byte-vs-char">↑ Review: byte vs char offsets (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">From lesson 3: what does <code>?</code> do to an <code>Err</code> inside <code>save</code>?</p>
+  <ul class="options">
+    <li data-correct>Returns it immediately to the caller</li>
+    <li>Prints it and continues to the next line</li>
     <li>Converts it into a default success value</li>
-    <li>Retries the operation once, then gives up</li>
+    <li>Stores it on the struct for later reading</li>
   </ul>
-  <p class="why"><code>?</code> is early return. <code>save</code> doesn't know whether a
-  failed write deserves a message or a retry, so it propagates the error to the caller,
-  which does. That's also why the status line never gets set on a failed save.
-  <a class="review" href="#question-mark">↑ Review: what ? expands to (stage 4)</a>
-  </p>
-</div>
-
-<div class="quiz">
-  <p class="q">From lesson 2: why is <code>path</code> stored as <code>String</code> when <code>open</code> takes <code>&amp;str</code>?</p>
-  <ul class="options">
-    <li data-correct>The editor must own it, outliving the call</li>
-    <li>Borrowed strings cannot be printed to screen</li>
-    <li>Only owned strings can be compared for equality</li>
-    <li>The filesystem functions require owned strings</li>
-  </ul>
-  <p class="why">A <code>&amp;str</code> is borrowed from something else and lives only as
-  long as that thing does. The field has to survive for the editor's whole life, so it
-  owns a copy — while the parameter stays borrowed, so callers can pass a literal.
-  <a class="review" href="0002-opening-a-real-file.html#stage-4">↑ Review: &amp;str vs String (lesson 2, stage 4)</a>
+  <p class="why">Early return. <code>save</code> can't know whether a failed write
+  deserves a message or a retry, so it propagates upward to the code that does — which is
+  also why the success status never gets set on a failed save.
+  <a class="review" href="0003-saving-your-work.html#question-mark">↑ Review: what ? expands to (lesson 3, stage 4)</a>
   </p>
 </div>
 
 <p class="quiz-score"></p>
 
-<h2>Read this before lesson 4</h2>
+<h2>Read this before lesson 5</h2>
 
 <p><strong>Primary source:</strong>
-<a href="https://rust-book.cs.brown.edu/ch06-00-enums.html">
-<em>The Rust Programming Language</em>, Chapter 6 — Enums and Pattern Matching</a>
-(Brown University interactive edition).</p>
+<a href="https://doc.rust-lang.org/book/ch08-02-strings.html">
+<em>The Rust Programming Language</em>, 8.2 — Storing UTF-8 Encoded Text with Strings</a>.</p>
 
-<p>You've now used enums three lessons running without meeting them properly:
-<code>Result</code> is one, <code>match</code> exists to take them apart, and
-<code>if let</code> is the shorthand you just wrote. Chapter 6 covers all three from the
-ground up, and introduces <code>Option</code> — the enum for "there might not be one
-here", which is the first thing lesson 4 needs when we ask where the cursor is.</p>
+<p>Short, and squarely the thing you just met. It works through why Rust refuses to let
+you index a string with <code>s[0]</code> at all, and lays out the three ways to look at
+text — bytes, chars, and grapheme clusters. The section on grapheme clusters is the
+column-counting problem this lesson deferred.</p>
 
 <div class="ask">
-  <strong>I'm your teacher here — ask me things.</strong> The let-chain in stage 4
-  (<code>if save_requested &amp;&amp; let Err(error) = …</code>) is the newest syntax in
-  this lesson and the one most likely to feel arbitrary — ask and I'll show you the nested
-  version it replaced. Same for anything in the boilerplate table that raised more
-  questions than it answered.
+  <strong>I'm your teacher here — ask me things.</strong> Stage 3 has no code in it, which
+  is unusual — if a stage that only explains a bug felt like filler, tell me and I'll make
+  the case for it. And if <code>output.cursor_range</code> is <code>None</code> when you
+  expect a cursor, that's worth a message; focus behaviour is fiddly.
 </div>
 
 <nav class="footer-nav">
-  <a href="0002-opening-a-real-file.html">← Lesson 2: Opening a Real File</a>
+  <a href="0003-saving-your-work.html">← Lesson 3: Saving Your Work</a>
   <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
   <a href="../MISSION.md">Mission</a>
-  <a href="0004-where-is-the-cursor.html">Next: Lesson 4 — Where Is the Cursor? →</a>
+  <a href="0005-open-any-file.html">Next: Lesson 5 — Open Any File →</a>
 </nav>
 
 </body>

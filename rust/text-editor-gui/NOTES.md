@@ -35,17 +35,24 @@ language concept the next editor feature demands.
    _(written 2026-08-16; ends at 45 lines with `Editor::open(path)`)_
 3. ✅ Saving — `#[must_use]`, `?`, `if let`, Ctrl+S, and `main`'s deferred boilerplate
    _(written 2026-08-16; ends at 65 lines; lesson 1's promise now paid)_
-4. Cursor as (line, col) — `Option`, and the index-vs-grapheme problem
-5. Struct design pressure: what the `Editor` state needs to become
-6. Custom painting: stop using `TextEdit`, draw our own text and caret
-7. Feel `String` insertion hurt on a large file → introduce `ropey`
+4. ✅ Where is the cursor — `Option`, `TextEdit::show`, byte vs char index
+   _(written 2026-08-16; 89 lines; Ln/Col readout)_
+5. ✅ Open any file — CLI args, `unwrap_or_else`, match guards, `ErrorKind::NotFound`
+   _(written 2026-08-16; 97 lines; fixes the lesson-2 "error text in the buffer" bug)_
+6. Feel `String` insertion hurt on a large file → introduce `ropey`
+7. Custom painting: stop using `TextEdit`, draw our own text and caret
 8. Multiple buffers → `Vec<Buffer>`, tabs, and borrow-checker pressure
 9. Syntax highlighting
 10. Polish, README, release build
 
 ## Plan revisions
 
-- **2026-08-16:** lesson 2 was going to be "struct design, `Vec<String>` of lines".
+- **2026-08-16 (b):** planned lesson 5 was "struct design pressure". Replaced by
+  "open any file" — the CLI-arg change is one line but it exposes a real bug (a missing
+  file's error text landing in the save buffer), and fixing a bug the learner already
+  shipped beats an abstract refactor. Struct design will arrive on its own once multiple
+  buffers force it.
+- **2026-08-16 (a):** lesson 2 was going to be "struct design, `Vec<String>` of lines".
   Dropped — `TextEdit` binds to a `&mut String`, so a line-vector can't work until we
   paint text ourselves. A lines-based buffer is a lesson-6-or-later idea, and lesson 1's
   own footer already promised file opening. Teach the thing the code can actually do.
@@ -66,5 +73,13 @@ language concept the next editor feature demands.
   `save_and_report` method is the fallback — it compiles clean too, at 75 lines.
 - `?` earns its place in lesson 3 because `save` does a fallible write *then* a
   follow-up. Don't retro-fit `?` into single-operation functions just to show it off.
+- Lesson 4 deliberately defers grapheme clusters (tabs, emoji) to the custom-painting
+  lesson. It says so in a sidenote — don't quietly drop that promise.
+- Lesson 5's checkpoint is **abridged** (elides unchanged fns) — the first one that is.
+  Its `open` and `main` were diffed against the verified 97-line file. If Deryk dislikes
+  abridged checkpoints, revert to full listings; the lesson's ask-block invites that.
+- `move` is NOT needed on eframe's app-creator closure: `AppCreator<'app>` carries a
+  lifetime, so it can borrow a local. I had planned a lesson-5 teaching moment around
+  the missing-`move` error; it does not exist. Verified against eframe 0.36.1 source.
 - Lesson 6 owes the immediate-mode performance reckoning — lesson 1 promises a fight
   with egui when a 50,000-line file meets a naive redraw.

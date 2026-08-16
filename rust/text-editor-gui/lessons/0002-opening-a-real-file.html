@@ -119,6 +119,16 @@ h3 {
   letter-spacing: 0.01em;
 }
 
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
 .subtitle {
   font-size: 1.15rem;
   font-style: italic;
@@ -171,7 +181,7 @@ a code { color: var(--chip-ink); }
 
 /* Headings set their own scale and weight; a boxed chip fights them.
    Use colour alone to mark code here. */
-h1 code, h2 code, h3 code,
+h1 code, h2 code, h3 code, h4 code,
 .subtitle code, .thesis code,
 .recall > summary code {
   font-size: 0.86em;
@@ -441,7 +451,9 @@ body { counter-reset: stage; }
   font-size: 1.2rem;
   font-weight: 400;
 }
-.stage > h3::before {
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
   content: "Stage " counter(stage);
   position: absolute;
   left: 0;
@@ -1032,7 +1044,17 @@ leans on this constantly.</p>
 and the program carried on. Your editor degraded instead of dying — which for a tool
 someone else might run is the difference between "handled that badly" and "handled that".</p>
 
-<h3 id="unwrap">What the compiler suggested instead</h3>
+<div class="callout note" id="the-lie">
+  <span class="label">Now read that message again</span>
+  It says <strong>could not open src/main.rs</strong>. You asked it to open
+  <code>src/mian.rs</code>. The message names a file that was never involved — because
+  the path is written twice and you only changed one of them. This is a small bug you
+  just shipped, and a preview of a large category: a duplicated literal drifts, and the
+  copy that drifts is usually the one in the error message, where it does the most damage
+  and gets noticed the least. Stage 4 makes it impossible.
+</div>
+
+<h4 id="unwrap">What the compiler suggested instead</h4>
 
 <p>Back in stage 1, <code>rustc</code> offered you <code>.expect("REASON")</code>. It has
 a shorter sibling, <code>.unwrap()</code>. Both mean: <em>give me the
@@ -1130,8 +1152,11 @@ has to call the new name:</p>
 <div class="callout key">
   <span class="label">The path is now in exactly one place</span>
   Both the read and the error message use <code>path</code>. Change the argument in
-  <code>main</code> and both follow. That's not tidiness for its own sake — duplicated
-  literals are how error messages end up lying about what actually happened.
+  <code>main</code> and both follow. That's not tidiness for its own sake — it's the fix
+  for the bug you watched happen in
+  <a href="#the-lie">stage 3, where the message named the wrong file</a>. Misspell the
+  argument now and the message reports the misspelling, because there is no second copy
+  left to disagree with it.
 </div>
 
 <p class="sidenote">Relative to what? <code>cargo run</code> starts your program with the

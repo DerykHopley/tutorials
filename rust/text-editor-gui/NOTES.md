@@ -41,11 +41,34 @@ language concept the next editor feature demands.
    _(written 2026-08-16; 97 lines; fixes the lesson-2 "error text in the buffer" bug)_
 6. ✅ Measure before you optimise — `Instant`, frame-time readout, real numbers
    _(written 2026-08-16; 114 lines; overturned the "String is the bottleneck" plan)_
-7. Draw only what you can see — custom painting + viewport culling (the real fix)
-8. `ropey` — but only once a measurement demands it
-8. Multiple buffers → `Vec<Buffer>`, tabs, and borrow-checker pressure
-9. Syntax highlighting
-10. Polish, README, release build
+7. Syntax highlighting via `TextEdit::layouter` — tokenise one language, colour it
+8. Highlighting is slow → use the lesson-6 instrument, then cache the galley
+9. Multiple buffers → `Vec<Buffer>` + tabs. Struct design finally forces itself here
+10. Undo/redo — the first thing a reviewer presses after typing _(candidate)_
+11. Tests — `line_col` and `open` are pure and beautifully testable _(candidate)_
+12. `ropey` — justified by a measurement from lessons 8–9, with the written rationale
+13. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
+
+**Estimated total: 12–14.** Floor is 11 if 10 and 11 are dropped.
+
+### The fork that decides the number
+
+`TextEdit::layouter(&mut dyn FnMut(&Ui, &dyn TextBuffer, f32) -> Arc<Galley>)` exists in
+egui 0.36 (verified in source). That means **syntax highlighting does not require
+abandoning `TextEdit`**, which is the single biggest scoping decision left:
+
+- **Stay on `TextEdit`** (planned above): ~12–14 lessons. Keeps egui's text input,
+  selection, clipboard and IME for free. Accepts the lesson-6 ceiling — 7 ms/frame while
+  typing at 50k lines in release, and under 1.5 ms at 10k, which covers almost all real
+  source files.
+- **Own the rendering** (paint text ourselves, cull to the viewport): +3 or more lessons,
+  ~16 total, and it means reimplementing text input, selection and clipboard from
+  scratch. This is where most hobby editors die. Only take it if the mission changes to
+  "understand rendering" rather than "ship a portfolio editor".
+
+Lesson 6's closing section currently promises lesson 7 will be "drawing only what you can
+see". **If we take the stay-on-`TextEdit` path, that promise must be rewritten** — do not
+leave it dangling.
 
 ## Plan revisions
 

@@ -39,14 +39,23 @@ language concept the next editor feature demands.
    _(written 2026-08-16; 89 lines; Ln/Col readout)_
 5. ✅ Open any file — CLI args, `unwrap_or_else`, match guards, `ErrorKind::NotFound`
    _(written 2026-08-16; 97 lines; fixes the lesson-2 "error text in the buffer" bug)_
-6. Feel `String` insertion hurt on a large file → introduce `ropey`
-7. Custom painting: stop using `TextEdit`, draw our own text and caret
+6. ✅ Measure before you optimise — `Instant`, frame-time readout, real numbers
+   _(written 2026-08-16; 114 lines; overturned the "String is the bottleneck" plan)_
+7. Draw only what you can see — custom painting + viewport culling (the real fix)
+8. `ropey` — but only once a measurement demands it
 8. Multiple buffers → `Vec<Buffer>`, tabs, and borrow-checker pressure
 9. Syntax highlighting
 10. Polish, README, release build
 
 ## Plan revisions
 
+- **2026-08-16 (c):** lesson 6 was planned as "feel `String` insertion hurt → introduce
+  `ropey`". **Measured, and the premise was false.** On a 2 MB / 50k-line file:
+  `String::insert` mid-file = 11 µs (0.2% of frame); `line_col` = 875 µs (12%); egui's
+  full-text layout ≈ 6.2 ms (87%). Debug build ≈ 10× slower than release at every size
+  (70.61 ms vs 7.10 ms per keystroke at 50k lines). So lesson 6 became a profiling lesson
+  and the rope moved to lesson 8, gated on a measurement. **Do not reintroduce the rope
+  until a number asks for it** — the lesson explicitly makes that promise.
 - **2026-08-16 (b):** planned lesson 5 was "struct design pressure". Replaced by
   "open any file" — the CLI-arg change is one line but it exposes a real bug (a missing
   file's error text landing in the save buffer), and fixing a bug the learner already
@@ -81,5 +90,12 @@ language concept the next editor feature demands.
 - `move` is NOT needed on eframe's app-creator closure: `AppCreator<'app>` carries a
   lifetime, so it can borrow a local. I had planned a lesson-5 teaching moment around
   the missing-`move` error; it does not exist. Verified against eframe 0.36.1 source.
-- Lesson 6 owes the immediate-mode performance reckoning — lesson 1 promises a fight
-  with egui when a 50,000-line file meets a naive redraw.
+- ~~Lesson 6 owes the immediate-mode performance reckoning~~ — paid in lesson 6.
+- Lesson 6 leaves `request_repaint()` in the code so the readout keeps updating. It burns
+  CPU when idle, which contradicts lesson 1's praise of egui. The lesson says so; lesson 7
+  or the polish lesson should remove it or put it behind a flag.
+- Lesson 6's numbers are from this machine. The lesson tells Deryk to expect different
+  absolute values and to check the *shape* (linear in size, ~10× debug/release).
+- Benchmarks used `Context::run_ui` headlessly. Gotcha: you must call
+  `out.textures_delta.clear()` or epaint panics on drop with "Dropped TexturesDelta with
+  1 unapplied deltas".

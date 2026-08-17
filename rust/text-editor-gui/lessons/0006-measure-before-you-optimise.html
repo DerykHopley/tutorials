@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lesson 5 — Open Any File</title>
+<title>Lesson 6 — Measure Before You Optimise</title>
 <!-- @assets:style.css,quiz.css,quiz.js -->
 <style>
 /* ---- generated from assets/style.css — do not edit here ---- */
@@ -867,30 +867,31 @@ th {
 <body>
 
 <header class="masthead">
-  <p class="eyebrow">Lesson 05 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~25 minutes</p>
-  <h1>Open Any File</h1>
-  <p class="subtitle">Three stages — and the stage in the middle is a bug you already shipped.</p>
+  <p class="eyebrow">Lesson 06 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~35 minutes</p>
+  <h1>Measure Before You Optimise</h1>
+  <p class="subtitle">Three stages to an editor that reports its own frame time — and proves my prediction wrong.</p>
 </header>
 
-<p>Your editor opens exactly one file, whose name is baked into the binary. That's the
-last thing standing between it and being a tool someone could actually use. Fixing it
-takes one line.</p>
+<p>Back in
+<a href="0001-your-first-window.html#stage-6">lesson 1</a> I promised that immediate mode
+would eventually bite, and that we'd have the fight around lesson 6, "when a 50,000-line
+file meets a naive redraw". This is that lesson.</p>
 
-<p>The interesting part is what that line exposes. Once the editor can be pointed at any
-path, it can be pointed at a path that <em>doesn't exist yet</em> — and it turns out
-you've been handling that case badly since lesson 2, in a way that would destroy the
-file.</p>
+<p>I also wrote a plan predicting how it would go: <em>feel <code>String</code> insertion
+hurt on a large file, then reach for a rope data structure.</em> That prediction was
+wrong, and I only know it's wrong because I measured. Fixing what you assumed is slow is
+the most reliable way to spend a week making no difference.</p>
 
 <div class="thesis">
-  "Missing" and "broken" are not the same answer.<br>
-  A file that isn't there yet is a new file. Treating it as an error is what puts an
-  error message where your document should be.
+  You are not allowed a performance opinion without a number.<br>
+  Not a benchmark someone else ran, not a rule of thumb — a number your own program
+  printed, on your machine, doing your work.
 </div>
 
 <h2>Where you're starting</h2>
 
-<p>Lesson 4's 89 lines, with the Ln/Col readout. Check against
-<a href="0004-where-is-the-cursor.html#where-you-ended-up">lesson 4's checkpoint</a>.</p>
+<p>Lesson 5's 97 lines, opening any file from the command line. Check against
+<a href="0005-open-any-file.html#where-you-ended-up">lesson 5's checkpoint</a>.</p>
 
 <p class="legend">
   <span class="swatch new"></span>adding &nbsp;&nbsp;
@@ -899,325 +900,364 @@ file.</p>
 </p>
 
 <section class="stage" id="stage-1">
-<h3>Take the path from the command line</h3>
+<h3>Give it a stopwatch</h3>
 
-<p class="goal"><code>cargo run -- somefile.rs</code> opens that file.</p>
+<p class="goal">The editor reports how long its own frame took.</p>
 
-<p><strong>Three edits</strong>, all small.</p>
+<p><strong>Four edits.</strong> First, the standard library's clock:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
-<pre><code><span class="dim"><span class="k">use</span> eframe::egui;</span>
-<span class="add"><span class="k">use</span> std::env;</span>
-<span class="dim"><span class="k">use</span> std::fs;
-<span class="k">use</span> std::io;</span></code></pre>
+<pre><code><span class="dim"><span class="k">use</span> std::io;</span>
+<span class="add"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span></code></pre>
 
-<p class="sidenote">Alphabetical, and <code>rustfmt</code> will sort a contiguous block
-of <code>use</code> lines for you. Keeping them ordered is the sort of small consistency
-a reviewer notices without being able to say why the file feels tidy.</p>
+<p>Second and third — somewhere to keep the measurement, and a starting value:</p>
 
-<p>Second — read the argument at the top of <code>main</code>:</p>
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="dim">    status: <span class="t">String</span>,</span>
+<span class="add">    frame_ms: f32,</span>
+<span class="dim">}</span></code></pre>
 
-<p class="filename">editor/src/main.rs<span class="where">top of main</span></p>
-<pre><code><span class="dim"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
-<span class="add">    <span class="k">let</span> path = env::<span class="f">args</span>()
-        .<span class="f">nth</span>(<span class="s">1</span>)
-        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());
-</span><span class="dim">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
+<pre><code><span class="dim">            text,
+            status,</span>
+<span class="add">            frame_ms: <span class="s">0.0</span>,</span>
+<span class="dim">        }</span></code></pre>
 
-<p>Three things in three lines:</p>
+<p>Fourth — wrap the frame. Note that two of these lines go <em>outside</em> the panel
+closure, one at the very top of <code>ui</code> and one at the very bottom:</p>
 
-<ul>
-  <li><code>env::args()</code> is an iterator over the command-line arguments —
-  the same kind of thing as <code>self.text.chars()</code> in lesson 4.</li>
-  <li><code>.nth(1)</code> takes the second one, because argument zero is the program's
-  own name. It returns <code>Option&lt;String&gt;</code>: there might not be a second
-  argument, and <a href="0004-where-is-the-cursor.html#option">lesson 4's
-  <code>Option</code></a> is how Rust says so.</li>
-  <li><code>.unwrap_or_else(…)</code> is the <code>Option</code> equivalent of "or else
-  use this". <code>Some(p)</code> gives you <code>p</code>; <code>None</code> runs the
-  closure and uses that instead.</li>
-</ul>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, around the panel</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
+<span class="add">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
+        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
+</span>
+<span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
+            <span class="c">// … everything as before …</span>
+        });</span>
+<span class="add">
+        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;</span>
+<span class="dim">    }</span></code></pre>
 
-<div class="callout note">
-  <span class="label">Not the unwrap you were warned about</span>
-  <code>unwrap_or_else</code> shares a prefix with <code>unwrap()</code> and nothing else.
-  <a href="0002-opening-a-real-file.html#unwrap"><code>unwrap()</code></a> crashes when
-  there's nothing there. <code>unwrap_or_else</code> is the opposite — it exists
-  <em>because</em> there might be nothing there, and says what to do about it. The family
-  is worth knowing: <code>unwrap_or(v)</code> for a ready-made value,
-  <code>unwrap_or_else(f)</code> when the fallback costs something to build,
-  <code>unwrap_or_default()</code> for the type's default.
-</div>
+<p>And show it, in the label you already have:</p>
 
-<p>Third — use it instead of the literal:</p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
+<pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(
+                <span class="s">"{position}  ·  {} bytes  ·  {:.2} ms/frame"</span>,
+                <span class="k">self</span>.text.<span class="f">len</span>(),
+                <span class="k">self</span>.frame_ms
+            ));</span></code></pre>
 
-<p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
-<pre><code><span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(<span class="s">"scratch.md"</span>)))),</span>
-<span class="add">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span></code></pre>
+<h4 id="last-frame">Why it shows the previous frame</h4>
 
-<p class="run">cargo run -- src/main.rs<br>
-→ your editor, showing its own source again — by request this time<br>
-cargo run<br>
-→ no argument, so <em>scratch.md</em> as before</p>
+<p><code>frame_ms</code> is written <em>after</em> the panel has been drawn, so the label
+you just built is showing last frame's number. It can't show its own — the frame isn't
+over until after the label exists. Every frame-time readout in every program works this
+way.</p>
 
-<p class="sidenote">The <code>--</code> separates cargo's arguments from your program's.
-Without it, cargo would try to interpret <code>src/main.rs</code> itself.</p>
+<p><strong><code>request_repaint()</code></strong> is the other half. Remember
+<a href="0001-your-first-window.html#repaints">lesson 1</a>: egui only repaints when
+something happens, so an idle editor would freeze the number at whatever it was when you
+last touched a key. Asking for a repaint every frame turns that off, which is exactly
+what you want while measuring and exactly what you'd remove afterwards — it burns CPU
+forever, which is the thing lesson 1 praised egui for avoiding.</p>
 
-<div class="callout warn">
-  <span class="label">It can open its own source again — be careful</span>
-  Ctrl+S still writes to whatever is open. Pointing it at <code>src/main.rs</code> is fine
-  for looking; just don't type in the window and save unless you meant to.
-</div>
+<p class="run">cargo run<br>
+→ <em>Ln 1, Col 1 · 31 bytes · 0.09 ms/frame</em><br>
+<span class="note">Small file, tiny number. That's the control.</span></p>
 </section>
 
 <section class="stage" id="stage-2">
-<h3>Open a file that doesn't exist</h3>
+<h3>Feed it something enormous</h3>
 
-<p class="goal">Find the bug. No code change — just look at what happens.</p>
+<p class="goal">Watch the number move. No code — this stage is data collection.</p>
 
-<p>Now that any path works, try a path that isn't there yet:</p>
+<p>Make a genuinely large source file — 50,000 lines, about 2 MB:</p>
 
-<p class="run">cargo run -- notes.md<br>
-→ the window opens containing:<br><br>
-could not open notes.md<br><br>
-No such file or directory (os error 2)</p>
+<p class="run">cd editor<br>
+seq 1 50000 | awk '{print "    let value_" $1 " = compute(" $1 ") + 1;"}' &gt; big.rs<br>
+wc -l big.rs<br>
+<span class="note">50000 big.rs — and it's disposable, delete it when you're done.</span></p>
+
+<p class="run">cargo run -- big.rs<br>
+→ scroll around, then <strong>type a character</strong> and watch the number</p>
+
+<p>Two numbers matter, and they're very different. <em>Idle</em> is what you get while the
+text sits unchanged. <em>Typing</em> is what you get on the frames where the text
+changed. Here's what I measured on this machine:</p>
+
+<table id="numbers">
+  <tr><th>File</th><th>Idle</th><th>Typing</th><th>Typing, <code>--release</code></th></tr>
+  <tr><td>100 lines</td><td>0.10 ms</td><td>0.68 ms</td><td>0.04 ms</td></tr>
+  <tr><td>1,000 lines</td><td>0.25 ms</td><td>1.89 ms</td><td>0.15 ms</td></tr>
+  <tr><td>10,000 lines</td><td>1.86 ms</td><td>14.46 ms</td><td>1.44 ms</td></tr>
+  <tr><td>50,000 lines</td><td>9.29 ms</td><td><strong>70.61 ms</strong></td><td><strong>7.10 ms</strong></td></tr>
+</table>
+
+<p>A frame at 60 fps has <strong>16.7 ms</strong>. So in the build you've been running all
+along, a 50,000-line file gives you about 14 frames per second while typing — the editor
+visibly lags behind your fingers.</p>
+
+<p>Now run the same thing optimised:</p>
+
+<p class="run">cargo run --release -- big.rs<br>
+<span class="note">First build takes a minute — it's recompiling all 414 crates with optimisation.</span></p>
 
 <details class="recall">
-  <summary>Before reading on: that text is sitting in the editing buffer. What happens the moment you press Ctrl+S?</summary>
-  <p>It writes the error message to <code>notes.md</code> as the file's contents. You
-  asked to start a new document and the editor invented a file containing a complaint
-  about that document not existing.</p>
+  <summary>Before you look: how much faster do you expect the optimised build to be? Commit to a number.</summary>
+  <p>About <strong>ten times</strong>, and it's roughly ten times at every size. 70.61 ms
+  becomes 7.10 ms; 14.46 becomes 1.44. Most people guess two or three.</p>
 </details>
 
-<p>Go on — press Ctrl+S and then look:</p>
-
-<p class="run">cat editor/notes.md<br>
-→ could not open notes.md<br><br>
-→ No such file or directory (os error 2)<br>
-<span class="note">Then: rm editor/notes.md</span></p>
-
-<p>This has been true since
-<a href="0002-opening-a-real-file.html#stage-2">lesson 2, stage 2</a>, where the
-<code>Err</code> arm put the error message into <code>text</code>. At the time that was
-the right call: it was the smallest thing that kept the window open, and it demonstrated
-that failure could be data rather than a crash. But <code>text</code> is the
-<em>document</em>. Anything you put there is something the user might save.</p>
-
 <div class="callout key">
-  <span class="label">The actual mistake, in one sentence</span>
-  Two different situations — "this file is broken" and "this file is new" — were being
-  given the same answer, and the answer was wrong for both.
+  <span class="label">The single most useful number in this lesson</span>
+  A debug build is ~10× slower than a release build. Rust's debug profile turns off
+  optimisation entirely and keeps every bounds check and overflow check. If you ever catch
+  yourself thinking "Rust is supposed to be fast, why is this crawling" — check which
+  profile you're in before you change a single line of code.
 </div>
+
+<p class="sidenote">This is also why performance complaints about Rust programs are worth
+one question before any other: <em>release build?</em> It's the same reason the toolchain
+reference tells you a debug-build editor feeling sluggish on a big file is not a bug.</p>
 </section>
 
 <section class="stage" id="stage-3">
-<h3>Tell the two apart</h3>
+<h3>Find out where the time actually goes</h3>
 
-<p class="goal">A missing file opens as an empty new document. A broken one says so, without polluting the buffer.</p>
+<p class="goal">Time your own code separately, and stop guessing.</p>
 
-<p><strong>One edit</strong>, replacing the body of <code>open</code>:</p>
+<p>7 ms per keystroke in release is still 43% of a frame. Something is doing real work.
+The obvious suspect is <code>line_col</code> from lesson 4 — it walks the text from the
+start on every single frame, which is exactly the kind of thing that should scale badly.
+So measure it rather than assuming. <strong>Three edits.</strong></p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="dim">    frame_ms: f32,</span>
+<span class="add">    line_col_us: f32,</span>
+<span class="dim">}</span></code></pre>
 
 <p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
-<pre><code><span class="del">    <span class="c">/// Open a file into a new editor. A failure becomes the buffer contents,</span></span>
-<span class="del">    <span class="c">/// so the window always opens.</span></span>
-<span class="add">    <span class="c">/// Open a file into a new editor. A file that doesn't exist yet is not an</span>
-    <span class="c">/// error — it's a new file, and starts empty.</span></span>
-<span class="dim">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {</span>
-<span class="del">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
-<span class="del">            <span class="t">Ok</span>(contents) =&gt; contents,</span>
-<span class="del">            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open {path}\n\n{error}"</span>),</span>
-<span class="del">        };</span>
-<span class="add">        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
-            <span class="t">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
-            <span class="t">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
-                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"new file: {path}"</span>))
-            }
-            <span class="t">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"could not open {path}: {error}"</span>)),
-        };</span>
-<span class="dim">        <span class="t">Self</span> {
-            path: path.<span class="f">to_owned</span>(),
-            text,</span>
-<span class="del">            status: <span class="t">String</span>::<span class="f">new</span>(),</span>
-<span class="add">            status,</span>
-<span class="dim">        }
-    }</span></code></pre>
+<pre><code><span class="dim">            frame_ms: <span class="s">0.0</span>,</span>
+<span class="add">            line_col_us: <span class="s">0.0</span>,</span>
+<span class="dim">        }</span></code></pre>
 
-<p>Three things worth naming here.</p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the Some arm</span></p>
+<pre><code><span class="dim">                <span class="t">Some</span>(range) =&gt; {</span>
+<span class="add">                    <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();</span>
+<span class="dim">                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
+<span class="add">                    <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;</span>
+<span class="dim">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
+                }</span></code></pre>
 
-<p><strong>The match guard.</strong> <code>Err(error) if error.kind() == …</code> — the
-<code>if</code> after a pattern is a <strong>guard</strong>. The arm matches only when the
-pattern fits <em>and</em> the condition holds. Arms are tried top to bottom, so the
-specific <code>NotFound</code> case gets first refusal and the bare <code>Err</code> below
-catches everything else: permissions, a directory where a file should be, invalid UTF-8.</p>
+<p>Microseconds this time, not milliseconds — if you measure a small thing in big units
+you get <code>0.00</code> and learn nothing. Add it to the label:</p>
 
-<p><strong><code>ErrorKind</code>.</strong> An <code>io::Error</code> isn't just a
-message; <code>.kind()</code> returns an enum you can match on. That's what lets you make
-a decision about <em>why</em> something failed rather than pattern-matching on English
-text, which breaks the moment someone runs your program in another locale.</p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
+<pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
+<span class="del">                <span class="s">"{position}  ·  {} bytes  ·  {:.2} ms/frame"</span>,</span>
+<span class="del">                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
+<span class="add">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
+                <span class="k">self</span>.text.<span class="f">len</span>(),
+                <span class="k">self</span>.line_col_us,</span>
+<span class="dim">                <span class="k">self</span>.frame_ms
+            ));</span></code></pre>
 
-<p><strong>The tuple.</strong> The <code>match</code> now produces two values at once and
-they're destructured on the way out — the same
-<a href="0004-where-is-the-cursor.html#stage-2">tuple destructuring</a> as
-<code>line_col</code>, doing real work: each arm decides both what the buffer holds and
-what the user is told, and the compiler checks every arm answers both.</p>
+<p class="run">cargo run --release -- big.rs<br>
+→ press Ctrl+End to put the cursor at the very bottom, then type<br>
+→ <em>… line_col 875 µs · 7.10 ms/frame</em></p>
 
-<p class="sidenote">Note what the buffer holds in every arm now: file contents, or nothing
-at all. Never a message. That's the invariant worth remembering —
-<em>the document is never a place to put diagnostics</em>, because the document is the
-thing you save.</p>
+<h4 id="the-verdict">Read the two numbers together</h4>
 
-<p class="run">cargo run -- notes.md<br>
-→ an empty window, status: <em>new file: notes.md</em><br>
-→ type something, Ctrl+S, and cat editor/notes.md — your text, and only your text<br>
-<span class="note">Then, to see the other branch: mkdir editor/adir &amp;&amp; cargo run -- adir</span></p>
+<p><code>line_col</code> costs <strong>0.875 ms</strong> of a <strong>7.10 ms</strong>
+frame. It is about an eighth of the cost. Real, worth fixing eventually — and nowhere near
+the thing that's making the editor slow.</p>
 
-<p>That last one opens a <em>directory</em>. Not missing, so not a new file — the general
-arm catches it and reports it, buffer still empty.</p>
+<p>So what is? Everything else in that frame, and almost all of it is one thing: egui
+lays out the <em>entire</em> 2 MB of text — every glyph position, every line wrap — every
+time the text changes. It doesn't know that you only changed one character near the top,
+and it doesn't know that you can only see forty lines of it.</p>
 
-<p class="run">rm -r editor/adir editor/notes.md<br>
+<table id="where-time-goes">
+  <tr><th>Suspect</th><th>Measured</th><th>Share of a 7.10 ms frame</th></tr>
+  <tr><td><code>String::insert</code> (the buffer)</td><td>0.011 ms</td><td>0.2%</td></tr>
+  <tr><td><code>line_col</code> (our code)</td><td>0.875 ms</td><td>12%</td></tr>
+  <tr><td>egui laying out all the text</td><td>~6.2 ms</td><td>~87%</td></tr>
+</table>
+
+<div class="callout note">
+  <span class="label">I predicted the wrong bottleneck, in writing</span>
+  The plan for this lesson said we'd "feel <code>String</code> insertion hurt on a large
+  file" and then reach for a rope. Inserting a character into the middle of a 2 MB
+  <code>String</code> takes <strong>11 microseconds</strong> — 0.2% of the frame. It
+  copies a megabyte, and copying a megabyte is just not slow on modern hardware. Had I
+  followed the plan, you'd have spent a lesson replacing a data structure that was never
+  the problem, and the editor would have felt exactly as slow afterwards.
+</div>
+
+<p>This is the whole reason the lesson exists. The rope isn't wrong — it becomes right at
+a size and an edit pattern we haven't reached. But "obviously O(n) therefore obviously the
+bottleneck" is the most expensive kind of obvious.</p>
+
+<p class="run">rm editor/big.rs<br>
 cargo fmt &amp;&amp; cargo clippy<br>
-<span class="note">Both should be silent.</span></p>
+<span class="note">Both silent. Keep the instrumentation — lesson 7 needs it.</span></p>
 </section>
+
+<h2 id="what-next">What we do about it</h2>
+
+<p>Three findings, in the order they're worth acting on:</p>
+
+<ol>
+  <li><strong>Use <code>--release</code> when you care about speed.</strong> Free, and
+  the largest single factor at every file size.</li>
+  <li><strong>egui's full-text layout is the real cost.</strong> There's no flag for
+  this. The fix is to stop handing egui the whole file and draw only the lines that are
+  on screen — which means painting text ourselves. That's lesson 7, and it's the
+  structural change lesson 1 was pointing at.</li>
+  <li><strong>The buffer is fine, for now.</strong> <code>String</code> stops being fine
+  when edits stop being cheap: many megabytes, or edits far from the end, or undo history
+  wanting cheap snapshots. We'll swap it when a measurement says to, and you'll have the
+  measurement because you just built the instrument.</li>
+</ol>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>97 lines. Only <code>open</code> and <code>main</code> changed from lesson 4.</p>
+<p>114 lines. Only the struct, <code>open</code>, and <code>ui</code> changed.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the parts that changed</span></p>
 <pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
 <span class="l"><span class="k">use</span> std::env;</span>
 <span class="l"><span class="k">use</span> std::fs;</span>
 <span class="l"><span class="k">use</span> std::io;</span>
+<span class="l"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span>
 <span class="l"></span>
 <span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
 <span class="l">    path: <span class="t">String</span>,</span>
 <span class="l">    text: <span class="t">String</span>,</span>
 <span class="l">    status: <span class="t">String</span>,</span>
+<span class="l">    frame_ms: f32,</span>
+<span class="l">    line_col_us: f32,</span>
 <span class="l">}</span>
 <span class="l"></span>
-<span class="l"><span class="k">impl</span> <span class="t">Editor</span> {</span>
-<span class="l">    <span class="c">/// Open a file into a new editor. A file that doesn't exist yet is not an</span></span>
-<span class="l">    <span class="c">/// error — it's a new file, and starts empty.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {</span>
-<span class="l">        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
-<span class="l">            <span class="t">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),</span>
-<span class="l">            <span class="t">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {</span>
-<span class="l">                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"new file: {path}"</span>))</span>
+<span class="l"><span class="c">// open() gains two fields; save() and line_col() are unchanged.</span></span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
+<span class="l">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();</span>
+<span class="l">        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();</span>
+<span class="l"></span>
+<span class="l">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="l">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
+<span class="l">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="t">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {</span>
+<span class="l">                <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"save failed: {error}"</span>);</span>
 <span class="l">            }</span>
-<span class="l">            <span class="t">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"could not open {path}: {error}"</span>)),</span>
-<span class="l">        };</span>
-<span class="l">        <span class="t">Self</span> {</span>
-<span class="l">            path: path.<span class="f">to_owned</span>(),</span>
-<span class="l">            text,</span>
-<span class="l">            status,</span>
-<span class="l">        }</span>
+<span class="l"></span>
+<span class="l">            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="l">                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="l">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
+<span class="l">                .<span class="f">show</span>(ui);</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {</span>
+<span class="l">                <span class="t">Some</span>(range) =&gt; {</span>
+<span class="l">                    <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();</span>
+<span class="l">                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
+<span class="l">                    <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;</span>
+<span class="l">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)</span>
+<span class="l">                }</span>
+<span class="l">                <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),</span>
+<span class="l">            };</span>
+<span class="l"></span>
+<span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
+<span class="l">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
+<span class="l">                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
+<span class="l">                <span class="k">self</span>.line_col_us,</span>
+<span class="l">                <span class="k">self</span>.frame_ms</span>
+<span class="l">            ));</span>
+<span class="l">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
+<span class="l">        });</span>
+<span class="l"></span>
+<span class="l">        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;</span>
 <span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    <span class="c">// save() and line_col() are unchanged from lesson 4.</span></span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
-<span class="l">    <span class="k">let</span> path = env::<span class="f">args</span>()</span>
-<span class="l">        .<span class="f">nth</span>(<span class="s">1</span>)</span>
-<span class="l">        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());</span>
-<span class="l"></span>
-<span class="l">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span>
-<span class="l">        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),</span>
-<span class="l">        ..<span class="t">Default</span>::<span class="f">default</span>()</span>
-<span class="l">    };</span>
-<span class="l"></span>
-<span class="l">    eframe::<span class="f">run_native</span>(</span>
-<span class="l">        <span class="s">"editor"</span>,</span>
-<span class="l">        options,</span>
-<span class="l">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span>
-<span class="l">    )</span>
 <span class="l">}</span></code></pre>
-
-<div class="callout warn">
-  <span class="label">This listing is abridged</span>
-  Unlike every other checkpoint, this one elides <code>save</code>, <code>line_col</code>
-  and the whole of <code>impl eframe::App</code>, because none of them changed. Your file
-  should still contain them. If yours is 97 lines and <code>cargo clippy</code> is silent,
-  you're in the right place.
-</div>
 
 <h2 id="check-yourself">Check yourself</h2>
 
 <div class="quiz">
-  <p class="q">Why put a guard on the first <code>Err</code> arm instead of matching <code>ErrorKind</code> on its own?</p>
+  <p class="q">Your editor crawls on a 2 MB file. What do you check before changing any code?</p>
   <ul class="options">
-    <li data-correct>The later arm still needs the error itself</li>
-    <li>Guards run faster than nested match arms</li>
-    <li>ErrorKind cannot be compared for equality</li>
-    <li>Match arms may not be ordered by specificity</li>
+    <li data-correct>Whether you are running a release build</li>
+    <li>Whether the buffer should become a rope</li>
+    <li>Whether the file has very long single lines</li>
+    <li>Whether the status bar is redrawn too often</li>
   </ul>
-  <p class="why">The general arm formats <code>{error}</code> into its message, so the
-  error value has to stay bound. The guard lets one arm ask about the <em>kind</em> while
-  both arms keep hold of the error. Arms are tried in order, so the specific case must
-  come first.
-  <a class="review" href="#stage-3">↑ Review: the match guard (stage 3)</a>
+  <p class="why">Debug builds measured ~10× slower at every file size — 70.61 ms per
+  keystroke versus 7.10 ms at 50,000 lines. It's the largest single factor and it costs
+  nothing to check, so it comes before any code change.
+  <a class="review" href="#numbers">↑ Review: the measurements (stage 2)</a>
   </p>
 </div>
 
 <div class="quiz">
-  <p class="q">What did the old <code>open</code> actually do wrong when a file was missing?</p>
+  <p class="q">Inserting a character into the middle of a 2 MB <code>String</code> copies about a megabyte. How long does that take?</p>
   <ul class="options">
-    <li data-correct>Put a message where the document belongs</li>
-    <li>Crashed the program before the window opened</li>
-    <li>Silently created an empty file on disk</li>
-    <li>Reported the wrong filename in the message</li>
+    <li data-correct>Around 11 microseconds — negligible here</li>
+    <li>Around 11 milliseconds — most of the frame</li>
+    <li>Around 110 milliseconds — visibly janky</li>
+    <li>It depends entirely on available system memory</li>
   </ul>
-  <p class="why">The error text went into <code>text</code> — the buffer you save. So the
-  first Ctrl+S wrote a complaint about the missing file into that very file. Diagnostics
-  belong in the status line; the document is only ever the document.
-  <a class="review" href="#stage-2">↑ Review: the bug in action (stage 2)</a>
+  <p class="why">11 µs, roughly 0.2% of the frame. Copying a megabyte is genuinely cheap
+  on modern hardware. "Obviously O(n), therefore obviously the bottleneck" is exactly the
+  reasoning this lesson exists to break.
+  <a class="review" href="#where-time-goes">↑ Review: where the time goes (stage 3)</a>
   </p>
 </div>
 
 <div class="quiz">
-  <p class="q">From lesson 4: why does <code>line_col</code> walk <code>chars()</code> instead of slicing the string?</p>
+  <p class="q">From lesson 1: why does the frame-time readout need <code>request_repaint()</code>?</p>
   <ul class="options">
-    <li data-correct>egui counts characters, not bytes</li>
-    <li>Slicing a string is far slower than iterating</li>
-    <li>Strings cannot be sliced before their first newline</li>
-    <li>Iterating avoids borrowing the buffer mutably</li>
+    <li data-correct>Idle egui stops repainting, freezing the number</li>
+    <li>Repainting resets the timer between two frames</li>
+    <li>Labels cache their text until explicitly invalidated</li>
+    <li>The clock only advances while a widget has focus</li>
   </ul>
-  <p class="why">The cursor arrives as a <code>CharIndex</code>. Slicing uses byte
-  offsets, so on any non-ASCII text the two disagree — quietly misplacing the cursor, or
-  panicking outright if the index lands inside a multi-byte character.
-  <a class="review" href="0004-where-is-the-cursor.html#byte-vs-char">↑ Review: byte vs char offsets (lesson 4, stage 3)</a>
+  <p class="why">egui repaints on interaction or animation, so an untouched editor draws
+  no frames and the number sits at whatever it last was. Forcing a repaint every frame is
+  right while measuring and wrong afterwards — it spends CPU forever.
+  <a class="review" href="0001-your-first-window.html#repaints">↑ Review: when egui repaints (lesson 1, stage 6)</a>
   </p>
 </div>
 
 <p class="quiz-score"></p>
 
-<h2>Read this before lesson 6</h2>
+<h2>Read this before lesson 7</h2>
 
 <p><strong>Primary source:</strong>
-<a href="https://doc.rust-lang.org/std/option/enum.Option.html">
-<code>std::option::Option</code> — the API documentation</a>.</p>
+<a href="https://nnethercote.github.io/perf-book/profiling.html">
+<em>The Rust Performance Book</em> — Profiling</a>, by Nicholas Nethercote.</p>
 
-<p>Not a chapter this time, deliberately. Scroll the method list and read the one-line
-summaries: <code>map</code>, <code>and_then</code>, <code>filter</code>,
-<code>ok_or</code>, <code>unwrap_or_default</code>. You've now used
-<code>unwrap_or_else</code> and matched on <code>Some</code>/<code>None</code> by hand;
-most of the hand-written matches you'd be tempted to write already exist as a named
-method. Learning to skim std's docs is a skill in itself, and <code>Option</code> is the
-friendliest page to practise on.</p>
+<p>Nethercote spent years making <code>rustc</code> itself faster, and the book opens
+where this lesson did: measure first, and measure the right build. The profiling chapter
+is short and lists the tools worth knowing — <code>perf</code>, <code>samply</code>,
+<code>cargo-flamegraph</code> — for when a hand-placed <code>Instant::now()</code> stops
+being enough. Read the profiling chapter and the "Build Configuration" one; both are a few
+minutes each.</p>
 
 <div class="ask">
-  <strong>I'm your teacher here — ask me things.</strong> Stage 2 asks you to deliberately
-  save a broken file to see what happens, which is an odd instruction from someone who
-  spent lesson 3 telling you to protect your files — ask if that tension bothers you, it's
-  worth talking about. And the abridged checkpoint is a first; say if you'd rather have
-  the whole file every time.
+  <strong>I'm your teacher here — ask me things.</strong> Your numbers will not match my
+  table, and they shouldn't — different CPU, different everything. What matters is the
+  <em>shape</em>: roughly linear in file size, roughly 10× between profiles, and
+  <code>line_col</code> a minority of the frame. If your shape disagrees with mine, that's
+  genuinely interesting and I'd like to see it.
 </div>
 
 <nav class="footer-nav">
-  <a href="0004-where-is-the-cursor.html">← Lesson 4: Where Is the Cursor?</a>
+  <a href="0005-open-any-file.html">← Lesson 5: Open Any File</a>
   <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
   <a href="../MISSION.md">Mission</a>
-  <a href="0006-measure-before-you-optimise.html">Next: Lesson 6 — Measure Before You Optimise →</a>
+  <span>Next: Lesson 7 — drawing only what you can see</span>
 </nav>
 
 </body>

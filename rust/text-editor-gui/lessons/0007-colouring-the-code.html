@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 7 — Colouring the Code</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 07 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~35 minutes</p>
+  <h1>Colouring the Code</h1>
+  <p class="subtitle">Three stages to syntax highlighting — by writing a tiny scanner and handing egui the result.</p>
+</header>
+
+<p>This is the feature that makes a text box look like a code editor. It's also the one
+that sounds like it needs a parser, a grammar file, and a week. It needs about forty
+lines.</p>
+
+<p>The trick is that egui lets you take over one specific job: turning text into
+positioned, coloured glyphs. Everything else — typing, selection, clipboard, scrolling,
+the cursor — stays exactly as it is.</p>
+
+<div class="thesis">
+  Highlighting is not a parser.<br>
+  It's a scanner that walks the text once, decides what colour each run of characters is,
+  and never has to be right about the whole program.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 6's 114 lines, with the frame-time readout. Check against
+<a href="0006-measure-before-you-optimise.html#where-you-ended-up">lesson 6's
+checkpoint</a>.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-1">
+<h3>Take over the layout</h3>
+
+<p class="goal">The text changes colour — proving the hook works before any cleverness.</p>
+
+<p>A <strong>galley</strong> is egui's word for laid-out text: every glyph, positioned,
+coloured, wrapped. Normally <code>TextEdit</code> builds one for you. It also lets you
+supply your own builder, called a <strong>layouter</strong>, which it will call every
+time it needs the text laid out. <strong>Three edits.</strong></p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
+<pre><code><span class="dim"><span class="k">use</span> eframe::egui;</span>
+<span class="add"><span class="k">use</span> egui::text::<span class="t">LayoutJob</span>;</span>
+<span class="dim"><span class="k">use</span> std::env;
+<span class="k">use</span> std::fs;
+<span class="k">use</span> std::io;</span>
+<span class="add"><span class="k">use</span> std::sync::<span class="t">Arc</span>;</span>
+<span class="dim"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span></code></pre>
+
+<p>Second — a free function, above <code>struct Editor</code>. Not a method: it needs
+nothing from the editor, and keeping it out of <code>impl Editor</code> avoids borrowing
+<code>self</code> while <code>TextEdit</code> already holds
+<code>&amp;mut self.text</code>.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">above struct Editor</span></p>
+<pre><code><span class="add"><span class="k">const</span> <span class="t">PLAIN</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xe8</span>, <span class="s">0xe5</span>, <span class="s">0xde</span>);
+
+<span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span>
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
+    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
+    job.wrap.max_width = wrap_width;
+
+    job.<span class="f">append</span>(
+        text,
+        <span class="s">0.0</span>,
+        egui::<span class="t">TextFormat</span> {
+            font_id: font,
+            color: <span class="t">PLAIN</span>,
+            ..<span class="t">Default</span>::<span class="f">default</span>()
+        },
+    );
+
+    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))
+}</span></code></pre>
+
+<p>A <code>LayoutJob</code> is a list of text runs, each with a
+<code>TextFormat</code>. Right now there's one run in one colour — deliberately boring.
+<code>job.wrap.max_width</code> is the width egui asks you to wrap at; pass it through or
+your long lines run off the edge.</p>
+
+<p>Third — tell <code>TextEdit</code> to use it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the text box</span></p>
+<pre><code><span class="add">            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
+            };
+
+</span><span class="dim">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="del">                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="dim">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
+<span class="add">                .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)</span>
+<span class="dim">                .<span class="f">show</span>(ui);</span></code></pre>
+
+<div class="callout note">
+  <span class="label"><code>.font(…)</code> comes out</span>
+  Once you supply a layouter, <em>you</em> choose the font — that's what
+  <code>TextStyle::Monospace.resolve(ui.style())</code> is doing inside
+  <code>highlight</code>. Leaving <code>.font(…)</code> on the builder isn't an error, it
+  just stops meaning anything, and a line that looks like it does something but doesn't is
+  worse than no line.
+</div>
+
+<p class="run">cargo run<br>
+→ same text, now in the off-white you chose. The hook works.</p>
+</section>
+
+<section class="stage" id="stage-2">
+<h3>Find the keywords</h3>
+
+<p class="goal"><code>fn</code>, <code>let</code>, <code>struct</code> turn purple.</p>
+
+<p>Now the scanner. It walks the text once, chopping off one run at a time and deciding
+its colour. <strong>Two edits.</strong></p>
+
+<p class="filename">editor/src/main.rs<span class="where">above fn highlight</span></p>
+<pre><code><span class="add"><span class="c">/// Words the highlighter treats as keywords.</span>
+<span class="k">const</span> <span class="t">KEYWORDS</span>: &amp;[&amp;<span class="k">str</span>] = &amp;[
+    <span class="s">"as"</span>, <span class="s">"const"</span>, <span class="s">"else"</span>, <span class="s">"enum"</span>, <span class="s">"fn"</span>, <span class="s">"for"</span>, <span class="s">"if"</span>, <span class="s">"impl"</span>, <span class="s">"in"</span>, <span class="s">"let"</span>, <span class="s">"match"</span>, <span class="s">"mod"</span>, <span class="s">"move"</span>,
+    <span class="s">"mut"</span>, <span class="s">"pub"</span>, <span class="s">"return"</span>, <span class="s">"self"</span>, <span class="s">"struct"</span>, <span class="s">"trait"</span>, <span class="s">"use"</span>, <span class="s">"while"</span>,
+];
+</span>
+<span class="dim"><span class="k">const</span> <span class="t">PLAIN</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xe8</span>, <span class="s">0xe5</span>, <span class="s">0xde</span>);</span>
+<span class="add"><span class="k">const</span> <span class="t">KEYWORD</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xcf</span>, <span class="s">0x9b</span>, <span class="s">0xe0</span>);</span></code></pre>
+
+<p>Second — replace the single <code>job.append(…)</code> with the loop:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn highlight, replacing the single append</span></p>
+<pre><code><span class="add">    <span class="k">let</span> <span class="k">mut</span> rest = text;
+    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
+        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {
+            <span class="k">let</span> end = rest
+                .<span class="f">find</span>(|c: <span class="k">char</span>| !(c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>))
+                .<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
+            <span class="k">let</span> word = &amp;rest[..end];
+            <span class="k">let</span> colour = <span class="k">if</span> <span class="t">KEYWORDS</span>.<span class="f">contains</span>(&amp;word) {
+                <span class="t">KEYWORD</span>
+            } <span class="k">else</span> {
+                <span class="t">PLAIN</span>
+            };
+            (word, colour)
+        } <span class="k">else</span> {
+            <span class="k">let</span> end = rest.<span class="f">char_indices</span>().<span class="f">nth</span>(<span class="s">1</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |(i, _)| i);
+            (&amp;rest[..end], <span class="t">PLAIN</span>)
+        };
+
+        job.<span class="f">append</span>(
+            chunk,
+            <span class="s">0.0</span>,
+            egui::<span class="t">TextFormat</span> {
+                font_id: font.<span class="f">clone</span>(),
+                color: colour,
+                ..<span class="t">Default</span>::<span class="f">default</span>()
+            },
+        );
+        rest = &amp;rest[chunk.<span class="f">len</span>()..];
+    }</span></code></pre>
+
+<p>The whole scanner is that shape: look at what <code>rest</code> starts with, take the
+longest run that belongs together, colour it, and advance. Two cases so far — a word, or
+a single character of anything else.</p>
+
+<p><code>rest.find(predicate)</code> returns the <strong>byte</strong> offset of the first
+character that isn't part of the word, and <code>&amp;rest[..end]</code> slices there.
+That's safe because <code>find</code> only ever returns real character boundaries — the
+thing <a href="0004-where-is-the-cursor.html#byte-vs-char">lesson 4</a> warned you about
+is only a danger when you invent an index yourself.</p>
+
+<p class="sidenote">The <code>else</code> branch takes one character, not one byte —
+<code>char_indices().nth(1)</code> gives the byte offset where the <em>second</em>
+character starts. Slicing at a fixed <code>1</code> would panic the first time someone
+typed an accented letter outside a word.</p>
+
+<p class="run">printf 'fn main() {\n    let x = 1;\n}\n' &gt; editor/scratch.md<br>
+cargo run<br>
+→ <strong>fn</strong>, <strong>let</strong> in purple; the rest off-white</p>
+</section>
+
+<section class="stage" id="stage-3">
+<h3>Comments and strings</h3>
+
+<p class="goal">Two more colours, and the scanner starts to earn its name.</p>
+
+<p>Keywords alone look wrong, because the two things your eye most wants separated from
+code are comments and string literals. <strong>Two edits.</strong></p>
+
+<p class="filename">editor/src/main.rs<span class="where">with the other colours</span></p>
+<pre><code><span class="dim"><span class="k">const</span> <span class="t">KEYWORD</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xcf</span>, <span class="s">0x9b</span>, <span class="s">0xe0</span>);</span>
+<span class="add"><span class="k">const</span> <span class="t">STRING</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xa3</span>, <span class="s">0xcf</span>, <span class="s">0x8c</span>);
+<span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);</span></code></pre>
+
+<p>Second — two new arms, <em>before</em> the word arm:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn highlight, the top of the if-chain</span></p>
+<pre><code><span class="dim">        <span class="k">let</span> (chunk, colour) = </span><span class="add"><span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">"//"</span>) {
+            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">'\n'</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
+            (&amp;rest[..end], <span class="t">COMMENT</span>)
+        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">'"'</span>) {
+            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">'"'</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);
+            (&amp;rest[..end], <span class="t">STRING</span>)
+        } <span class="k">else</span> </span><span class="dim"><span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {</span></code></pre>
+
+<div class="callout note">
+  <span class="label">Order is the logic</span>
+  These arms go <strong>above</strong> the word arm, not below. A comment starts with
+  <code>/</code> and a string with <code>"</code>, so neither would be caught by the word
+  arm — but the principle bites the moment you add one that overlaps. An
+  <code>if</code>-chain is tried top to bottom, so the arms are in specificity order, and
+  moving one changes the language you're highlighting.
+</div>
+
+<p><code>strip_prefix('"')</code> returns <code>Option&lt;&amp;str&gt;</code> — the rest
+of the string with the quote removed, or <code>None</code>. Using it in an
+<code>if let</code> both tests for the quote and gives you what follows, so you search for
+the closing quote in the right place. The <code>+ 2</code> puts both quotes back into the
+chunk.</p>
+
+<p><code>map_or(rest.len(), …)</code> handles the unterminated string — you're editing
+code, so half-typed literals are the normal state of the world. It colours to end of text
+rather than panicking or giving up.</p>
+
+<p class="run">printf 'fn main() {\n    // greet\n    let s = "hello";\n}\n' &gt; editor/scratch.md<br>
+cargo run<br>
+→ purple keywords, grey comment, green string</p>
+
+<div class="callout key">
+  <span class="label">That's syntax highlighting</span>
+  Forty lines, no parser, no grammar file. It doesn't know what a function <em>is</em> —
+  it knows that <code>fn</code> is in a list. Real highlighters are this shape too, just
+  with more arms and a little state carried between lines for things like block comments.
+</div>
+
+<p class="run">cargo fmt &amp;&amp; cargo clippy<br>
+<span class="note">Both silent. Clippy will suggest <code>strip_prefix</code> if you wrote the quote test by hand — it's right.</span></p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>172 lines. Only the imports and <code>fn ui</code>'s text box changed; everything else
+here is new.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the new parts</span></p>
+<pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
+<span class="l"><span class="k">use</span> egui::text::<span class="t">LayoutJob</span>;</span>
+<span class="l"><span class="k">use</span> std::env;</span>
+<span class="l"><span class="k">use</span> std::fs;</span>
+<span class="l"><span class="k">use</span> std::io;</span>
+<span class="l"><span class="k">use</span> std::sync::<span class="t">Arc</span>;</span>
+<span class="l"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span>
+<span class="l"></span>
+<span class="l"><span class="c">/// Words the highlighter treats as keywords.</span></span>
+<span class="l"><span class="k">const</span> <span class="t">KEYWORDS</span>: &amp;[&amp;<span class="k">str</span>] = &amp;[</span>
+<span class="l">    <span class="s">"as"</span>, <span class="s">"const"</span>, <span class="s">"else"</span>, <span class="s">"enum"</span>, <span class="s">"fn"</span>, <span class="s">"for"</span>, <span class="s">"if"</span>, <span class="s">"impl"</span>, <span class="s">"in"</span>, <span class="s">"let"</span>, <span class="s">"match"</span>, <span class="s">"mod"</span>, <span class="s">"move"</span>,</span>
+<span class="l">    <span class="s">"mut"</span>, <span class="s">"pub"</span>, <span class="s">"return"</span>, <span class="s">"self"</span>, <span class="s">"struct"</span>, <span class="s">"trait"</span>, <span class="s">"use"</span>, <span class="s">"while"</span>,</span>
+<span class="l">];</span>
+<span class="l"></span>
+<span class="l"><span class="k">const</span> <span class="t">PLAIN</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xe8</span>, <span class="s">0xe5</span>, <span class="s">0xde</span>);</span>
+<span class="l"><span class="k">const</span> <span class="t">KEYWORD</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xcf</span>, <span class="s">0x9b</span>, <span class="s">0xe0</span>);</span>
+<span class="l"><span class="k">const</span> <span class="t">STRING</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xa3</span>, <span class="s">0xcf</span>, <span class="s">0x8c</span>);</span>
+<span class="l"><span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);</span>
+<span class="l"></span>
+<span class="l"><span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span></span>
+<span class="l"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
+<span class="l">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
+<span class="l">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
+<span class="l">    job.wrap.max_width = wrap_width;</span>
+<span class="l"></span>
+<span class="l">    <span class="k">let</span> <span class="k">mut</span> rest = text;</span>
+<span class="l">    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {</span>
+<span class="l">        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">"//"</span>) {</span>
+<span class="l">            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">'\n'</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());</span>
+<span class="l">            (&amp;rest[..end], <span class="t">COMMENT</span>)</span>
+<span class="l">        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">'"'</span>) {</span>
+<span class="l">            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">'"'</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);</span>
+<span class="l">            (&amp;rest[..end], <span class="t">STRING</span>)</span>
+<span class="l">        } <span class="k">else</span> <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {</span>
+<span class="l">            <span class="k">let</span> end = rest</span>
+<span class="l">                .<span class="f">find</span>(|c: <span class="k">char</span>| !(c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>))</span>
+<span class="l">                .<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());</span>
+<span class="l">            <span class="k">let</span> word = &amp;rest[..end];</span>
+<span class="l">            <span class="k">let</span> colour = <span class="k">if</span> <span class="t">KEYWORDS</span>.<span class="f">contains</span>(&amp;word) {</span>
+<span class="l">                <span class="t">KEYWORD</span></span>
+<span class="l">            } <span class="k">else</span> {</span>
+<span class="l">                <span class="t">PLAIN</span></span>
+<span class="l">            };</span>
+<span class="l">            (word, colour)</span>
+<span class="l">        } <span class="k">else</span> {</span>
+<span class="l">            <span class="k">let</span> end = rest.<span class="f">char_indices</span>().<span class="f">nth</span>(<span class="s">1</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |(i, _)| i);</span>
+<span class="l">            (&amp;rest[..end], <span class="t">PLAIN</span>)</span>
+<span class="l">        };</span>
+<span class="l"></span>
+<span class="l">        job.<span class="f">append</span>(</span>
+<span class="l">            chunk,</span>
+<span class="l">            <span class="s">0.0</span>,</span>
+<span class="l">            egui::<span class="t">TextFormat</span> {</span>
+<span class="l">                font_id: font.<span class="f">clone</span>(),</span>
+<span class="l">                color: colour,</span>
+<span class="l">                ..<span class="t">Default</span>::<span class="f">default</span>()</span>
+<span class="l">            },</span>
+<span class="l">        );</span>
+<span class="l">        rest = &amp;rest[chunk.<span class="f">len</span>()..];</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="c">// struct Editor, impl Editor and main() are unchanged from lesson 6.</span></span>
+<span class="l"><span class="c">// Inside fn ui, only the text box changed:</span></span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {</span>
+<span class="l">                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)</span>
+<span class="l">            };</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="l">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
+<span class="l">                .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)</span>
+<span class="l">                .<span class="f">show</span>(ui);</span></code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">Why is <code>highlight</code> a free function rather than a method on <code>Editor</code>?</p>
+  <ul class="options">
+    <li data-correct><code>TextEdit</code> already holds a borrow of the text</li>
+    <li>Free functions are measurably faster to call</li>
+    <li>Methods cannot return reference-counted values</li>
+    <li>egui requires layouters to be free functions</li>
+  </ul>
+  <p class="why">The layouter runs while <code>TextEdit::multiline(&amp;mut self.text)</code>
+  holds an exclusive borrow of the buffer. A method taking <code>&amp;self</code> would
+  want to borrow the whole editor at the same time, and the borrow checker would refuse.
+  <a class="review" href="#stage-1">↑ Review: why it lives outside impl (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why must the comment and string arms come <em>before</em> the word arm?</p>
+  <ul class="options">
+    <li data-correct>An if-chain takes the first arm that matches</li>
+    <li>Comments may legally contain any keyword</li>
+    <li>Strings are longer than words on average</li>
+    <li>egui requires runs in order of their colour</li>
+  </ul>
+  <p class="why">Arms are tested top to bottom, so ordering encodes specificity — the same
+  reason lesson 5's <code>NotFound</code> guard had to sit above the general
+  <code>Err</code>. Here nothing overlaps yet, but the habit is what keeps a scanner
+  correct as arms are added.
+  <a class="review" href="#stage-3">↑ Review: order is the logic (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">From lesson 4: why is slicing with <code>&amp;rest[..end]</code> safe here?</p>
+  <ul class="options">
+    <li data-correct><code>find</code> returns real character boundaries</li>
+    <li>Slicing a <code>&amp;str</code> can never panic</li>
+    <li>The scanner rejects all non-ASCII input first</li>
+    <li>Byte and character offsets agree inside words</li>
+  </ul>
+  <p class="why">Slicing panics only when an index lands inside a multi-byte character.
+  Every index here came from <code>find</code> or <code>char_indices</code>, which only
+  ever report boundaries. The danger is indices you invent yourself.
+  <a class="review" href="0004-where-is-the-cursor.html#byte-vs-char">↑ Review: byte vs char offsets (lesson 4, stage 3)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 8</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://docs.rs/egui/latest/egui/text/struct.LayoutJob.html">
+<code>egui::text::LayoutJob</code> — the API documentation</a>, and the
+<a href="https://docs.rs/egui/latest/egui/struct.TextFormat.html"><code>TextFormat</code></a>
+page beside it.</p>
+
+<p>You've used two fields of <code>TextFormat</code>. Read the rest — there's underline,
+strikethrough, background colour, and vertical alignment, all of which you now know how to
+reach. Squiggly underlines for compiler errors are the same mechanism as the colours you
+just wrote, which is worth realising before you need it.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> The scanner is the densest code
+  in the course so far, and the <code>rest = &amp;rest[chunk.len()..]</code> line at the
+  bottom of the loop is the one worth being sure about — if it isn't obvious why that
+  can't loop forever, ask, because that's exactly the bug this shape invites.
+</div>
+
+<nav class="footer-nav">
+  <a href="0006-measure-before-you-optimise.html">← Lesson 6: Measure Before You Optimise</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <a href="0008-knowing-when-to-stop.html">Next: Lesson 8 — Knowing When to Stop →</a>
+</nav>
+
+</body>
+</html>

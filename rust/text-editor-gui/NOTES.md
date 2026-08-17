@@ -41,8 +41,10 @@ language concept the next editor feature demands.
    _(written 2026-08-16; 97 lines; fixes the lesson-2 "error text in the buffer" bug)_
 6. ✅ Measure before you optimise — `Instant`, frame-time readout, real numbers
    _(written 2026-08-16; 114 lines; overturned the "String is the bottleneck" plan)_
-7. Syntax highlighting via `TextEdit::layouter` — tokenise one language, colour it
-8. Highlighting is slow → use the lesson-6 instrument, then cache the galley
+7. ✅ Colouring the code — `TextEdit::layouter`, `LayoutJob`, a 40-line scanner
+   _(written 2026-08-16; 172 lines)_
+8. ✅ Knowing when to stop — measure highlighting, degrade above a measured limit
+   _(written 2026-08-16; 196 lines; deliberately ships NO cache — see below)_
 9. Multiple buffers → `Vec<Buffer>` + tabs. Struct design finally forces itself here
 10. Undo/redo — the first thing a reviewer presses after typing _(candidate)_
 11. Tests — `line_col` and `open` are pure and beautifully testable _(candidate)_
@@ -50,6 +52,18 @@ language concept the next editor feature demands.
 13. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
 
 **Estimated total: 12–14.** Floor is 11 if 10 and 11 are dropped.
+
+### Open question: the highlight cache
+
+A naive cache (compare the text, keep the last galley) measured, at 50k lines:
+idle 26.80 → 5.39 ms, but typing 47.11 → **186.22 ms**. The parts don't explain it:
+`String == String` on 2 MB is 0.039 ms and `to_owned` is 0.107 ms, and holding the
+previous galley alive across frames costs nothing measurable (tested in isolation).
+egui 0.36 has no `util::cache` helper to fall back on.
+
+**Lesson 8 deliberately ships no cache and says so, with the numbers.** Do not add one
+without profiling this properly first — the pathology is real and unexplained. It is
+written up in the lesson as an open question, and Deryk has been invited to chase it.
 
 ### The fork that decides the number
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lesson 6 — Measure Before You Optimise</title>
+<title>Lesson 8 — Knowing When to Stop</title>
 <!-- @assets:style.css,quiz.css,quiz.js -->
 <style>
 /* ---- generated from assets/style.css — do not edit here ---- */
@@ -867,31 +867,29 @@ th {
 <body>
 
 <header class="masthead">
-  <p class="eyebrow">Lesson 06 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~35 minutes</p>
-  <h1>Measure Before You Optimise</h1>
-  <p class="subtitle">Three stages to an editor that reports its own frame time — and proves my prediction wrong.</p>
+  <p class="eyebrow">Lesson 08 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~25 minutes</p>
+  <h1>Knowing When to Stop</h1>
+  <p class="subtitle">Highlighting made the editor slow. The fix is four lines, and choosing them is the lesson.</p>
 </header>
 
-<p>Back in
-<a href="0001-your-first-window.html#stage-6">lesson 1</a> I promised that immediate mode
-would eventually bite, and that we'd have the fight around lesson 6, "when a 50,000-line
-file meets a naive redraw". This is that lesson.</p>
+<p>Lesson 7 gave you syntax highlighting. It also, quietly, gave you a function that
+re-scans your entire file every time egui needs to draw it — which is most frames.</p>
 
-<p>I also wrote a plan predicting how it would go: <em>feel <code>String</code> insertion
-hurt on a large file, then reach for a rope data structure.</em> That prediction was
-wrong, and I only know it's wrong because I measured. Fixing what you assumed is slow is
-the most reliable way to spend a week making no difference.</p>
+<p>You built the instrument for exactly this in
+<a href="0006-measure-before-you-optimise.html">lesson 6</a>. Now use it on your own
+feature, decide from the numbers what to do, and — this is the part most tutorials skip —
+decide what <em>not</em> to do.</p>
 
 <div class="thesis">
-  You are not allowed a performance opinion without a number.<br>
-  Not a benchmark someone else ran, not a rule of thumb — a number your own program
-  printed, on your machine, doing your work.
+  Every optimisation is a trade, and some trades aren't worth making.<br>
+  A feature that degrades deliberately at a limit you measured beats one that's clever
+  everywhere and correct nowhere.
 </div>
 
 <h2>Where you're starting</h2>
 
-<p>Lesson 5's 97 lines, opening any file from the command line. Check against
-<a href="0005-open-any-file.html#where-you-ended-up">lesson 5's checkpoint</a>.</p>
+<p>Lesson 7's 172 lines, with highlighting. Check against
+<a href="0007-colouring-the-code.html#where-you-ended-up">lesson 7's checkpoint</a>.</p>
 
 <p class="legend">
   <span class="swatch new"></span>adding &nbsp;&nbsp;
@@ -900,365 +898,298 @@ the most reliable way to spend a week making no difference.</p>
 </p>
 
 <section class="stage" id="stage-1">
-<h3>Give it a stopwatch</h3>
+<h3>Point the instrument at your own feature</h3>
 
-<p class="goal">The editor reports how long its own frame took.</p>
+<p class="goal">Numbers, from your editor, on files of five different sizes.</p>
 
-<p><strong>Four edits.</strong> First, the standard library's clock:</p>
+<p>No code this stage. Build the files and read the frame counter you already have:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
-<pre><code><span class="dim"><span class="k">use</span> std::io;</span>
-<span class="add"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span></code></pre>
+<p class="run">cd editor<br>
+for n in 1000 5000 10000 25000 50000; do<br>
+&nbsp;&nbsp;seq 1 $n | awk '{print "    let value_" $1 " = compute(" $1 "); // note"}' &gt; big-$n.rs<br>
+done<br>
+<span class="note">Five files, 40 KB to 2.2 MB. All disposable.</span></p>
 
-<p>Second and third — somewhere to keep the measurement, and a starting value:</p>
+<p class="run">cargo run --release -- big-50000.rs<br>
+→ scroll, type a character, read the ms/frame<br>
+<span class="note">Release. Lesson 6's most useful number was that debug lies to you by 10×.</span></p>
 
-<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
-<pre><code><span class="dim">    status: <span class="t">String</span>,</span>
-<span class="add">    frame_ms: f32,</span>
-<span class="dim">}</span></code></pre>
+<p>Here's what I measured, with lesson 7's highlighting on and — for comparison — the
+plain single-colour layouter from lesson 7 stage 1:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
-<pre><code><span class="dim">            text,
-            status,</span>
-<span class="add">            frame_ms: <span class="s">0.0</span>,</span>
-<span class="dim">        }</span></code></pre>
+<table id="numbers">
+  <tr><th>File</th><th>Plain, typing</th><th>Highlighted, idle</th><th>Highlighted, typing</th></tr>
+  <tr><td>1,000 lines (40 KB)</td><td>0.17 ms</td><td>0.57 ms</td><td>0.74 ms</td></tr>
+  <tr><td>5,000 lines (212 KB)</td><td>0.84 ms</td><td>2.09 ms</td><td>3.46 ms</td></tr>
+  <tr><td>10,000 lines (427 KB)</td><td>1.62 ms</td><td>4.16 ms</td><td>7.11 ms</td></tr>
+  <tr><td>25,000 lines (1.1 MB)</td><td>3.62 ms</td><td>10.64 ms</td><td><strong>17.39 ms</strong></td></tr>
+  <tr><td>50,000 lines (2.2 MB)</td><td>7.41 ms</td><td>28.57 ms</td><td><strong>41.57 ms</strong></td></tr>
+</table>
 
-<p>Fourth — wrap the frame. Note that two of these lines go <em>outside</em> the panel
-closure, one at the very top of <code>ui</code> and one at the very bottom:</p>
+<p>Highlighting costs roughly <strong>4–5× the plain layout</strong>, and it crosses the
+16.7 ms frame budget somewhere between 10,000 and 25,000 lines. Above that the editor
+lags your typing.</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, around the panel</span></p>
-<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
-<span class="add">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
-        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
-</span>
-<span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
-            <span class="c">// … everything as before …</span>
-        });</span>
-<span class="add">
-        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;</span>
-<span class="dim">    }</span></code></pre>
+<h4 id="idle-too">The idle column is the surprising one</h4>
 
-<p>And show it, in the label you already have:</p>
+<p>Look again at 50,000 lines: <strong>28.57 ms even when you aren't typing.</strong>
+Nothing changed, and it still costs more than a frame.</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
-<pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
-<span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(
-                <span class="s">"{position}  ·  {} bytes  ·  {:.2} ms/frame"</span>,
-                <span class="k">self</span>.text.<span class="f">len</span>(),
-                <span class="k">self</span>.frame_ms
-            ));</span></code></pre>
+<details class="recall">
+  <summary>Before reading on: the text hasn't changed since the last frame. Why is the editor doing 28 ms of work?</summary>
+  <p>Because your layouter runs anyway. <code>TextEdit</code> calls it whenever it needs
+  the text laid out, and it has no way to know that your scanner would produce exactly the
+  same answer as last time. The scan is 2 MB of character-by-character work, every
+  frame.</p>
+</details>
 
-<h4 id="last-frame">Why it shows the previous frame</h4>
-
-<p><code>frame_ms</code> is written <em>after</em> the panel has been drawn, so the label
-you just built is showing last frame's number. It can't show its own — the frame isn't
-over until after the label exists. Every frame-time readout in every program works this
-way.</p>
-
-<p><strong><code>request_repaint()</code></strong> is the other half. Remember
-<a href="0001-your-first-window.html#repaints">lesson 1</a>: egui only repaints when
-something happens, so an idle editor would freeze the number at whatever it was when you
-last touched a key. Asking for a repaint every frame turns that off, which is exactly
-what you want while measuring and exactly what you'd remove afterwards — it burns CPU
-forever, which is the thing lesson 1 praised egui for avoiding.</p>
-
-<p class="run">cargo run<br>
-→ <em>Ln 1, Col 1 · 31 bytes · 0.09 ms/frame</em><br>
-<span class="note">Small file, tiny number. That's the control.</span></p>
+<p>Worth knowing: egui <em>does</em> cache the expensive part downstream. Its
+<code>layout_job</code> is memoised, so handing it an identical job twice is cheap the
+second time. What isn't cached is <em>building</em> the job — your scanner — because
+that's your code and egui has never seen it.</p>
 </section>
 
 <section class="stage" id="stage-2">
-<h3>Feed it something enormous</h3>
+<h3>Draw the line where the measurement is</h3>
 
-<p class="goal">Watch the number move. No code — this stage is data collection.</p>
+<p class="goal">Big files open instantly again, in plain text, and say why.</p>
 
-<p>Make a genuinely large source file — 50,000 lines, about 2 MB:</p>
+<p>The table says highlighting is comfortable at 427 KB (7.11 ms while typing) and over
+budget at 1.1 MB (17.39 ms). So the limit goes between them, nearer the safe end.
+<strong>Two edits.</strong></p>
 
-<p class="run">cd editor<br>
-seq 1 50000 | awk '{print "    let value_" $1 " = compute(" $1 ") + 1;"}' &gt; big.rs<br>
-wc -l big.rs<br>
-<span class="note">50000 big.rs — and it's disposable, delete it when you're done.</span></p>
+<p class="filename">editor/src/main.rs<span class="where">with the other colours</span></p>
+<pre><code><span class="dim"><span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);</span>
+<span class="add">
+<span class="c">/// Above this size, highlighting costs more than a frame is worth. Chosen from</span>
+<span class="c">/// measurement: at 427 KB a keystroke costs 7.1 ms, at 1.1 MB it costs 17.4 ms,</span>
+<span class="c">/// and a 60fps frame is 16.7 ms.</span>
+<span class="k">const</span> <span class="t">HIGHLIGHT_LIMIT</span>: <span class="k">usize</span> = <span class="s">512</span> * <span class="s">1024</span>;</span></code></pre>
 
-<p class="run">cargo run -- big.rs<br>
-→ scroll around, then <strong>type a character</strong> and watch the number</p>
-
-<p>Two numbers matter, and they're very different. <em>Idle</em> is what you get while the
-text sits unchanged. <em>Typing</em> is what you get on the frames where the text
-changed. Here's what I measured on this machine:</p>
-
-<table id="numbers">
-  <tr><th>File</th><th>Idle</th><th>Typing</th><th>Typing, <code>--release</code></th></tr>
-  <tr><td>100 lines</td><td>0.10 ms</td><td>0.68 ms</td><td>0.04 ms</td></tr>
-  <tr><td>1,000 lines</td><td>0.25 ms</td><td>1.89 ms</td><td>0.15 ms</td></tr>
-  <tr><td>10,000 lines</td><td>1.86 ms</td><td>14.46 ms</td><td>1.44 ms</td></tr>
-  <tr><td>50,000 lines</td><td>9.29 ms</td><td><strong>70.61 ms</strong></td><td><strong>7.10 ms</strong></td></tr>
-</table>
-
-<p>A frame at 60 fps has <strong>16.7 ms</strong>. So in the build you've been running all
-along, a 50,000-line file gives you about 14 frames per second while typing — the editor
-visibly lags behind your fingers.</p>
-
-<p>Now run the same thing optimised:</p>
-
-<p class="run">cargo run --release -- big.rs<br>
-<span class="note">First build takes a minute — it's recompiling all 414 crates with optimisation.</span></p>
-
-<details class="recall">
-  <summary>Before you look: how much faster do you expect the optimised build to be? Commit to a number.</summary>
-  <p>About <strong>ten times</strong>, and it's roughly ten times at every size. 70.61 ms
-  becomes 7.10 ms; 14.46 becomes 1.44. Most people guess two or three.</p>
-</details>
-
-<div class="callout key">
-  <span class="label">The single most useful number in this lesson</span>
-  A debug build is ~10× slower than a release build. Rust's debug profile turns off
-  optimisation entirely and keeps every bounds check and overflow check. If you ever catch
-  yourself thinking "Rust is supposed to be fast, why is this crawling" — check which
-  profile you're in before you change a single line of code.
+<div class="callout note">
+  <span class="label">The comment is the point, not the constant</span>
+  A bare <code>512 * 1024</code> is a magic number, and the next person to read it —
+  including you in four months — has no way to tell whether it was measured or guessed.
+  Writing down the two numbers it sits between turns an arbitrary constant into a decision
+  someone can check, and disagree with, and re-measure on faster hardware. In an
+  interview, this comment is worth more than the code above it.
 </div>
 
-<p class="sidenote">This is also why performance complaints about Rust programs are worth
-one question before any other: <em>release build?</em> It's the same reason the toolchain
-reference tells you a debug-build editor feeling sluggish on a big file is not a bug.</p>
+<p>Second — the early exit, at the top of <code>highlight</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn highlight, before the scanner</span></p>
+<pre><code><span class="dim">    job.wrap.max_width = wrap_width;</span>
+<span class="add">
+    <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+        job.<span class="f">append</span>(
+            text,
+            <span class="s">0.0</span>,
+            egui::<span class="t">TextFormat</span> {
+                font_id: font,
+                color: <span class="t">PLAIN</span>,
+                ..<span class="t">Default</span>::<span class="f">default</span>()
+            },
+        );
+        <span class="k">return</span> ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job));
+    }
+</span>
+<span class="dim">    <span class="k">let</span> <span class="k">mut</span> rest = text;</span></code></pre>
+
+<p>One run, one colour, one <code>append</code> — which is exactly lesson 7 stage 1
+again. The fast path was already written; it just needed a reason to exist.</p>
+
+<p class="sidenote">Note <code>font_id: font</code> here, without <code>.clone()</code>.
+This branch uses the font once and then returns, so it can hand over ownership. The
+scanner below needs it on every iteration, which is why that one clones. The compiler
+enforces the distinction, and it's a small example of ownership doing useful work rather
+than being an obstacle.</p>
+
+<p class="run">cargo run --release -- big-50000.rs<br>
+→ opens instantly, plain text, ~7 ms/frame — back to lesson 6's numbers<br>
+cargo run --release -- big-10000.rs<br>
+→ still fully highlighted</p>
 </section>
 
 <section class="stage" id="stage-3">
-<h3>Find out where the time actually goes</h3>
+<h3>Tell the user, don't just do it</h3>
 
-<p class="goal">Time your own code separately, and stop guessing.</p>
+<p class="goal">The status bar says highlighting is off, so silence isn't mistaken for a bug.</p>
 
-<p>7 ms per keystroke in release is still 43% of a frame. Something is doing real work.
-The obvious suspect is <code>line_col</code> from lesson 4 — it walks the text from the
-start on every single frame, which is exactly the kind of thing that should scale badly.
-So measure it rather than assuming. <strong>Three edits.</strong></p>
-
-<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
-<pre><code><span class="dim">    frame_ms: f32,</span>
-<span class="add">    line_col_us: f32,</span>
-<span class="dim">}</span></code></pre>
-
-<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
-<pre><code><span class="dim">            frame_ms: <span class="s">0.0</span>,</span>
-<span class="add">            line_col_us: <span class="s">0.0</span>,</span>
-<span class="dim">        }</span></code></pre>
-
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, the Some arm</span></p>
-<pre><code><span class="dim">                <span class="t">Some</span>(range) =&gt; {</span>
-<span class="add">                    <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();</span>
-<span class="dim">                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
-<span class="add">                    <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;</span>
-<span class="dim">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
-                }</span></code></pre>
-
-<p>Microseconds this time, not milliseconds — if you measure a small thing in big units
-you get <code>0.00</code> and learn nothing. Add it to the label:</p>
+<p>An editor that silently stops highlighting looks broken. One that says <em>"highlighting
+off (file too large)"</em> looks considered. <strong>One edit.</strong></p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
-<pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
-<span class="del">                <span class="s">"{position}  ·  {} bytes  ·  {:.2} ms/frame"</span>,</span>
-<span class="del">                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
-<span class="add">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
-                <span class="k">self</span>.text.<span class="f">len</span>(),
-                <span class="k">self</span>.line_col_us,</span>
-<span class="dim">                <span class="k">self</span>.frame_ms
+<pre><code><span class="add">            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+                <span class="s">"highlighting off (file too large)"</span>
+            } <span class="k">else</span> {
+                <span class="s">"highlighting on"</span>
+            };
+
+</span><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
+<span class="del">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
+<span class="add">                <span class="s">"{position}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
+<span class="dim">                <span class="k">self</span>.text.<span class="f">len</span>(),
+                <span class="k">self</span>.line_col_us,
+                <span class="k">self</span>.frame_ms
             ));</span></code></pre>
 
-<p class="run">cargo run --release -- big.rs<br>
-→ press Ctrl+End to put the cursor at the very bottom, then type<br>
-→ <em>… line_col 875 µs · 7.10 ms/frame</em></p>
+<p>Both branches produce a <code>&amp;'static str</code> — text baked into the binary,
+borrowed, never allocated. There's no <code>String</code> here and no
+<code>to_owned()</code>, because there's nothing to own: the two messages exist for the
+whole life of the program.</p>
 
-<h4 id="the-verdict">Read the two numbers together</h4>
+<p class="run">cargo run --release -- big-50000.rs<br>
+→ <em>… 2277780 bytes · highlighting off (file too large) · …</em></p>
 
-<p><code>line_col</code> costs <strong>0.875 ms</strong> of a <strong>7.10 ms</strong>
-frame. It is about an eighth of the cost. Real, worth fixing eventually — and nowhere near
-the thing that's making the editor slow.</p>
+<h4 id="not-doing">What we're deliberately not doing</h4>
 
-<p>So what is? Everything else in that frame, and almost all of it is one thing: egui
-lays out the <em>entire</em> 2 MB of text — every glyph position, every line wrap — every
-time the text changes. It doesn't know that you only changed one character near the top,
-and it doesn't know that you can only see forty lines of it.</p>
+<p>The obvious next move is to cache the highlight so idle frames stop rescanning. I tried
+it before writing this lesson, and I'm not teaching it, for a reason worth reading:</p>
 
-<table id="where-time-goes">
-  <tr><th>Suspect</th><th>Measured</th><th>Share of a 7.10 ms frame</th></tr>
-  <tr><td><code>String::insert</code> (the buffer)</td><td>0.011 ms</td><td>0.2%</td></tr>
-  <tr><td><code>line_col</code> (our code)</td><td>0.875 ms</td><td>12%</td></tr>
-  <tr><td>egui laying out all the text</td><td>~6.2 ms</td><td>~87%</td></tr>
+<table id="cache-attempt">
+  <tr><th>50,000 lines</th><th>Idle</th><th>Typing</th></tr>
+  <tr><td>No cache</td><td>26.80 ms</td><td>47.11 ms</td></tr>
+  <tr><td>Naive cache (compare text, keep last galley)</td><td><strong>5.39 ms</strong></td><td><strong>186.22 ms</strong></td></tr>
 </table>
 
-<div class="callout note">
-  <span class="label">I predicted the wrong bottleneck, in writing</span>
-  The plan for this lesson said we'd "feel <code>String</code> insertion hurt on a large
-  file" and then reach for a rope. Inserting a character into the middle of a 2 MB
-  <code>String</code> takes <strong>11 microseconds</strong> — 0.2% of the frame. It
-  copies a megabyte, and copying a megabyte is just not slow on modern hardware. Had I
-  followed the plan, you'd have spent a lesson replacing a data structure that was never
-  the problem, and the editor would have felt exactly as slow afterwards.
+<p>Idle got five times better. Typing got four times <em>worse</em> — and when I measured
+the parts, the comparison cost 0.04 ms and the copy 0.11 ms, which does not come close to
+explaining the other 140. I don't yet know what does.</p>
+
+<div class="callout key">
+  <span class="label">This is a real engineering position, not a cop-out</span>
+  Shipping an optimisation you can't explain is how you get a program that's fast on your
+  machine and mysterious on everyone else's. The honest options were: spend a day
+  profiling properly, or take the four-line change that's obviously correct and move on.
+  For a 512 KB limit that no real source file reaches, the four lines win. The measurement
+  is written down so the question can be reopened when it matters.
 </div>
 
-<p>This is the whole reason the lesson exists. The rope isn't wrong — it becomes right at
-a size and an edit pattern we haven't reached. But "obviously O(n) therefore obviously the
-bottleneck" is the most expensive kind of obvious.</p>
-
-<p class="run">rm editor/big.rs<br>
+<p class="run">rm editor/big-*.rs<br>
 cargo fmt &amp;&amp; cargo clippy<br>
-<span class="note">Both silent. Keep the instrumentation — lesson 7 needs it.</span></p>
+<span class="note">Both silent.</span></p>
 </section>
-
-<h2 id="what-next">What we do about it</h2>
-
-<p>Three findings, in the order they're worth acting on:</p>
-
-<ol>
-  <li><strong>Use <code>--release</code> when you care about speed.</strong> Free, and
-  the largest single factor at every file size.</li>
-  <li><strong>egui's full-text layout is the real cost.</strong> There's no flag for
-  this. The textbook fix is to draw only the lines on screen — but that means painting
-  text ourselves, and giving up egui's text input, selection and clipboard along with it.
-  Weighed against a 7 ms frame at 50,000 lines and under 2 ms at 10,000, that trade isn't
-  worth making yet. We'll revisit it if a measurement forces the issue.</li>
-  <li><strong>The buffer is fine, for now.</strong> <code>String</code> stops being fine
-  when edits stop being cheap: many megabytes, or edits far from the end, or undo history
-  wanting cheap snapshots. We'll swap it when a measurement says to, and you'll have the
-  measurement because you just built the instrument.</li>
-</ol>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>114 lines. Only the struct, <code>open</code>, and <code>ui</code> changed.</p>
+<p>196 lines. Only <code>highlight</code>'s opening and the status label changed.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the parts that changed</span></p>
-<pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
-<span class="l"><span class="k">use</span> std::env;</span>
-<span class="l"><span class="k">use</span> std::fs;</span>
-<span class="l"><span class="k">use</span> std::io;</span>
-<span class="l"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span>
+<pre class="numbered"><code><span class="l"><span class="c">/// Above this size, highlighting costs more than a frame is worth. Chosen from</span></span>
+<span class="l"><span class="c">/// measurement: at 427 KB a keystroke costs 7.1 ms, at 1.1 MB it costs 17.4 ms,</span></span>
+<span class="l"><span class="c">/// and a 60fps frame is 16.7 ms.</span></span>
+<span class="l"><span class="k">const</span> <span class="t">HIGHLIGHT_LIMIT</span>: <span class="k">usize</span> = <span class="s">512</span> * <span class="s">1024</span>;</span>
 <span class="l"></span>
-<span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
-<span class="l">    path: <span class="t">String</span>,</span>
-<span class="l">    text: <span class="t">String</span>,</span>
-<span class="l">    status: <span class="t">String</span>,</span>
-<span class="l">    frame_ms: f32,</span>
-<span class="l">    line_col_us: f32,</span>
+<span class="l"><span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span></span>
+<span class="l"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
+<span class="l">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
+<span class="l">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
+<span class="l">    job.wrap.max_width = wrap_width;</span>
+<span class="l"></span>
+<span class="l">    <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {</span>
+<span class="l">        job.<span class="f">append</span>(</span>
+<span class="l">            text,</span>
+<span class="l">            <span class="s">0.0</span>,</span>
+<span class="l">            egui::<span class="t">TextFormat</span> {</span>
+<span class="l">                font_id: font,</span>
+<span class="l">                color: <span class="t">PLAIN</span>,</span>
+<span class="l">                ..<span class="t">Default</span>::<span class="f">default</span>()</span>
+<span class="l">            },</span>
+<span class="l">        );</span>
+<span class="l">        <span class="k">return</span> ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job));</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    <span class="c">// … the scanner from lesson 7, unchanged …</span></span>
 <span class="l">}</span>
 <span class="l"></span>
-<span class="l"><span class="c">// open() gains two fields; save() and line_col() are unchanged.</span></span>
+<span class="l"><span class="c">// And in fn ui, just above the status label:</span></span>
 <span class="l"></span>
-<span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
-<span class="l">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
-<span class="l">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();</span>
-<span class="l">        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();</span>
-<span class="l"></span>
-<span class="l">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
-<span class="l">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
-<span class="l">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="t">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {</span>
-<span class="l">                <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"save failed: {error}"</span>);</span>
-<span class="l">            }</span>
-<span class="l"></span>
-<span class="l">            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);</span>
-<span class="l"></span>
-<span class="l">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
-<span class="l">                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
-<span class="l">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
-<span class="l">                .<span class="f">show</span>(ui);</span>
-<span class="l"></span>
-<span class="l">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {</span>
-<span class="l">                <span class="t">Some</span>(range) =&gt; {</span>
-<span class="l">                    <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();</span>
-<span class="l">                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
-<span class="l">                    <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;</span>
-<span class="l">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)</span>
-<span class="l">                }</span>
-<span class="l">                <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),</span>
+<span class="l">            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {</span>
+<span class="l">                <span class="s">"highlighting off (file too large)"</span></span>
+<span class="l">            } <span class="k">else</span> {</span>
+<span class="l">                <span class="s">"highlighting on"</span></span>
 <span class="l">            };</span>
 <span class="l"></span>
 <span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
-<span class="l">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
+<span class="l">                <span class="s">"{position}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
 <span class="l">                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
 <span class="l">                <span class="k">self</span>.line_col_us,</span>
 <span class="l">                <span class="k">self</span>.frame_ms</span>
-<span class="l">            ));</span>
-<span class="l">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
-<span class="l">        });</span>
-<span class="l"></span>
-<span class="l">        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;</span>
-<span class="l">    }</span>
-<span class="l">}</span></code></pre>
+<span class="l">            ));</span></code></pre>
 
 <h2 id="check-yourself">Check yourself</h2>
 
 <div class="quiz">
-  <p class="q">Your editor crawls on a 2 MB file. What do you check before changing any code?</p>
+  <p class="q">At 50,000 lines the editor spends 28 ms per frame even when you aren't typing. Why?</p>
   <ul class="options">
-    <li data-correct>Whether you are running a release build</li>
-    <li>Whether the buffer should become a rope</li>
-    <li>Whether the file has very long single lines</li>
-    <li>Whether the status bar is redrawn too often</li>
+    <li data-correct>The layouter re-scans the text every frame</li>
+    <li>egui re-uploads the font atlas each frame</li>
+    <li>The frame counter forces a full redraw always</li>
+    <li>Idle frames still write the file back to disk</li>
   </ul>
-  <p class="why">Debug builds measured ~10× slower at every file size — 70.61 ms per
-  keystroke versus 7.10 ms at 50,000 lines. It's the largest single factor and it costs
-  nothing to check, so it comes before any code change.
-  <a class="review" href="#numbers">↑ Review: the measurements (stage 2)</a>
+  <p class="why"><code>TextEdit</code> calls your layouter whenever it needs a layout, and
+  it can't know your scanner would return the same answer. egui memoises the galley it
+  builds from the job — but building the job is your code, which it has never seen.
+  <a class="review" href="#idle-too">↑ Review: the idle column (stage 1)</a>
   </p>
 </div>
 
 <div class="quiz">
-  <p class="q">Inserting a character into the middle of a 2 MB <code>String</code> copies about a megabyte. How long does that take?</p>
+  <p class="q">What makes <code>HIGHLIGHT_LIMIT</code> defensible rather than arbitrary?</p>
   <ul class="options">
-    <li data-correct>Around 11 microseconds — negligible here</li>
-    <li>Around 11 milliseconds — most of the frame</li>
-    <li>Around 110 milliseconds — visibly janky</li>
-    <li>It depends entirely on available system memory</li>
+    <li data-correct>A comment recording the measurements around it</li>
+    <li>Being a round power of two in bytes</li>
+    <li>Matching the limits other editors happen to use</li>
+    <li>Being small enough that nobody will notice</li>
   </ul>
-  <p class="why">11 µs, roughly 0.2% of the frame. Copying a megabyte is genuinely cheap
-  on modern hardware. "Obviously O(n), therefore obviously the bottleneck" is exactly the
-  reasoning this lesson exists to break.
-  <a class="review" href="#where-time-goes">↑ Review: where the time goes (stage 3)</a>
+  <p class="why">Any constant can be typed. What makes this one reviewable is the note
+  that highlighting costs 7.1 ms at 427 KB and 17.4 ms at 1.1 MB against a 16.7 ms budget
+  — so a reader can check the reasoning, disagree, or re-measure on different hardware.
+  <a class="review" href="#stage-2">↑ Review: the comment is the point (stage 2)</a>
   </p>
 </div>
 
 <div class="quiz">
-  <p class="q">From lesson 1: why does the frame-time readout need <code>request_repaint()</code>?</p>
+  <p class="q">The naive highlight cache made idle 5× faster and typing 4× slower. What did I do about it?</p>
   <ul class="options">
-    <li data-correct>Idle egui stops repainting, freezing the number</li>
-    <li>Repainting resets the timer between two frames</li>
-    <li>Labels cache their text until explicitly invalidated</li>
-    <li>The clock only advances while a widget has focus</li>
+    <li data-correct>Left it out, and wrote down the measurement</li>
+    <li>Shipped it, since idle is the common case</li>
+    <li>Shipped it behind a configuration flag</li>
+    <li>Removed highlighting from large files entirely</li>
   </ul>
-  <p class="why">egui repaints on interaction or animation, so an untouched editor draws
-  no frames and the number sits at whatever it last was. Forcing a repaint every frame is
-  right while measuring and wrong afterwards — it spends CPU forever.
-  <a class="review" href="0001-your-first-window.html#repaints">↑ Review: when egui repaints (lesson 1, stage 6)</a>
+  <p class="why">The slowdown couldn't be explained by the parts I measured, and shipping
+  an optimisation you can't explain is how a program ends up fast on one machine and
+  mysterious everywhere else. The numbers are recorded so the question can be reopened
+  when something actually depends on it.
+  <a class="review" href="#not-doing">↑ Review: what we're deliberately not doing (stage 3)</a>
   </p>
 </div>
 
 <p class="quiz-score"></p>
 
-<h2>Read this before lesson 7</h2>
+<h2>Read this before lesson 9</h2>
 
 <p><strong>Primary source:</strong>
-<a href="https://nnethercote.github.io/perf-book/profiling.html">
-<em>The Rust Performance Book</em> — Profiling</a>, by Nicholas Nethercote.</p>
+<a href="https://nnethercote.github.io/perf-book/general-tips.html">
+<em>The Rust Performance Book</em> — General Tips</a>.</p>
 
-<p>Nethercote spent years making <code>rustc</code> itself faster, and the book opens
-where this lesson did: measure first, and measure the right build. The profiling chapter
-is short and lists the tools worth knowing — <code>perf</code>, <code>samply</code>,
-<code>cargo-flamegraph</code> — for when a hand-placed <code>Instant::now()</code> stops
-being enough. Read the profiling chapter and the "Build Configuration" one; both are a few
-minutes each.</p>
+<p>Short, and the right chapter for where you are: it opens by insisting that
+optimisation without measurement is guessing, which you've now proved twice — once when
+<code>String</code> turned out to be innocent, and once when a cache made things worse.
+It also covers when <em>not</em> to optimise, which is the harder half.</p>
 
 <div class="ask">
-  <strong>I'm your teacher here — ask me things.</strong> Your numbers will not match my
-  table, and they shouldn't — different CPU, different everything. What matters is the
-  <em>shape</em>: roughly linear in file size, roughly 10× between profiles, and
-  <code>line_col</code> a minority of the frame. If your shape disagrees with mine, that's
-  genuinely interesting and I'd like to see it.
+  <strong>I'm your teacher here — ask me things.</strong> The cache result in stage 3 is
+  an open question, not a settled one — if you want to chase it, I'll happily dig into it
+  with you, and it would make a genuinely good interview story either way. And if you
+  think 512 KB is the wrong limit, argue it: you have the same table I do.
 </div>
 
 <nav class="footer-nav">
-  <a href="0005-open-any-file.html">← Lesson 5: Open Any File</a>
+  <a href="0007-colouring-the-code.html">← Lesson 7: Colouring the Code</a>
   <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
   <a href="../MISSION.md">Mission</a>
-  <a href="0007-colouring-the-code.html">Next: Lesson 7 — Colouring the Code →</a>
+  <span>Next: Lesson 9 — more than one file open at once</span>
 </nav>
 
 </body>

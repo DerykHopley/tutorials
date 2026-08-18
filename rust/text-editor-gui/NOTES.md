@@ -45,13 +45,44 @@ language concept the next editor feature demands.
    _(written 2026-08-16; 172 lines)_
 8. ✅ Knowing when to stop — measure highlighting, degrade above a measured limit
    _(written 2026-08-16; 196 lines; deliberately ships NO cache — see below)_
-9. Multiple buffers → `Vec<Buffer>` + tabs. Struct design finally forces itself here
-10. Undo/redo — the first thing a reviewer presses after typing _(candidate)_
-11. Tests — `line_col` and `open` are pure and beautifully testable _(candidate)_
-12. `ropey` — justified by a measurement from lessons 8–9, with the written rationale
-13. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
+9. ✅ More than one file — `Buffer`/`Editor` split, `Vec<Buffer>`, tabs, index-not-reference
+   _(written 2026-08-16; 227 lines)_
+10. ✅ Tests that find something — `#[cfg(test)]`, a real red test, extract `scan` to test it
+   _(written 2026-08-16; 312 lines, 10 tests; found and fixed a real `name()` bug)_
+11. `ropey` — only if a measurement asks for it. **It may not.** See the open question below.
+12. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
 
-**Estimated total: 12–14.** Floor is 11 if 10 and 11 are dropped.
+**Estimated total: 12.** Undo/redo was dropped — egui already provides it (see below).
+
+### Three planned premises that measurement killed
+
+Recording these because the pattern matters: **every time I checked a planned premise
+against the compiler or a benchmark, roughly one in three was false.**
+
+1. **Lesson 6** was to be "feel `String` insertion hurt → introduce ropey". `String::insert`
+   mid-file on 2 MB is 11 µs. Premise false; lesson became profiling.
+2. **Lesson 9** was to be where "struct design forces itself / borrow-checker pressure"
+   appears. It doesn't. Rust's disjoint closure captures (edition 2021+) accept the naive
+   `let buffer = &mut self.buffers[self.active];` inside the panel closure while
+   `self.line_col_us` is assigned. **Verified: the naive version compiles clean.** The
+   real Rust lesson there is self-referential structs (why `active: usize` not
+   `&mut Buffer`), which does produce genuine errors — E0106 then E0505.
+3. **Lesson 10** was to be undo/redo. **egui's `TextEdit` already implements it**: it owns
+   an `Undoer` and binds Ctrl+Z itself (`egui-0.36.1/src/widgets/text_edit/builder.rs`,
+   and `src/util/undoer.rs`). Building our own would duplicate a working feature and fight
+   egui for the keybinding. Lesson 10 became tests instead.
+
+**Standing instruction: verify the premise before writing the lesson, not after.**
+
+### Open question: whether the rope is ever justified
+
+Lesson 11 is `ropey`, gated on a measurement — and the measurements so far do not support
+it. `String` edits are 11 µs on 2 MB; the frame cost is egui layout and our scanner. The
+mission does list "a rope buffer, with a written justification of why not `String`" as a
+success criterion, so the honest options are:
+(a) find a workload where `String` genuinely hurts (undo snapshots, many large buffers), or
+(b) write the justification as *why we did **not** use one*, which is a stronger portfolio
+answer than an unjustified rewrite. **Raise this with Deryk before writing lesson 11.**
 
 ### Open question: the highlight cache
 

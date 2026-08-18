@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 9 — More Than One File</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 09 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~35 minutes</p>
+  <h1>More Than One File</h1>
+  <p class="subtitle">Three stages to tabs — and the moment your struct stops being one thing.</p>
+</header>
+
+<p>Every feature so far lived on one struct called <code>Editor</code>, and that name has
+been quietly lying for a while. It holds a path, some text, a status message, and two
+performance counters. The first three describe <em>a file</em>. The last two describe
+<em>the application</em>.</p>
+
+<p>Opening a second file forces the split, because you want two of the first group and
+still only one of the second.</p>
+
+<div class="thesis">
+  A struct that needs two of some fields and one of the others is two structs.<br>
+  You don't decide that by taste — you decide it the moment you need a second one.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 8's 196 lines, with highlighting and the size limit. Check against
+<a href="0008-knowing-when-to-stop.html#where-you-ended-up">lesson 8's checkpoint</a>.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-1">
+<h3>Name what you actually have</h3>
+
+<p class="goal">Identical behaviour, honest names — one file, still working.</p>
+
+<p>This stage changes no behaviour at all. It renames the thing you have and builds a new
+thing around it. <strong>Four edits</strong>, and it won't compile until all four are in.</p>
+
+<p>First — rename the struct. The file-shaped fields stay; the app-shaped ones leave:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="del"><span class="k">struct</span> <span class="t">Editor</span> {</span>
+<span class="add"><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {</span>
+<span class="dim">    path: <span class="t">String</span>,
+    text: <span class="t">String</span>,
+    status: <span class="t">String</span>,</span>
+<span class="del">    frame_ms: f32,</span>
+<span class="del">    line_col_us: f32,</span>
+<span class="dim">}</span></code></pre>
+
+<p>Second — the <code>impl</code> block moves with it, and <code>open</code> stops
+setting the counters:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the impl block</span></p>
+<pre><code><span class="del"><span class="k">impl</span> <span class="t">Editor</span> {</span>
+<span class="add"><span class="k">impl</span> <span class="t">Buffer</span> {</span>
+<span class="dim">    <span class="c">/// Open a file. …</span>
+            text,
+            status,</span>
+<span class="del">            frame_ms: <span class="s">0.0</span>,</span>
+<span class="del">            line_col_us: <span class="s">0.0</span>,</span>
+<span class="dim">        }
+    }</span></code></pre>
+
+<p>Third — a tab needs a short label, so give <code>Buffer</code> one more method,
+after <code>line_col</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer, after line_col</span></p>
+<pre><code><span class="add">
+    <span class="c">/// Just the file name, for the tab label.</span>
+    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        <span class="k">self</span>.path.<span class="f">rsplit</span>(<span class="s">'/'</span>).<span class="f">next</span>().<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)
+    }</span></code></pre>
+
+<p class="sidenote">Returning <code>&amp;str</code> rather than <code>String</code> means
+no allocation per tab per frame — it's a borrowed window onto the path the buffer already
+owns. Remember this method. Lesson 10 comes back for it.</p>
+
+<p>Fourth — a new <code>Editor</code>, holding many buffers and one of everything else:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">below impl Buffer</span></p>
+<pre><code><span class="add"><span class="k">struct</span> <span class="t">Editor</span> {
+    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
+    active: <span class="k">usize</span>,
+    frame_ms: f32,
+    line_col_us: f32,
+}
+
+<span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">String</span>]) -&gt; <span class="t">Self</span> {
+        <span class="k">let</span> buffers = paths.<span class="f">iter</span>().<span class="f">map</span>(|p| <span class="t">Buffer</span>::<span class="f">open</span>(p)).<span class="f">collect</span>();
+        <span class="t">Self</span> {
+            buffers,
+            active: <span class="s">0</span>,
+            frame_ms: <span class="s">0.0</span>,
+            line_col_us: <span class="s">0.0</span>,
+        }
+    }
+}</span></code></pre>
+
+<p>Inside <code>fn ui</code>, reach the current file once at the top and use it
+throughout:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
+<pre><code><span class="add">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];
+</span><span class="dim">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(…);</span></code></pre>
+
+<div class="callout note">
+  <span class="label">Then every <code>self.</code> in the panel becomes <code>buffer.</code></span>
+  <code>self.save()</code> → <code>buffer.save()</code>, <code>self.status</code> →
+  <code>buffer.status</code>, <code>&amp;mut self.text</code> →
+  <code>&amp;mut buffer.text</code>, <code>self.line_col(…)</code> →
+  <code>buffer.line_col(…)</code>, <code>self.text.len()</code> →
+  <code>buffer.text.len()</code>. The two counters — <code>self.line_col_us</code> and
+  <code>self.frame_ms</code> — stay on <code>self</code>, because they belong to the
+  application. The compiler will find every one you miss; work through them until it
+  stops complaining.
+</div>
+
+<p>And <code>main</code> now passes a slice:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
+<pre><code><span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span>
+<span class="add">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)))),</span></code></pre>
+
+<p class="run">cargo run<br>
+→ exactly what you had before<br>
+<span class="note">A refactor that changes nothing visible is the safest kind, and the only kind you can be sure you got right.</span></p>
+</section>
+
+<section class="stage" id="stage-2">
+<h3>Take more than one path</h3>
+
+<p class="goal"><code>cargo run -- a.rs b.rs</code> opens both. You'll only see the first.</p>
+
+<p><strong>One edit.</strong> <code>nth(1)</code> took the second argument;
+<code>skip(1)</code> takes all of them:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of main</span></p>
+<pre><code><span class="del">    <span class="k">let</span> path = env::<span class="f">args</span>()</span>
+<span class="del">        .<span class="f">nth</span>(<span class="s">1</span>)</span>
+<span class="del">        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());</span>
+<span class="add">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();
+    <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {
+        <span class="f">vec</span>![<span class="s">"scratch.md"</span>.<span class="f">to_owned</span>()]
+    } <span class="k">else</span> {
+        paths
+    };</span></code></pre>
+
+<p><code>collect()</code> turns an iterator into a collection, and the type annotation
+<code>Vec&lt;String&gt;</code> is how it knows <em>which</em> collection — the same call
+could build a <code>HashSet</code> or a <code>String</code>. This is one of the few places
+Rust genuinely needs you to say the type out loud.</p>
+
+<p class="sidenote">The second <code>let paths</code> shadows the first. Shadowing isn't
+mutation — it's a new binding with the same name, and it's idiomatic for exactly this:
+take a value, transform it, keep calling it the thing it is.</p>
+
+<p class="run">printf 'fn a() {}\n' &gt; editor/one.rs; printf 'fn b() {}\n' &gt; editor/two.rs<br>
+cargo run -- one.rs two.rs<br>
+→ one.rs, highlighted. two.rs is open but has no way to be seen yet.</p>
+</section>
+
+<section class="stage" id="stage-3">
+<h3>Tabs</h3>
+
+<p class="goal">Click a name, switch files.</p>
+
+<p><strong>One edit</strong>, at the very top of the panel — above the
+<code>let buffer = …</code> line you added in stage 1:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
+<pre><code><span class="add">            ui.<span class="f">horizontal</span>(|ui| {
+                <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {
+                    <span class="k">let</span> selected = index == <span class="k">self</span>.active;
+                    <span class="k">if</span> ui
+                        .<span class="f">selectable_label</span>(selected, <span class="k">self</span>.buffers[index].<span class="f">name</span>())
+                        .<span class="f">clicked</span>()
+                    {
+                        <span class="k">self</span>.active = index;
+                    }
+                }
+            });
+</span><span class="dim">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];</span></code></pre>
+
+<p><code>selectable_label(selected, text)</code> draws a label that looks pressed when
+<code>selected</code> is true — immediate mode again, so there's no tab widget holding
+state anywhere. You describe how it looks right now, and <code>self.active</code> is the
+only thing that remembers anything.</p>
+
+<p class="run">cargo run -- one.rs two.rs<br>
+→ two tabs; click to switch. Edit one, switch away, switch back — your edit is still there.</p>
+
+<h4 id="index-not-reference">Why <code>active: usize</code> and not <code>active: &amp;mut Buffer</code></h4>
+
+<p>Storing an index looks primitive. Surely the editor should just hold a reference to the
+buffer it's editing? Try it:</p>
+
+<pre><code><span class="k">struct</span> <span class="t">Editor</span> {
+    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
+    active: &amp;<span class="k">mut</span> <span class="t">Buffer</span>,
+}</code></pre>
+
+<pre class="error"><code><span class="c">error[E0106]</span>: missing lifetime specifier
+ <span class="c">--&gt;</span> src/main.rs:5:13
+  |
+5 |     active: &amp;mut Buffer,
+  |             ^ <span class="c">expected named lifetime parameter</span></code></pre>
+
+<p>Take the compiler's advice, add the lifetime, and try to build one:</p>
+
+<pre class="error"><code><span class="c">error[E0505]</span>: cannot move out of `buffers` because it is borrowed
+  |
+9 |     let mut buffers = vec![Buffer { … }];
+10 |     let active = &amp;mut buffers[0];
+  |                       ------- <span class="c">borrow of `buffers` occurs here</span>
+11 |     let editor = Editor { buffers, active };
+  |                           ^^^^^^^  ------ <span class="c">borrow later used here</span>
+  |                           |
+  |                           <span class="c">move out of `buffers` occurs here</span></code></pre>
+
+<p>The struct wants to <em>own</em> the vector and <em>hold a reference into</em> it at
+the same time. That's a <strong>self-referential struct</strong>, and safe Rust doesn't
+permit it: moving the <code>Editor</code> would move the vector, and the reference would
+be left pointing at where the data used to be.</p>
+
+<div class="callout key">
+  <span class="label">This is why real Rust code is full of indices</span>
+  Not because indices are elegant — they aren't; nothing stops you using a stale one — but
+  because "own the collection, refer to a member by position" is the shape that survives
+  being moved. Every arena, every entity-component system, every graph library in Rust
+  reaches for the same answer. Recognising the shape now saves you a very long fight
+  later.
+</div>
+
+<p class="run">rm editor/one.rs editor/two.rs<br>
+cargo fmt &amp;&amp; cargo clippy<br>
+<span class="note">Both silent.</span></p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>227 lines. <code>highlight</code> and the constants above it are untouched.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the restructured parts</span></p>
+<pre class="numbered"><code><span class="l"><span class="k">struct</span> <span class="t">Buffer</span> {</span>
+<span class="l">    path: <span class="t">String</span>,</span>
+<span class="l">    text: <span class="t">String</span>,</span>
+<span class="l">    status: <span class="t">String</span>,</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> <span class="t">Buffer</span> {</span>
+<span class="l">    <span class="c">/// Open a file. A file that doesn&#x27;t exist yet is a new file, not an error.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;str) -&gt; <span class="k">Self</span> {</span>
+<span class="l">        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
+<span class="l">            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),</span>
+<span class="l">            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {</span>
+<span class="l">                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {path}&quot;</span>))</span>
+<span class="l">            }</span>
+<span class="l">            <span class="f">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;could not open {path}: {error}&quot;</span>)),</span>
+<span class="l">        };</span>
+<span class="l">        <span class="k">Self</span> {</span>
+<span class="l">            path: path.<span class="f">to_owned</span>(),</span>
+<span class="l">            text,</span>
+<span class="l">            status,</span>
+<span class="l">        }</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    <span class="c">/// Write the buffer back to the file it came from.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {</span>
+<span class="l">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;</span>
+<span class="l">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);</span>
+<span class="l">        <span class="f">Ok</span>(())</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    <span class="c">/// Turn a character offset into a 1-based line and column.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: usize) -&gt; (usize, usize) {</span>
+<span class="l">        <span class="k">let</span> <span class="k">mut</span> line = <span class="s">1</span>;</span>
+<span class="l">        <span class="k">let</span> <span class="k">mut</span> column = <span class="s">1</span>;</span>
+<span class="l">        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">chars</span>().<span class="f">take</span>(char_index) {</span>
+<span class="l">            <span class="k">if</span> ch == &#x27;\n&#x27; {</span>
+<span class="l">                line += <span class="s">1</span>;</span>
+<span class="l">                column = <span class="s">1</span>;</span>
+<span class="l">            } <span class="k">else</span> {</span>
+<span class="l">                column += <span class="s">1</span>;</span>
+<span class="l">            }</span>
+<span class="l">        }</span>
+<span class="l">        (line, column)</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    <span class="c">/// Just the file name, for the tab label.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {</span>
+<span class="l">        <span class="k">self</span>.path.<span class="f">rsplit</span>(&#x27;/&#x27;).<span class="f">next</span>().<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
+<span class="l">    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,</span>
+<span class="l">    active: usize,</span>
+<span class="l">    frame_ms: f32,</span>
+<span class="l">    line_col_us: f32,</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">String</span>]) -&gt; <span class="k">Self</span> {</span>
+<span class="l">        <span class="k">let</span> buffers = paths.<span class="f">iter</span>().<span class="f">map</span>(|p| <span class="t">Buffer</span>::<span class="f">open</span>(p)).<span class="f">collect</span>();</span>
+<span class="l">        <span class="k">Self</span> {</span>
+<span class="l">            buffers,</span>
+<span class="l">            active: <span class="s">0</span>,</span>
+<span class="l">            frame_ms: <span class="s">0</span>.<span class="s">0</span>,</span>
+<span class="l">            line_col_us: <span class="s">0</span>.<span class="s">0</span>,</span>
+<span class="l">        }</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"></span>
+<span class="l"><span class="c">// highlight() is unchanged from lesson 8.</span></span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
+<span class="l">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();</span>
+<span class="l">        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();</span>
+<span class="l"></span>
+<span class="l">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="l">            ui.<span class="f">horizontal</span>(|ui| {</span>
+<span class="l">                <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {</span>
+<span class="l">                    <span class="k">let</span> selected = index == <span class="k">self</span>.active;</span>
+<span class="l">                    <span class="k">if</span> ui</span>
+<span class="l">                        .<span class="f">selectable_label</span>(selected, <span class="k">self</span>.buffers[index].<span class="f">name</span>())</span>
+<span class="l">                        .<span class="f">clicked</span>()</span>
+<span class="l">                    {</span>
+<span class="l">                        <span class="k">self</span>.active = index;</span>
+<span class="l">                    }</span>
+<span class="l">                }</span>
+<span class="l">            });</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];</span>
+<span class="l"></span>
+<span class="l">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
+<span class="l">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = buffer.<span class="f">save</span>() {</span>
+<span class="l">                buffer.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);</span>
+<span class="l">            }</span>
+<span class="l"><span class="c">            // … the text box, position readout and labels, now reading</span></span>
+<span class="l"><span class="c">            // `buffer` instead of `self` …</span></span>
+<span class="l">        });</span>
+<span class="l"></span>
+<span class="l">        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
+<span class="l">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();</span>
+<span class="l">    <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {</span>
+<span class="l">        vec![<span class="s">&quot;scratch.md&quot;</span>.<span class="f">to_owned</span>()]</span>
+<span class="l">    } <span class="k">else</span> {</span>
+<span class="l">        paths</span>
+<span class="l">    };</span>
+<span class="l"></span>
+<span class="l">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span>
+<span class="l">        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800</span>.<span class="s">0</span>, <span class="s">600</span>.<span class="s">0</span>]),</span>
+<span class="l">        ..<span class="t">Default</span>::<span class="f">default</span>()</span>
+<span class="l">    };</span>
+<span class="l"></span>
+<span class="l">    eframe::<span class="f">run_native</span>(</span>
+<span class="l">        <span class="s">&quot;editor&quot;</span>,</span>
+<span class="l">        options,</span>
+<span class="l">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="f">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)))),</span>
+<span class="l">    )</span>
+<span class="l">}</span></code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">What told you it was time to split <code>Editor</code> into two structs?</p>
+  <ul class="options">
+    <li data-correct>Needing two of some fields, one of others</li>
+    <li>The struct had grown past five total fields</li>
+    <li>Rust forbids methods returning borrowed strings</li>
+    <li>Tabs require a dedicated widget state type</li>
+  </ul>
+  <p class="why"><code>path</code>, <code>text</code> and <code>status</code> describe a
+  file; <code>frame_ms</code> and <code>line_col_us</code> describe the application. That
+  was always true, but harmless until a second file made you need two of one group and
+  one of the other.
+  <a class="review" href="#stage-1">↑ Review: naming what you have (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why can't <code>Editor</code> hold <code>&amp;mut Buffer</code> beside the <code>Vec</code> it came from?</p>
+  <ul class="options">
+    <li data-correct>Moving the struct would invalidate the reference</li>
+    <li>References are not allowed in structs at all</li>
+    <li>A Vec cannot be borrowed while it is owned</li>
+    <li>Only one mutable borrow may exist per program</li>
+  </ul>
+  <p class="why">It would be self-referential: the struct owns the vector and points into
+  it. Move the <code>Editor</code> and the vector moves too, leaving the reference aimed
+  at the old address. Indices survive the move, which is why Rust code uses them.
+  <a class="review" href="#index-not-reference">↑ Review: index, not reference (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">From lesson 5: why does <code>collect()</code> need a type annotation here?</p>
+  <ul class="options">
+    <li data-correct>It can build many different collections</li>
+    <li>Iterators have no type until collected</li>
+    <li>Command-line arguments have unknown types</li>
+    <li>Annotations are required on every let binding</li>
+  </ul>
+  <p class="why"><code>collect()</code> is generic over what it builds — the same
+  iterator could become a <code>Vec</code>, a <code>HashSet</code> or a
+  <code>String</code>. The annotation on the binding is how you choose.
+  <a class="review" href="#stage-2">↑ Review: collecting the arguments (stage 2)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 10</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://rust-book.cs.brown.edu/ch05-00-structs.html">
+<em>The Rust Programming Language</em>, Chapter 5 — Using Structs to Structure Related
+Data</a> (Brown University interactive edition).</p>
+
+<p>You've been writing structs since lesson 1 and just did your first real split, so this
+lands better now than it would have then. Chapter 5.3 on method syntax covers exactly what
+you did to <code>Buffer</code>, and the chapter closes with an example that grows a struct
+the same way this lesson did.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> Stage 1 is the biggest single
+  change in the course so far and the compiler will shout a lot while you're halfway
+  through it. That's expected — work through the errors top to bottom and they collapse
+  quickly. If one doesn't make sense, paste it to me rather than guessing.
+</div>
+
+<nav class="footer-nav">
+  <a href="0008-knowing-when-to-stop.html">← Lesson 8: Knowing When to Stop</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <a href="0010-tests-that-find-something.html">Next: Lesson 10 — Tests That Find Something →</a>
+</nav>
+
+</body>
+</html>

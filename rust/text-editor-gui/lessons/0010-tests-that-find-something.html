@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 10 — Tests That Find Something</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 10 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~30 minutes</p>
+  <h1>Tests That Find Something</h1>
+  <p class="subtitle">Three stages — and the second one goes red on a bug you shipped in lesson 9.</p>
+</header>
+
+<p>Your mission says this repo is a work sample. A Rust repo with no <code>#[test]</code>
+in it invites exactly one question in an interview, and it isn't a friendly one.</p>
+
+<p>But tests written to have tests are worthless. The point of this lesson is that one of
+them fails — on real code you wrote an hour ago — and that the effort of making another
+one testable improves the design.</p>
+
+<div class="thesis">
+  A test that has never failed has told you nothing.<br>
+  Write them where you're most likely to be wrong: the edges, the empty case, the input
+  nobody thought about.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 9's 227 lines, with tabs. Check against
+<a href="0009-more-than-one-file.html#where-you-ended-up">lesson 9's checkpoint</a>.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-1">
+<h3>Your first test module</h3>
+
+<p class="goal"><code>cargo test</code> runs, and passes.</p>
+
+<p>Rust puts unit tests in the same file as the code they test, at the bottom.
+<strong>One edit</strong> — append this to the very end of <code>main.rs</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the very bottom of the file</span></p>
+<pre><code><span class="add">
+#[<span class="f">cfg</span>(test)]
+<span class="k">mod</span> tests {
+    <span class="k">use</span> <span class="k">super</span>::*;
+
+    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Buffer</span> {
+        <span class="t">Buffer</span> {
+            path: <span class="s">"test.rs"</span>.<span class="f">to_owned</span>(),
+            text: text.<span class="f">to_owned</span>(),
+            status: <span class="t">String</span>::<span class="f">new</span>(),
+        }
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">line_col_starts_at_one_one</span>() {
+        <span class="f">assert_eq!</span>(<span class="f">buffer_with</span>(<span class="s">"abc"</span>).<span class="f">line_col</span>(<span class="s">0</span>), (<span class="s">1</span>, <span class="s">1</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">line_col_counts_newlines</span>() {
+        <span class="k">let</span> b = <span class="f">buffer_with</span>(<span class="s">"ab\ncd"</span>);
+        <span class="f">assert_eq!</span>(b.<span class="f">line_col</span>(<span class="s">2</span>), (<span class="s">1</span>, <span class="s">3</span>));
+        <span class="f">assert_eq!</span>(b.<span class="f">line_col</span>(<span class="s">3</span>), (<span class="s">2</span>, <span class="s">1</span>));
+        <span class="f">assert_eq!</span>(b.<span class="f">line_col</span>(<span class="s">5</span>), (<span class="s">2</span>, <span class="s">3</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">line_col_counts_characters_not_bytes</span>() {
+        <span class="k">let</span> b = <span class="f">buffer_with</span>(<span class="s">"caf\u{e9}x"</span>);
+        <span class="f">assert_eq!</span>(b.<span class="f">line_col</span>(<span class="s">5</span>), (<span class="s">1</span>, <span class="s">6</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">line_col_past_the_end_is_the_end</span>() {
+        <span class="f">assert_eq!</span>(<span class="f">buffer_with</span>(<span class="s">"ab"</span>).<span class="f">line_col</span>(<span class="s">999</span>), (<span class="s">1</span>, <span class="s">3</span>));
+    }
+}</span></code></pre>
+
+<p>Four things carry the weight here:</p>
+
+<ul>
+  <li><code>#[cfg(test)]</code> — compile this module <em>only</em> under
+  <code>cargo test</code>. It costs nothing in the shipped binary.</li>
+  <li><code>use super::*;</code> — the tests are a child module, so they need to pull in
+  the parent's items. This is why private functions are testable in Rust without any
+  ceremony.</li>
+  <li><code>#[test]</code> — marks a function as a test. No registration, no naming
+  convention.</li>
+  <li><code>assert_eq!</code> — on failure it prints both values, which is why it beats
+  <code>assert!(a == b)</code>.</li>
+</ul>
+
+<p class="sidenote">The names are sentences: <code>line_col_past_the_end_is_the_end</code>.
+When one fails, the name is the first thing you read, and it should tell you what broke
+without opening the file. Nobody has ever been helped by a test called
+<code>test_line_col_2</code>.</p>
+
+<p>Notice the last two. Counting characters rather than bytes is the
+<a href="0004-where-is-the-cursor.html#byte-vs-char">lesson 4 trap</a>, pinned down so it
+can't come back. And an index past the end is the sort of thing a cursor does during a
+delete — worth knowing it returns the end rather than panicking.</p>
+
+<p class="run">cargo test<br>
+→ test result: ok. 4 passed; 0 failed</p>
+</section>
+
+<section class="stage" id="stage-2">
+<h3>Test the thing you wrote last</h3>
+
+<p class="goal">A red test — on code from lesson 9.</p>
+
+<p><code>Buffer::name()</code> is a one-liner that chops a path down to a filename. It's
+the newest code in the project and the least examined. <strong>One edit</strong>, inside
+the test module:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests</span></p>
+<pre><code><span class="add">
+    #[test]
+    <span class="k">fn</span> <span class="f">name_of_a_bare_filename</span>() {
+        <span class="f">assert_eq!</span>(<span class="f">buffer_with</span>(<span class="s">""</span>).<span class="f">name</span>(), <span class="s">"test.rs"</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">name_of_a_nested_path</span>() {
+        <span class="k">let</span> <span class="k">mut</span> b = <span class="f">buffer_with</span>(<span class="s">""</span>);
+        b.path = <span class="s">"src/widgets/main.rs"</span>.<span class="f">to_owned</span>();
+        <span class="f">assert_eq!</span>(b.<span class="f">name</span>(), <span class="s">"main.rs"</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">name_of_a_trailing_slash</span>() {
+        <span class="k">let</span> <span class="k">mut</span> b = <span class="f">buffer_with</span>(<span class="s">""</span>);
+        b.path = <span class="s">"src/"</span>.<span class="f">to_owned</span>();
+        <span class="f">assert_eq!</span>(b.<span class="f">name</span>(), <span class="s">"src"</span>);
+    }</span></code></pre>
+
+<p class="run">cargo test</p>
+
+<pre class="error"><code>test tests::name_of_a_bare_filename ... ok
+test tests::name_of_a_nested_path ... ok
+test tests::name_of_a_trailing_slash ... FAILED
+
+---- tests::name_of_a_trailing_slash stdout ----
+assertion `left == right` failed
+  left: ""
+ right: "src"
+
+test result: FAILED. 9 passed; 1 failed</code></pre>
+
+<details class="recall">
+  <summary>Before reading on: <code>self.path.rsplit('/').next()</code> on <code>"src/"</code> returned an empty string. Why?</summary>
+  <p><code>rsplit</code> splits from the right and yields the piece <em>after</em> the
+  last separator first. For <code>"src/"</code> the last <code>/</code> is at the end, so
+  the first piece is the empty string between it and the end of the text. It's not an
+  error — it's the correct answer to a question that was asked badly.</p>
+</details>
+
+<p>A blank tab label isn't fatal, but it's the kind of thing a reviewer clicks on in the
+first minute. Fix it by trimming the trailing separator before splitting, and rejecting an
+empty answer:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
+<span class="del">        <span class="k">self</span>.path.<span class="f">rsplit</span>(<span class="s">'/'</span>).<span class="f">next</span>().<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)</span>
+<span class="add">        <span class="k">self</span>.path
+            .<span class="f">trim_end_matches</span>(<span class="s">'/'</span>)
+            .<span class="f">rsplit</span>(<span class="s">'/'</span>)
+            .<span class="f">next</span>()
+            .<span class="f">filter</span>(|name| !name.<span class="f">is_empty</span>())
+            .<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)</span>
+<span class="dim">    }</span></code></pre>
+
+<p><code>.filter(…)</code> on an <code>Option</code> turns <code>Some(x)</code> into
+<code>None</code> when the predicate fails, so an empty result falls through to
+<code>unwrap_or</code> and you get the whole path back rather than nothing at all. That's
+the <a href="0005-open-any-file.html#stage-1"><code>Option</code> combinator</a> family
+from lesson 5, earning its keep.</p>
+
+<p class="run">cargo test<br>
+→ test result: ok. 7 passed; 0 failed</p>
+
+<div class="callout key">
+  <span class="label">That's the whole argument for tests, in one bug</span>
+  You'd have found this eventually — by opening a directory, seeing a blank tab, and
+  wondering. The test found it in the ten seconds it took to ask "what about a path
+  ending in a slash?", before it ever reached a user, and it will now keep finding it if
+  anyone rewrites that method.
+</div>
+</section>
+
+<section class="stage" id="stage-3">
+<h3>Make the untestable part testable</h3>
+
+<p class="goal">The scanner gets tested, and the code gets better in the process.</p>
+
+<p><code>highlight</code> can't be tested: it needs a <code>&amp;egui::Ui</code>, which
+only exists mid-frame inside a running application. But the <em>decisions</em> it makes —
+which run of characters is which colour — need no egui at all. They're tangled up with the
+drawing, so untangle them. <strong>Two edits.</strong></p>
+
+<p>First — split the function in half. The scanning half returns a list of runs:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">replacing the head of fn highlight</span></p>
+<pre><code><span class="del"><span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span></span>
+<span class="del"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
+<span class="del">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
+<span class="del">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
+<span class="del">    job.wrap.max_width = wrap_width;</span>
+<span class="del">    <span class="c">// … the HIGHLIGHT_LIMIT early return …</span></span>
+<span class="add"><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span>
+<span class="c">/// so it can be tested directly.</span>
+<span class="k">fn</span> <span class="f">scan</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Vec</span>&lt;(&amp;<span class="k">str</span>, egui::<span class="t">Color32</span>)&gt; {
+    <span class="k">let</span> <span class="k">mut</span> runs = <span class="t">Vec</span>::<span class="f">new</span>();</span>
+<span class="dim">
+    <span class="k">let</span> <span class="k">mut</span> rest = text;
+    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
+        <span class="c">// … the if-chain, unchanged …</span></span></code></pre>
+
+<p>The bottom of the loop pushes instead of appending, and the function returns the
+list:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn scan, the end of the loop</span></p>
+<pre><code><span class="del">        job.<span class="f">append</span>(chunk, <span class="s">0.0</span>, egui::<span class="t">TextFormat</span> { … });</span>
+<span class="add">        runs.<span class="f">push</span>((chunk, colour));</span>
+<span class="dim">        rest = &amp;rest[chunk.<span class="f">len</span>()..];
+    }
+</span><span class="del">    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))</span>
+<span class="add">    runs</span>
+<span class="dim">}</span></code></pre>
+
+<p>Second — a new <code>highlight</code> that turns runs into a galley. It's short,
+because all the thinking now happens elsewhere:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">below fn scan</span></p>
+<pre><code><span class="add">
+<span class="c">/// Lay `text` out for egui, colouring it unless the file is too big.</span>
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
+    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
+    job.wrap.max_width = wrap_width;
+
+    <span class="k">let</span> runs = <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+        <span class="f">vec!</span>[(text, <span class="t">PLAIN</span>)]
+    } <span class="k">else</span> {
+        <span class="f">scan</span>(text)
+    };
+
+    <span class="k">for</span> (chunk, colour) <span class="k">in</span> runs {
+        job.<span class="f">append</span>(
+            chunk,
+            <span class="s">0.0</span>,
+            egui::<span class="t">TextFormat</span> {
+                font_id: font.<span class="f">clone</span>(),
+                color: colour,
+                ..<span class="t">Default</span>::<span class="f">default</span>()
+            },
+        );
+    }
+
+    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))
+}</span></code></pre>
+
+<div class="callout note">
+  <span class="label">Read the new <code>highlight</code> again</span>
+  The size limit used to be an early return buried in the middle of a scanner. Now it's
+  <code>if too big { one run } else { scan it }</code> — the whole policy in three lines,
+  where someone can see it. Making the code testable didn't just enable the tests; it
+  moved a decision somewhere it can be read.
+</div>
+
+<p>Now the tests, which need no <code>Ui</code> at all:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests</span></p>
+<pre><code><span class="add">
+    #[test]
+    <span class="k">fn</span> <span class="f">scan_colours_keywords_only</span>() {
+        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">"let x"</span>);
+        <span class="f">assert_eq!</span>(runs[<span class="s">0</span>], (<span class="s">"let"</span>, <span class="t">KEYWORD</span>));
+        <span class="f">assert_eq!</span>(runs[<span class="s">2</span>], (<span class="s">"x"</span>, <span class="t">PLAIN</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">scan_handles_an_unterminated_string</span>() {
+        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">"s = \"oops"</span>);
+        <span class="f">assert_eq!</span>(runs.<span class="f">last</span>().<span class="f">unwrap</span>(), &amp;(<span class="s">"\"oops"</span>, <span class="t">STRING</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">scan_reassembles_the_original_text</span>() {
+        <span class="k">let</span> text = <span class="s">"fn a() { // hi\n  let s = \"x\";\n}\n"</span>;
+        <span class="k">let</span> joined: <span class="t">String</span> = <span class="f">scan</span>(text).<span class="f">iter</span>().<span class="f">map</span>(|(c, _)| *c).<span class="f">collect</span>();
+        <span class="f">assert_eq!</span>(joined, text);
+    }</span></code></pre>
+
+<p>The last one is the most valuable test in the file and the least obvious. It doesn't
+check any colour — it checks that gluing every run back together reproduces the input
+exactly. That single property catches a dropped character, a duplicated one, a slice off
+by a byte, and the infinite loop you'd get if a run ever came back empty. Properties like
+that are worth more than a dozen assertions about specific colours.</p>
+
+<p class="sidenote">Note <code>.unwrap()</code> in a test — the thing
+<a href="0002-opening-a-real-file.html#unwrap">lesson 2</a> warned you off. In tests it's
+correct: a panic <em>is</em> the failure report, and there's no user to protect. The rule
+was never "never unwrap", it was "don't claim something can't fail unless you can defend
+it".</p>
+
+<p class="run">cargo test<br>
+→ test result: ok. 10 passed; 0 failed<br>
+cargo run<br>
+<span class="note">Highlighting still works — the refactor changed structure, not behaviour.</span></p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>312 lines, 10 tests passing.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the parts that changed</span></p>
+<pre class="numbered"><code><span class="l"><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span></span>
+<span class="l"><span class="c">/// so it can be tested directly.</span></span>
+<span class="l"><span class="k">fn</span> <span class="f">scan</span>(text: &amp;str) -&gt; <span class="t">Vec</span>&lt;(&amp;str, egui::<span class="t">Color32</span>)&gt; {</span>
+<span class="l">    <span class="k">let</span> <span class="k">mut</span> runs = <span class="t">Vec</span>::<span class="f">new</span>();</span>
+<span class="l"><span class="c">    // … the same if-chain as lesson 7 …</span></span>
+<span class="l">        runs.<span class="f">push</span>((chunk, colour));</span>
+<span class="l">        rest = &amp;rest[chunk.<span class="f">len</span>()..];</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    runs</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="c">/// Lay `text` out for egui, colouring it unless the file is too big.</span></span>
+<span class="l"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;str, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
+<span class="l">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
+<span class="l">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
+<span class="l">    job.wrap.max_width = wrap_width;</span>
+<span class="l"></span>
+<span class="l">    <span class="k">let</span> runs = <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {</span>
+<span class="l">        vec![(text, <span class="t">PLAIN</span>)]</span>
+<span class="l">    } <span class="k">else</span> {</span>
+<span class="l">        <span class="f">scan</span>(text)</span>
+<span class="l">    };</span>
+<span class="l"></span>
+<span class="l">    <span class="k">for</span> (chunk, colour) <span class="k">in</span> runs {</span>
+<span class="l">        job.<span class="f">append</span>(</span>
+<span class="l">            chunk,</span>
+<span class="l">            <span class="s">0</span>.<span class="s">0</span>,</span>
+<span class="l">            egui::<span class="t">TextFormat</span> {</span>
+<span class="l">                font_id: font.<span class="f">clone</span>(),</span>
+<span class="l">                color: colour,</span>
+<span class="l">                ..<span class="t">Default</span>::<span class="f">default</span>()</span>
+<span class="l">            },</span>
+<span class="l">        );</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))</span>
+<span class="l"></span>
+<span class="l"></span>
+<span class="l">    <span class="c">/// Just the file name, for the tab label.</span></span>
+<span class="l">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {</span>
+<span class="l">        <span class="k">self</span>.path</span>
+<span class="l">            .<span class="f">trim_end_matches</span>(&#x27;/&#x27;)</span>
+<span class="l">            .<span class="f">rsplit</span>(&#x27;/&#x27;)</span>
+<span class="l">            .<span class="f">next</span>()</span>
+<span class="l">            .<span class="f">filter</span>(|name| !name.<span class="f">is_empty</span>())</span>
+<span class="l">            .<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">#[<span class="f">cfg</span>(test)]</span>
+<span class="l"><span class="k">mod</span> tests {</span>
+<span class="l">    <span class="k">use</span> super::*;</span>
+<span class="l"></span>
+<span class="l">    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;str) -&gt; <span class="t">Buffer</span> {</span>
+<span class="l">        <span class="t">Buffer</span> {</span>
+<span class="l">            path: <span class="s">&quot;test.rs&quot;</span>.<span class="f">to_owned</span>(),</span>
+<span class="l">            text: text.<span class="f">to_owned</span>(),</span>
+<span class="l">            status: <span class="t">String</span>::<span class="f">new</span>(),</span>
+<span class="l">        }</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    #[test]</span>
+<span class="l">    <span class="k">fn</span> <span class="f">line_col_starts_at_one_one</span>() {</span>
+<span class="l">        <span class="f">assert_eq</span>!(<span class="f">buffer_with</span>(<span class="s">&quot;abc&quot;</span>).<span class="f">line_col</span>(<span class="s">0</span>), (<span class="s">1</span>, <span class="s">1</span>));</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    #[test]</span>
+<span class="l">    <span class="k">fn</span> <span class="f">line_col_counts_newlines</span>() {</span>
+<span class="l">        <span class="k">let</span> b = <span class="f">buffer_with</span>(<span class="s">&quot;ab\ncd&quot;</span>);</span>
+<span class="l">        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">2</span>), (<span class="s">1</span>, <span class="s">3</span>));</span>
+<span class="l">        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">3</span>), (<span class="s">2</span>, <span class="s">1</span>));</span>
+<span class="l">        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">5</span>), (<span class="s">2</span>, <span class="s">3</span>));</span>
+<span class="l"><span class="c">    // … the remaining line_col and name tests …</span></span>
+<span class="l">    #[test]</span>
+<span class="l">    <span class="k">fn</span> <span class="f">scan_colours_keywords_only</span>() {</span>
+<span class="l">        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;let x&quot;</span>);</span>
+<span class="l">        <span class="f">assert_eq</span>!(runs[<span class="s">0</span>], (<span class="s">&quot;let&quot;</span>, <span class="t">KEYWORD</span>));</span>
+<span class="l">        <span class="f">assert_eq</span>!(runs[<span class="s">2</span>], (<span class="s">&quot;x&quot;</span>, <span class="t">PLAIN</span>));</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    #[test]</span>
+<span class="l">    <span class="k">fn</span> <span class="f">scan_handles_an_unterminated_string</span>() {</span>
+<span class="l">        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;s = \&quot;oops&quot;</span>);</span>
+<span class="l">        <span class="f">assert_eq</span>!(runs.<span class="f">last</span>().<span class="f">unwrap</span>(), &amp;(<span class="s">&quot;\&quot;oops&quot;</span>, <span class="t">STRING</span>));</span>
+<span class="l">    }</span>
+<span class="l"></span>
+<span class="l">    #[test]</span>
+<span class="l">    <span class="k">fn</span> <span class="f">scan_reassembles_the_original_text</span>() {</span>
+<span class="l">        <span class="k">let</span> text = <span class="s">&quot;fn a() { // hi\n  let s = \&quot;x\&quot;;\n}\n&quot;</span>;</span>
+<span class="l">        <span class="k">let</span> joined: <span class="t">String</span> = <span class="f">scan</span>(text).<span class="f">iter</span>().<span class="f">map</span>(|(c, _)| *c).<span class="f">collect</span>();</span>
+<span class="l">        <span class="f">assert_eq</span>!(joined, text);</span>
+<span class="l">    }</span>
+<span class="l">}</span></code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">What does <code>#[cfg(test)]</code> on the test module do?</p>
+  <ul class="options">
+    <li data-correct>Compiles it only when running tests</li>
+    <li>Runs each test in a separate process</li>
+    <li>Grants the module access to private items</li>
+    <li>Marks every function inside it as a test</li>
+  </ul>
+  <p class="why">It's conditional compilation, so the tests add nothing to the shipped
+  binary. Access to private items comes from being a child module plus
+  <code>use super::*</code>, and each test still needs its own <code>#[test]</code>.
+  <a class="review" href="#stage-1">↑ Review: the four pieces (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why did <code>name()</code> return an empty string for the path <code>"src/"</code>?</p>
+  <ul class="options">
+    <li data-correct><code>rsplit</code> yields the empty piece after the last slash</li>
+    <li>Paths ending in a slash are rejected as invalid</li>
+    <li>The borrow of <code>self.path</code> ended too early</li>
+    <li>Trailing separators are stripped by the filesystem</li>
+  </ul>
+  <p class="why"><code>rsplit</code> works from the right, and the first piece it yields
+  is whatever sits after the final separator — here, nothing. The function was answering
+  correctly; the question was wrong.
+  <a class="review" href="#stage-2">↑ Review: the failing test (stage 2)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Which test would catch a scanner that silently drops a character?</p>
+  <ul class="options">
+    <li data-correct>The one rejoining every run into the original</li>
+    <li>The one checking keywords get the keyword colour</li>
+    <li>The one on an unterminated string literal</li>
+    <li>None — that needs a running egui window</li>
+  </ul>
+  <p class="why">Colour assertions only check the runs they name. Rejoining every run and
+  comparing to the input is a property of the whole output, so it catches dropped
+  characters, duplicates, off-by-one slices and empty runs at once.
+  <a class="review" href="#stage-3">↑ Review: the property test (stage 3)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 11</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://rust-book.cs.brown.edu/ch11-00-testing.html">
+<em>The Rust Programming Language</em>, Chapter 11 — Writing Automated Tests</a>
+(Brown University interactive edition).</p>
+
+<p>Chapter 11.1 covers <code>#[test]</code>, <code>assert!</code> and
+<code>#[should_panic]</code>; 11.2 covers running a subset with
+<code>cargo test name_of</code>, which you'll want the moment you have thirty of them;
+11.3 draws the line between unit tests like today's and integration tests in a separate
+<code>tests/</code> directory. You've just written the first kind.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> If your
+  <code>name_of_a_trailing_slash</code> test passed first time, something's different
+  about your <code>name()</code> and I'd like to see it. And if the split in stage 3 felt
+  like moving code around for its own sake, push back — I think the new
+  <code>highlight</code> reads better, but that's a claim you should make me defend.
+</div>
+
+<nav class="footer-nav">
+  <a href="0009-more-than-one-file.html">← Lesson 9: More Than One File</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <span>Next: Lesson 11 — the rope, if the numbers ask for it</span>
+</nav>
+
+</body>
+</html>

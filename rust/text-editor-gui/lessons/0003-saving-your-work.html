@@ -1064,7 +1064,7 @@ something you have to type. The point isn't that you can never discard a
 
 <p class="goal">A status line reports every save — including the ones that fail.</p>
 
-<p><strong>Four edits</strong>, and the file won't compile until all four are in.</p>
+<p><strong>Five edits</strong>, and the file won't compile until all five are in.</p>
 
 <p>First and second — the editor needs somewhere to put a message, and
 <code>open</code> has to start it empty:</p>
@@ -1120,7 +1120,7 @@ it ever gets there.</p>
 <a href="0001-your-first-window.html#borrows">lesson 1's rule</a> that needs an exclusive
 borrow. Miss this edit and the compiler will tell you, in almost the same words as lesson 1.</p>
 
-<p>Fourth — the caller, which <em>does</em> know what to do, plus somewhere to show it:</p>
+<p>Fourth — the caller, which <em>does</em> know what to do:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
 <pre><code><span class="dim">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
@@ -1130,6 +1130,9 @@ borrow. Miss this edit and the compiler will tell you, in almost the same words 
 <span class="add">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="t">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
                 <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"save failed: {error}"</span>);
             }</span></code></pre>
+
+<p>Fifth — somewhere to show it. This is an <strong>extra</strong> label, added below
+the byte counter; the byte counter stays.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, below the byte counter</span></p>
 <pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>

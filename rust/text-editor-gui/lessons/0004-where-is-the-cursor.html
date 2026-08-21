@@ -905,7 +905,7 @@ you're unsure.</p>
 
 <p>So far you've drawn the text box with <code>ui.add(…)</code>, which hands back only
 whether it was clicked. <code>TextEdit</code> has a richer door: <code>.show(ui)</code>
-returns everything it learned while drawing. <strong>Two edits.</strong></p>
+returns everything it learned while drawing. <strong>Three edits.</strong></p>
 
 <p>First — swap <code>ui.add</code> for <code>.show</code> and keep the result:</p>
 
@@ -930,7 +930,7 @@ returns everything it learned while drawing. <strong>Two edits.</strong></p>
   drifts.
 </div>
 
-<p>Second — report what came back, just below it:</p>
+<p>Second — report what came back, just above the labels you already have:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, under the text box</span></p>
 <pre><code><span class="add">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {
@@ -938,6 +938,10 @@ returns everything it learned while drawing. <strong>Two edits.</strong></p>
                 <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),
             };
 </span><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
+
+<p>Third — fold the position into the byte-count label. Note this replaces the
+<em>byte-count</em> label; the <code>ui.label(&amp;self.status)</code> line below it is
+untouched.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the byte-count label</span></p>
 <pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>

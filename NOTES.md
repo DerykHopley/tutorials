@@ -57,4 +57,8 @@ bugs. Standing rules:
   Deryk will actually read, not what I meant to write.
 - **Verify interactive behaviour by driving the page**, not by reading the JS.
 - **Never touch Deryk's in-progress working files** to run a check. Use a scratch
-  target and delete it.
+  target and delete it. That includes fixing their code when a lesson misled them —
+  tell them the line to add; doing it for them removes the work.
+- **Diagnose from their actual file, not from the lesson.** When Deryk reports a
+  mismatch, read their source first. Twice now the reported cause and the real cause
+  differed.

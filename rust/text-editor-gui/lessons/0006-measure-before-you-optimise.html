@@ -996,6 +996,91 @@ forever, which is the thing lesson 1 praised egui for avoiding.</p>
 </div>
 </section>
 
+<section class="stage" id="stage-reachable">
+<h3>Make the readout reachable</h3>
+
+<p class="goal">The status line stays put at the bottom of the window, whatever the file.</p>
+
+<p>Before feeding it a huge file, try scrolling to the end of a merely large one. You
+can't — and the readout you just built lives <em>below</em> the text box, so on anything
+longer than the window it is pushed off-screen and unreachable. An instrument you can't
+read isn't an instrument.</p>
+
+<p><a href="0001-your-first-window.html#stage-3">Lesson 1</a> promised this fix: "later
+you'll add a top panel for tabs and a bottom one for a status bar, and the central panel
+will shrink to fit around them automatically." <strong>Four edits.</strong></p>
+
+<p>First — the editor needs to remember the position between frames, because the status
+bar is now drawn <em>before</em> the text box that computes it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="dim">    status: <span class="t">String</span>,</span>
+<span class="add">    position: <span class="t">String</span>,</span>
+<span class="dim">    frame_ms: f32,</span></code></pre>
+
+<p>Second — start it off with something sensible:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
+<pre><code><span class="dim">            status,</span>
+<span class="add">            position: <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),</span>
+<span class="dim">            frame_ms: <span class="s">0.0</span>,</span></code></pre>
+
+<p>Third — move both labels out of the central panel and into a bottom panel, declared
+<em>above</em> it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, above the central panel</span></p>
+<pre><code><span class="dim">        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
+</span>
+<span class="add">        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">"status"</span>).<span class="f">show</span>(ui, |ui| {
+            ui.<span class="f">label</span>(<span class="f">format!</span>(
+                <span class="s">"{}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
+                <span class="k">self</span>.position,
+                <span class="k">self</span>.text.<span class="f">len</span>(),
+                <span class="k">self</span>.line_col_us,
+                <span class="k">self</span>.frame_ms
+            ));
+            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);
+        });
+</span>
+<span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span></code></pre>
+
+<div class="callout note">
+  <span class="label">Order decides the layout — and it is not negotiable</span>
+  Panels claim space in the order you declare them, and <code>CentralPanel</code> takes
+  whatever is left. Declare the bottom panel <em>after</em> the central panel and it gets
+  a height of <strong>zero pixels</strong> — no error, no warning, it simply never
+  appears. I measured exactly that before writing this stage.
+</div>
+
+<p>Fourth — delete the two old labels from the bottom of the central panel, wrap the text
+box in a scroll area, and store the position instead of printing it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the text box and the old labels</span></p>
+<pre><code><span class="add">            egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="dim">                <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                    .<span class="f">show</span>(ui);</span>
+
+<span class="del">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {</span>
+<span class="add">                <span class="k">self</span>.position = <span class="k">match</span> output.cursor_range {</span>
+<span class="dim">                    <span class="c">// … the two arms, unchanged, just indented one more level …</span>
+                };</span>
+<span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  …"</span>));</span>
+<span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
+<span class="add">            });</span>
+<span class="dim">        });</span></code></pre>
+
+<p class="sidenote">The status bar now shows the cursor position from the <em>previous</em>
+frame, because it's drawn first. That's the same one-frame lag
+<code>frame_ms</code> already had, for the same reason, and at 60 frames a second nobody
+has ever noticed.</p>
+
+<p class="run">cargo run<br>
+→ the status line sits at the bottom of the window and stays there<br>
+→ the text scrolls, and the readout doesn't move</p>
+</section>
+
 <section class="stage" id="stage-2">
 <h3>Feed it something enormous</h3>
 
@@ -1153,8 +1238,8 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>114 lines in total. Two regions changed — the struct at the top and <code>fn ui</code>
-further down — so they're shown separately.</p>
+<p>121 lines in total. Two regions changed — the struct at the top and the whole of
+<code>fn ui</code> — so they're shown separately.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the top of the file</span></p>
 <pre><code><span class="k">use</span> eframe::egui;
@@ -1167,15 +1252,20 @@ further down — so they're shown separately.</p>
     path: <span class="t">String</span>,
     text: <span class="t">String</span>,
     status: <span class="t">String</span>,
+    position: <span class="t">String</span>,
     frame_ms: f32,
     line_col_us: f32,
-}</code></pre>
+}
+
+<span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="c">/// Open a file into a new editor. A file that doesn&#x27;t exist yet is not an</span>
+    <span class="c">/// error — it&#x27;s a new file, and starts empty.</span></code></pre>
 
 <div class="callout note">
   <span class="label">The middle of the file is unchanged</span>
   Between them sit <code>impl Editor</code>'s three methods. <code>open</code> gains the
-  two new fields in its <code>Self { … }</code>, as stages 1 and 3 showed;
-  <code>save</code> and <code>line_col</code> are untouched from
+  three new fields in its <code>Self { … }</code>; <code>save</code> and
+  <code>line_col</code> are untouched from
   <a href="0005-open-any-file.html#where-you-ended-up">lesson 5</a>.
 </div>
 
@@ -1185,31 +1275,10 @@ further down — so they're shown separately.</p>
         <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
         ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
 
-        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
-            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));
-            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="t">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
-                <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"save failed: {error}"</span>);
-            }
-
-            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);
-
-            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
-                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
-                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
-                .<span class="f">show</span>(ui);
-
-            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {
-                <span class="t">Some</span>(range) =&gt; {
-                    <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();
-                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);
-                    <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;
-                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
-                }
-                <span class="t">None</span> =&gt; <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),
-            };
-
-            ui.<span class="f">label</span>(<span class="f">format!</span>(
-                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
+        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">&quot;status&quot;</span>).<span class="f">show</span>(ui, |ui| {
+            ui.<span class="f">label</span>(<span class="f">format</span>!(
+                <span class="s">&quot;{}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,
+                <span class="k">self</span>.position,
                 <span class="k">self</span>.text.<span class="f">len</span>(),
                 <span class="k">self</span>.line_col_us,
                 <span class="k">self</span>.frame_ms
@@ -1217,11 +1286,37 @@ further down — so they're shown separately.</p>
             ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);
         });
 
-        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;
+        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
+            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));
+            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
+                <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);
+            }
+
+            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);
+
+            egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {
+                <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                    .<span class="f">show</span>(ui);
+
+                <span class="k">self</span>.position = <span class="k">match</span> output.cursor_range {
+                    <span class="f">Some</span>(range) =&gt; {
+                        <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();
+                        <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);
+                        <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000</span>.<span class="s">0</span>;
+                        <span class="f">format</span>!(<span class="s">&quot;Ln {line}, Col {column}&quot;</span>)
+                    }
+                    <span class="t">None</span> =&gt; <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),
+                };
+            });
+        });
+
+        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;
     }
 }</code></pre>
 
-<p>114 lines, <code>cargo clippy</code> silent.</p>
+<p>121 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

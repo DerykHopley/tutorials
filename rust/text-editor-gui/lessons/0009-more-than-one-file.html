@@ -1126,18 +1126,20 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>227 lines in total. The restructure touches the top of the file and the whole of
+<p>245 lines in total. The restructure touches the top of the file and the whole of
 <code>fn ui</code>; the highlighting code in between is untouched.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">Buffer and Editor, replacing the old Editor</span></p>
-<pre><code><span class="k">struct</span> <span class="t">Buffer</span> {
+<pre><code><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {
     path: <span class="t">String</span>,
     text: <span class="t">String</span>,
     status: <span class="t">String</span>,
 }
 
 <span class="k">impl</span> <span class="t">Buffer</span> {
-    <span class="c">/// Open a file. A file that doesn&#x27;t exist yet is a new file, not an error.</span>
+    <span class="c">/// Open a file into a new editor. A file that doesn&#x27;t exist yet is not an</span>
+    <span class="c">/// error — it&#x27;s a new file, and starts empty.</span>
     <span class="k">fn</span> <span class="f">open</span>(path: &amp;str) -&gt; <span class="k">Self</span> {
         <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
             <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
@@ -1184,6 +1186,7 @@ cargo fmt &amp;&amp; cargo clippy<br>
 <span class="k">struct</span> <span class="t">Editor</span> {
     buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
     active: usize,
+    position: <span class="t">String</span>,
     frame_ms: f32,
     line_col_us: f32,
 }
@@ -1194,6 +1197,7 @@ cargo fmt &amp;&amp; cargo clippy<br>
         <span class="k">Self</span> {
             buffers,
             active: <span class="s">0</span>,
+            position: <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),
             frame_ms: <span class="s">0</span>.<span class="s">0</span>,
             line_col_us: <span class="s">0</span>.<span class="s">0</span>,
         }
@@ -1201,8 +1205,8 @@ cargo fmt &amp;&amp; cargo clippy<br>
 }</code></pre>
 
 <div class="callout note">
-  <span class="label">The constants and fn highlight sit here, unchanged</span>
-  About ninety lines — <code>KEYWORDS</code>, the colours, <code>HIGHLIGHT_LIMIT</code>
+  <span class="label">The constants and fn highlight sit above this, unchanged</span>
+  About eighty lines — <code>KEYWORDS</code>, the colours, <code>HIGHLIGHT_LIMIT</code>
   and all of <code>highlight</code> — are exactly as
   <a href="0008-knowing-when-to-stop.html#where-you-ended-up">lesson 8</a> left them.
   Nothing in this lesson goes near them.
@@ -1213,6 +1217,23 @@ cargo fmt &amp;&amp; cargo clippy<br>
     <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
         <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
         ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
+
+        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">&quot;status&quot;</span>).<span class="f">show</span>(ui, |ui| {
+            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active].text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+                <span class="s">&quot;highlighting off (file too large)&quot;</span>
+            } <span class="k">else</span> {
+                <span class="s">&quot;highlighting on&quot;</span>
+            };
+
+            ui.<span class="f">label</span>(<span class="f">format</span>!(
+                <span class="s">&quot;{}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,
+                <span class="k">self</span>.position,
+                <span class="k">self</span>.buffers[<span class="k">self</span>.active].text.<span class="f">len</span>(),
+                <span class="k">self</span>.line_col_us,
+                <span class="k">self</span>.frame_ms
+            ));
+            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.buffers[<span class="k">self</span>.active].status);
+        });
 
         egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
             ui.<span class="f">horizontal</span>(|ui| {
@@ -1233,7 +1254,29 @@ cargo fmt &amp;&amp; cargo clippy<br>
             <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = buffer.<span class="f">save</span>() {
                 buffer.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);
             }
-<span class="gap">the text box, position readout and labels — unchanged, but reading <code>buffer</code> rather than <code>self</code></span>
+
+            ui.<span class="f">heading</span>(&amp;buffer.path);
+
+            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
+            };
+
+            egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {
+                <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> buffer.text)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                    .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)
+                    .<span class="f">show</span>(ui);
+
+                <span class="k">self</span>.position = <span class="k">match</span> output.cursor_range {
+                    <span class="f">Some</span>(range) =&gt; {
+                        <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();
+                        <span class="k">let</span> (line, column) = buffer.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);
+                        <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000</span>.<span class="s">0</span>;
+                        <span class="f">format</span>!(<span class="s">&quot;Ln {line}, Col {column}&quot;</span>)
+                    }
+                    <span class="t">None</span> =&gt; <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),
+                };
+            });
         });
 
         <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;
@@ -1260,7 +1303,7 @@ cargo fmt &amp;&amp; cargo clippy<br>
     )
 }</code></pre>
 
-<p>227 lines, <code>cargo clippy</code> silent.</p>
+<p>245 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

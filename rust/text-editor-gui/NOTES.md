@@ -39,16 +39,16 @@ language concept the next editor feature demands.
    _(written 2026-08-16; 89 lines; Ln/Col readout)_
 5. ✅ Open any file — CLI args, `unwrap_or_else`, match guards, `ErrorKind::NotFound`
    _(written 2026-08-16; 97 lines; fixes the lesson-2 "error text in the buffer" bug)_
-6. ✅ Measure before you optimise — `Instant`, frame-time readout, real numbers
-   _(written 2026-08-16; 114 lines; overturned the "String is the bottleneck" plan)_
+6. ✅ Measure before you optimise — `Instant`, frame-time readout, status panel, real numbers
+   _(written 2026-08-16; 121 lines; overturned the "String is the bottleneck" plan)_
 7. ✅ Colouring the code — `TextEdit::layouter`, `LayoutJob`, a 40-line scanner
-   _(written 2026-08-16; 172 lines)_
+   _(written 2026-08-16; 183 lines)_
 8. ✅ Knowing when to stop — measure highlighting, degrade above a measured limit
-   _(written 2026-08-16; 196 lines; deliberately ships NO cache — see below)_
+   _(written 2026-08-16; 207 lines; deliberately ships NO cache — see below)_
 9. ✅ More than one file — `Buffer`/`Editor` split, `Vec<Buffer>`, tabs, index-not-reference
-   _(written 2026-08-16; 227 lines)_
+   _(written 2026-08-16; 245 lines)_
 10. ✅ Tests that find something — `#[cfg(test)]`, a real red test, extract `scan` to test it
-   _(written 2026-08-16; 312 lines, 10 tests; found and fixed a real `name()` bug)_
+   _(written 2026-08-16; 330 lines, 10 tests; found and fixed a real `name()` bug)_
 11. `ropey` — only if a measurement asks for it. **It may not.** See the open question below.
 12. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
 
@@ -167,6 +167,14 @@ leave it dangling.
   the measurement demands it, which is a better lesson than "here's a nicer widget"; and
   (b) **lesson 12**, where `request_repaint()` comes out and the readout's fate is decided
   anyway (delete it, or put it behind a debug flag).
+- **The status bar is a bottom `Panel` as of 2026-08-16**, added to lesson 6 because the
+  readout was unreachable on a file taller than the window — Deryk hit this opening
+  `big.rs`. Two things this pins down, both measured rather than assumed:
+  egui 0.36 has **no `TopBottomPanel`** (the side panels were unified into one `Panel`
+  type, so it's `egui::Panel::bottom(id)`); and a bottom panel declared *after* the
+  `CentralPanel` gets a height of **zero pixels**, silently. Panels must come first.
+  Consequence: the status bar shows the *previous* frame's cursor position, so `Editor`
+  carries a `position: String`. Same one-frame lag `frame_ms` already had.
 - Lesson 6 leaves `request_repaint()` in the code so the readout keeps updating. It burns
   CPU when idle, which contradicts lesson 1's praise of egui. The lesson says so; lesson 7
   or the polish lesson should remove it or put it behind a flag.

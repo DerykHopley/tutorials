@@ -1097,8 +1097,9 @@ be left pointing at where the data used to be.</p>
   <span class="label">This is why real Rust code is full of indices</span>
   Not because indices are elegant — they aren't; nothing stops you using a stale one — but
   because "own the collection, refer to a member by position" is the shape that survives
-  being moved. Every arena, every entity-component system, every graph library in Rust
-  reaches for the same answer. Recognising the shape now saves you a very long fight
+  being moved. Every arena — one big allocation you hand out numbered slots from — every
+  entity-component system in a game engine, every graph library in Rust reaches for the
+  same answer. Recognising the shape now saves you a very long fight
   later.
 </div>
 

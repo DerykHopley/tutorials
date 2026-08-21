@@ -1122,7 +1122,7 @@ cargo run<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>172 lines in total. Almost everything here is new — the constants and the
+<p>183 lines in total. Almost everything here is new — the constants and the
 <code>highlight</code> function — plus one small change inside <code>fn ui</code>.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">new, above struct Editor</span></p>
@@ -1135,9 +1135,9 @@ cargo run<br>
 <span class="k">use</span> std::time::<span class="t">Instant</span>;
 
 <span class="c">/// Words the highlighter treats as keywords.</span>
-<span class="k">const</span> <span class="t">KEYWORDS</span>: &amp;[&amp;<span class="k">str</span>] = &amp;[
-    <span class="s">"as"</span>, <span class="s">"const"</span>, <span class="s">"else"</span>, <span class="s">"enum"</span>, <span class="s">"fn"</span>, <span class="s">"for"</span>, <span class="s">"if"</span>, <span class="s">"impl"</span>, <span class="s">"in"</span>, <span class="s">"let"</span>, <span class="s">"match"</span>, <span class="s">"mod"</span>, <span class="s">"move"</span>,
-    <span class="s">"mut"</span>, <span class="s">"pub"</span>, <span class="s">"return"</span>, <span class="s">"self"</span>, <span class="s">"struct"</span>, <span class="s">"trait"</span>, <span class="s">"use"</span>, <span class="s">"while"</span>,
+<span class="k">const</span> <span class="t">KEYWORDS</span>: &amp;[&amp;str] = &amp;[
+    <span class="s">&quot;as&quot;</span>, <span class="s">&quot;const&quot;</span>, <span class="s">&quot;else&quot;</span>, <span class="s">&quot;enum&quot;</span>, <span class="s">&quot;fn&quot;</span>, <span class="s">&quot;for&quot;</span>, <span class="s">&quot;if&quot;</span>, <span class="s">&quot;impl&quot;</span>, <span class="s">&quot;in&quot;</span>, <span class="s">&quot;let&quot;</span>, <span class="s">&quot;match&quot;</span>, <span class="s">&quot;mod&quot;</span>, <span class="s">&quot;move&quot;</span>,
+    <span class="s">&quot;mut&quot;</span>, <span class="s">&quot;pub&quot;</span>, <span class="s">&quot;return&quot;</span>, <span class="s">&quot;self&quot;</span>, <span class="s">&quot;struct&quot;</span>, <span class="s">&quot;trait&quot;</span>, <span class="s">&quot;use&quot;</span>, <span class="s">&quot;while&quot;</span>,
 ];
 
 <span class="k">const</span> <span class="t">PLAIN</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xe8</span>, <span class="s">0xe5</span>, <span class="s">0xde</span>);
@@ -1146,22 +1146,22 @@ cargo run<br>
 <span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);
 
 <span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span>
-<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;str, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
     <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
     <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
     job.wrap.max_width = wrap_width;
 
     <span class="k">let</span> <span class="k">mut</span> rest = text;
     <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
-        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">"//"</span>) {
-            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">'\n'</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
+        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">&quot;//&quot;</span>) {
+            <span class="k">let</span> end = rest.<span class="f">find</span>(&#x27;\n&#x27;).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
             (&amp;rest[..end], <span class="t">COMMENT</span>)
-        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">'"'</span>) {
-            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">'"'</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);
+        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(&#x27;<span class="s">&quot;&#x27;) {</span>
+            <span class="k">let</span> end = after_quote.<span class="f">find</span>(&#x27;<span class="s">&quot;&#x27;).map_or(rest.len(), |i| i + 2);</span>
             (&amp;rest[..end], <span class="t">STRING</span>)
-        } <span class="k">else</span> <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {
+        } <span class="k">else</span> <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: char| c.<span class="f">is_alphanumeric</span>() || c == &#x27;_&#x27;) {
             <span class="k">let</span> end = rest
-                .<span class="f">find</span>(|c: <span class="k">char</span>| !(c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>))
+                .<span class="f">find</span>(|c: char| !(c.<span class="f">is_alphanumeric</span>() || c == &#x27;_&#x27;))
                 .<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
             <span class="k">let</span> word = &amp;rest[..end];
             <span class="k">let</span> colour = <span class="k">if</span> <span class="t">KEYWORDS</span>.<span class="f">contains</span>(&amp;word) {
@@ -1177,7 +1177,7 @@ cargo run<br>
 
         job.<span class="f">append</span>(
             chunk,
-            <span class="s">0.0</span>,
+            <span class="s">0</span>.<span class="s">0</span>,
             egui::<span class="t">TextFormat</span> {
                 font_id: font.<span class="f">clone</span>(),
                 color: colour,
@@ -1191,24 +1191,27 @@ cargo run<br>
 }</code></pre>
 
 <div class="callout note">
-  <span class="label">Roughly ninety lines between these two are unchanged</span>
-  <code>struct Editor</code>, all of <code>impl Editor</code>, and <code>main</code> are
-  exactly as <a href="0006-measure-before-you-optimise.html#where-you-ended-up">lesson 6</a>
-  left them. Inside <code>fn ui</code>, only the text box changed — everything around it,
-  including the save handling and the labels, stays put.
+  <span class="label">Roughly eighty lines between these two are unchanged</span>
+  <code>struct Editor</code>, all of <code>impl Editor</code>, the status panel and
+  <code>main</code> are exactly as
+  <a href="0006-measure-before-you-optimise.html#where-you-ended-up">lesson 6</a> left
+  them. Inside <code>fn ui</code>, only the text box changed.
 </div>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the text box</span></p>
-<pre><code>            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
-                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
-            };
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, inside the scroll area</span></p>
+<pre><code>
+        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
+            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));
+            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
+                <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);
+            }
 
-            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
-                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
-                .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)
-                .<span class="f">show</span>(ui);</code></pre>
+            ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);
 
-<p>172 lines, <code>cargo clippy</code> silent.</p>
+            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)</code></pre>
+
+<p>183 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

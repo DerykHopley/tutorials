@@ -1088,17 +1088,17 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>196 lines in total. Two small regions changed: the top of <code>highlight</code>, and
-the status label in <code>fn ui</code>.</p>
+<p>207 lines in total. Two small regions changed: the top of <code>highlight</code>, and
+the status line in the bottom panel.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the constant, and the top of fn highlight</span></p>
 <pre><code><span class="c">/// Above this size, highlighting costs more than a frame is worth. Chosen from</span>
 <span class="c">/// measurement: at 427 KB a keystroke costs 7.1 ms, at 1.1 MB it costs 17.4 ms,</span>
 <span class="c">/// and a 60fps frame is 16.7 ms.</span>
-<span class="k">const</span> <span class="t">HIGHLIGHT_LIMIT</span>: <span class="k">usize</span> = <span class="s">512</span> * <span class="s">1024</span>;
+<span class="k">const</span> <span class="t">HIGHLIGHT_LIMIT</span>: usize = <span class="s">512</span> * <span class="s">1024</span>;
 
 <span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span>
-<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;str, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
     <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
     <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
     job.wrap.max_width = wrap_width;
@@ -1106,7 +1106,7 @@ the status label in <code>fn ui</code>.</p>
     <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
         job.<span class="f">append</span>(
             text,
-            <span class="s">0.0</span>,
+            <span class="s">0</span>.<span class="s">0</span>,
             egui::<span class="t">TextFormat</span> {
                 font_id: font,
                 color: <span class="t">PLAIN</span>,
@@ -1116,31 +1116,38 @@ the status label in <code>fn ui</code>.</p>
         <span class="k">return</span> ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job));
     }
 
-<span class="gap">the scanner from lesson 7, unchanged</span>
-}</code></pre>
+    <span class="k">let</span> <span class="k">mut</span> rest = text;
+    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
+<span class="gap">the scanner from lesson 7, unchanged</span></code></pre>
 
 <div class="callout note">
   <span class="label">Everything else is unchanged</span>
-  The scanner inside <code>highlight</code>, and the whole of <code>struct Editor</code>,
-  <code>impl Editor</code>, the rest of <code>fn ui</code> and <code>main</code>, are as
+  <code>struct Editor</code>, <code>impl Editor</code>, the central panel and
+  <code>main</code> are as
   <a href="0007-colouring-the-code.html#where-you-ended-up">lesson 7</a> left them.
 </div>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, just above the status label</span></p>
-<pre><code>            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
-                <span class="s">"highlighting off (file too large)"</span>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the bottom panel</span></p>
+<pre><code>        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">&quot;status&quot;</span>).<span class="f">show</span>(ui, |ui| {
+            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+                <span class="s">&quot;highlighting off (file too large)&quot;</span>
             } <span class="k">else</span> {
-                <span class="s">"highlighting on"</span>
+                <span class="s">&quot;highlighting on&quot;</span>
             };
 
-            ui.<span class="f">label</span>(<span class="f">format!</span>(
-                <span class="s">"{position}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
+            ui.<span class="f">label</span>(<span class="f">format</span>!(
+                <span class="s">&quot;{}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,
+                <span class="k">self</span>.position,
                 <span class="k">self</span>.text.<span class="f">len</span>(),
                 <span class="k">self</span>.line_col_us,
                 <span class="k">self</span>.frame_ms
-            ));</code></pre>
+            ));
+            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);
+        });
 
-<p>196 lines, <code>cargo clippy</code> silent.</p>
+        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</code></pre>
+
+<p>207 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

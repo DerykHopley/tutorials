@@ -1195,16 +1195,17 @@ cargo run<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>312 lines, 10 tests passing.</p>
+<p>330 lines, 10 tests passing. Two regions changed: <code>highlight</code> split in two,
+and <code>name</code> fixed — plus the new test module at the very bottom.</p>
 
-<p class="filename">editor/src/main.rs<span class="where">the parts that changed</span></p>
+<p class="filename">editor/src/main.rs<span class="where">fn scan and fn highlight, replacing the old highlight</span></p>
 <pre><code><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span>
 <span class="c">/// so it can be tested directly.</span>
 <span class="k">fn</span> <span class="f">scan</span>(text: &amp;str) -&gt; <span class="t">Vec</span>&lt;(&amp;str, egui::<span class="t">Color32</span>)&gt; {
     <span class="k">let</span> <span class="k">mut</span> runs = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">let</span> <span class="k">mut</span> rest = text;
+    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
 <span class="gap">the same if-chain as lesson 7</span>
-        runs.<span class="f">push</span>((chunk, colour));
-        rest = &amp;rest[chunk.<span class="f">len</span>()..];
     }
 
     runs
@@ -1235,19 +1236,30 @@ cargo run<br>
     }
 
     ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))
+}
 
+<span class="c">/// One open file.</span></code></pre>
 
-    <span class="c">/// Just the file name, for the tab label.</span>
-    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {
-        <span class="k">self</span>.path
+<div class="callout note">
+  <span class="label">Only one other line changed above the tests</span>
+  <code>Buffer::name</code> gains the trailing-slash fix below. Everything else —
+  <code>Buffer</code>, <code>Editor</code>, <code>fn ui</code> and <code>main</code> — is
+  exactly as <a href="0009-more-than-one-file.html#where-you-ended-up">lesson 9</a> left
+  it.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer</span></p>
+<pre><code>        <span class="k">self</span>.path
             .<span class="f">trim_end_matches</span>(&#x27;/&#x27;)
             .<span class="f">rsplit</span>(&#x27;/&#x27;)
             .<span class="f">next</span>()
             .<span class="f">filter</span>(|name| !name.<span class="f">is_empty</span>())
             .<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)
     }
+}</code></pre>
 
-#[<span class="f">cfg</span>(test)]
+<p class="filename">editor/src/main.rs<span class="where">the very bottom of the file</span></p>
+<pre><code>#[<span class="f">cfg</span>(test)]
 <span class="k">mod</span> tests {
     <span class="k">use</span> super::*;
 
@@ -1267,10 +1279,8 @@ cargo run<br>
     #[test]
     <span class="k">fn</span> <span class="f">line_col_counts_newlines</span>() {
         <span class="k">let</span> b = <span class="f">buffer_with</span>(<span class="s">&quot;ab\ncd&quot;</span>);
-        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">2</span>), (<span class="s">1</span>, <span class="s">3</span>));
-        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">3</span>), (<span class="s">2</span>, <span class="s">1</span>));
-        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">5</span>), (<span class="s">2</span>, <span class="s">3</span>));
 <span class="gap">the remaining line_col and name tests</span>
+
     #[test]
     <span class="k">fn</span> <span class="f">scan_colours_keywords_only</span>() {
         <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;let x&quot;</span>);
@@ -1291,6 +1301,8 @@ cargo run<br>
         <span class="f">assert_eq</span>!(joined, text);
     }
 }</code></pre>
+
+<p>330 lines; <code>cargo test</code> green, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

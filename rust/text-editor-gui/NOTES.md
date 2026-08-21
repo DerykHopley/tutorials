@@ -159,6 +159,14 @@ leave it dangling.
   lifetime, so it can borrow a local. I had planned a lesson-5 teaching moment around
   the missing-`move` error; it does not exist. Verified against eframe 0.36.1 source.
 - ~~Lesson 6 owes the immediate-mode performance reckoning~~ — paid in lesson 6.
+- **Peak-hold on the frame counter: offered 2026-08-16, Deryk declined for now.** The
+  raw live number flickers, which confused them until lesson 6 gained a callout saying it
+  would. Do not add peak-hold speculatively. It becomes genuinely motivated in two places:
+  (a) **lesson 11**, where any rope decision rests on measuring *edit-time spikes* — a raw
+  live number is close to unreadable for that, so the instrument would be improved because
+  the measurement demands it, which is a better lesson than "here's a nicer widget"; and
+  (b) **lesson 12**, where `request_repaint()` comes out and the readout's fate is decided
+  anyway (delete it, or put it behind a debug flag).
 - Lesson 6 leaves `request_repaint()` in the code so the readout keeps updating. It burns
   CPU when idle, which contradicts lesson 1's praise of egui. The lesson says so; lesson 7
   or the polish lesson should remove it or put it behind a flag.

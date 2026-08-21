@@ -923,8 +923,9 @@ returns everything it learned while drawing. <strong>Two edits.</strong></p>
 <div class="callout note">
   <span class="label">Two things moved, not one</span>
   The widget is no longer wrapped in <code>ui.add(…)</code>, so the surrounding
-  parentheses and the trailing <code>);</code> are gone, and the whole chain dedents by
-  four spaces. It's the same builder chain with <code>.show(ui)</code> on the end instead
+  parentheses and the trailing <code>);</code> are gone, and the whole chain shifts four
+  spaces to the left — also called a <em>dedent</em>, or an <em>outdent</em> in some
+  editors. It's the same builder chain with <code>.show(ui)</code> on the end instead
   of being passed to <code>add</code>. Run <code>cargo fmt</code> if the indentation
   drifts.
 </div>

@@ -37,6 +37,11 @@ mechanics of each live in [LESSON-FORMAT.md](./LESSON-FORMAT.md); the *reasons* 
   the reasoning in [LESSON-FORMAT.md](./LESSON-FORMAT.md); it generalises to any topic
   where instructions point into a larger artifact.
 - **Wants a fast way back to the source material** from a self-test they got wrong.
+- **Gloss domain jargon on first use — but don't avoid it.** Say the plain thing, then
+  name the term of art: "shifts four spaces to the left — also called a *dedent*". Stated
+  2026-08-16 after Deryk asked whether "dedents" was a misspelling and then said knowing
+  the word was useful. Dropping the jargon entirely would have withheld something worth
+  having; using it unexplained cost them a detour. Do both.
 
 ## How I should verify things
 

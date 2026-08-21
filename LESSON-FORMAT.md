@@ -158,6 +158,16 @@ had five, the status label never got added, and lesson 4's replacement had nothi
 match. `python3 build.py` now audits every stage and warns on a mismatch. Never let a
 single ordinal ("Fourth — …") introduce two blocks.
 
+**Never paste an end-state line into an early stage.** Stage listings get generated from
+the finished source, which makes it easy to lift a line that already mentions something a
+later stage introduces. The reader then hits a compiler error the lesson gave them no way
+to fix — and no way to tell whose fault it was. Lesson 6 shipped exactly that: stage 2's
+status label read `self.line_col_us`, a field stage 4 adds, so stage 3 wouldn't build.
+**Reconstruct each stage's state and compile that**, rather than diffing against the end.
+`python3 build.py` now audits every lesson for a field used before the stage that adds it.
+Watch indentation too — the same stage nested the match arms one level deeper, so stage
+4's context lines no longer matched what the reader had in front of them.
+
 **Show every edit, including token-level ones.** If a stage changes something *inside* a
 line the reader already has — a renamed parameter, a dropped underscore — the green
 `.add` band alone will not register it, because the whole line looks new. Pair it with a

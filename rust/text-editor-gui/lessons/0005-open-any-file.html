@@ -993,8 +993,17 @@ No such file or directory (os error 2)</p>
 
 <p class="run">cat editor/notes.md<br>
 → could not open notes.md<br><br>
-→ No such file or directory (os error 2)<br>
-<span class="note">Then: rm editor/notes.md</span></p>
+→ No such file or directory (os error 2)</p>
+
+<div class="callout note">
+  <span class="label">Delete that file before you go on</span>
+  Your editor has just created <code>editor/notes.md</code> containing the error message.
+  Stage 3 opens the same path again and expects it to be <em>missing</em> — leave the file
+  there and you'll get its contents instead of the empty new document the stage promises,
+  and the fix will look like it didn't work.
+  <br><br>
+  Run: <code>rm editor/notes.md</code>
+</div>
 
 <p>This has been true since
 <a href="0002-opening-a-real-file.html#stage-2">lesson 2, stage 2</a>, where the
@@ -1068,14 +1077,27 @@ thing you save.</p>
 
 <p class="run">cargo run -- notes.md<br>
 → an empty window, status: <em>new file: notes.md</em><br>
-→ type something, Ctrl+S, and cat editor/notes.md — your text, and only your text<br>
-<span class="note">Then, to see the other branch: mkdir editor/adir &amp;&amp; cargo run -- adir</span></p>
+→ type something, Ctrl+S, and cat editor/notes.md — your text, and only your text</p>
 
-<p>That last one opens a <em>directory</em>. Not missing, so not a new file — the general
-arm catches it and reports it, buffer still empty.</p>
+<p>That's the <code>NotFound</code> arm. To exercise the <em>other</em> one, point the
+editor at something that exists but isn't a readable file — a directory:</p>
 
-<p class="run">rm -r editor/adir editor/notes.md<br>
-cargo fmt &amp;&amp; cargo clippy<br>
+<p class="run">mkdir editor/adir<br>
+cargo run -- adir<br>
+→ status: <em>could not open adir: Is a directory (os error 21)</em>, buffer empty</p>
+
+<p>Not missing, so not a new file — the general <code>Err</code> arm catches it, reports
+it, and still leaves the document untouched.</p>
+
+<div class="callout note">
+  <span class="label">Tidy up before lesson 6</span>
+  Both of those were throwaway. Remove them, or lesson 6's measurements will be taken on
+  a directory full of clutter.
+  <br><br>
+  Run: <code>rm -r editor/adir editor/notes.md</code>
+</div>
+
+<p class="run">cargo fmt &amp;&amp; cargo clippy<br>
 <span class="note">Both should be silent.</span></p>
 </section>
 

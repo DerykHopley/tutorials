@@ -944,7 +944,7 @@ returns everything it learned while drawing. <strong>Three edits.</strong></p>
 untouched.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the byte-count label</span></p>
-<pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<pre><code><span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
 <span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
 
 <h4 id="option">The other enum</h4>
@@ -1186,7 +1186,6 @@ clusters, not chars. We'll take that on when we paint text ourselves.</p>
 <span class="l">            };</span>
 <span class="l"></span>
 <span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
-<span class="l">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
 <span class="l">        });</span>
 <span class="l">    }</span>
 <span class="l">}</span>

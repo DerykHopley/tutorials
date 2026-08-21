@@ -981,6 +981,19 @@ forever, which is the thing lesson 1 praised egui for avoiding.</p>
 <p class="run">cargo run<br>
 → <em>Ln 1, Col 1 · 31 bytes · 0.09 ms/frame</em><br>
 <span class="note">Small file, tiny number. That's the control.</span></p>
+
+<div class="callout note">
+  <span class="label">It will fidget constantly, and that's correct</span>
+  Frame time genuinely varies frame to frame — the OS schedules your process differently,
+  caches are warm or cold, the compositor times things slightly differently. On a small
+  file you're reading a tenth of a millisecond to two decimal places, so the last digits
+  will never sit still. That's the measurement being honest, not a bug.
+  <br><br>
+  It also means the exact value is not the thing to read. <strong>Watch for the
+  jump</strong> — the difference between resting and typing, and how that difference grows
+  with file size. That difference is what stages 2 and 3 are about, and it's far larger
+  than the noise.
+</div>
 </section>
 
 <section class="stage" id="stage-2">

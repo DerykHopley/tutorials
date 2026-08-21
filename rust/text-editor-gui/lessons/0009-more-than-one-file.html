@@ -274,6 +274,22 @@ pre .del {
 }
 pre .dim { opacity: 0.5; }
 
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
 /* Sits directly on top of its code block, like a file tab. */
 .filename {
   display: inline-block;
@@ -1110,133 +1126,141 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>227 lines. <code>highlight</code> and the constants above it are untouched.</p>
+<p>227 lines in total. The restructure touches the top of the file and the whole of
+<code>fn ui</code>; the highlighting code in between is untouched.</p>
 
-<p class="filename">editor/src/main.rs<span class="where">the restructured parts</span></p>
-<pre class="numbered"><code><span class="l"><span class="k">struct</span> <span class="t">Buffer</span> {</span>
-<span class="l">    path: <span class="t">String</span>,</span>
-<span class="l">    text: <span class="t">String</span>,</span>
-<span class="l">    status: <span class="t">String</span>,</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">impl</span> <span class="t">Buffer</span> {</span>
-<span class="l">    <span class="c">/// Open a file. A file that doesn&#x27;t exist yet is a new file, not an error.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;str) -&gt; <span class="k">Self</span> {</span>
-<span class="l">        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
-<span class="l">            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),</span>
-<span class="l">            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {</span>
-<span class="l">                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {path}&quot;</span>))</span>
-<span class="l">            }</span>
-<span class="l">            <span class="f">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;could not open {path}: {error}&quot;</span>)),</span>
-<span class="l">        };</span>
-<span class="l">        <span class="k">Self</span> {</span>
-<span class="l">            path: path.<span class="f">to_owned</span>(),</span>
-<span class="l">            text,</span>
-<span class="l">            status,</span>
-<span class="l">        }</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    <span class="c">/// Write the buffer back to the file it came from.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {</span>
-<span class="l">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;</span>
-<span class="l">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);</span>
-<span class="l">        <span class="f">Ok</span>(())</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    <span class="c">/// Turn a character offset into a 1-based line and column.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: usize) -&gt; (usize, usize) {</span>
-<span class="l">        <span class="k">let</span> <span class="k">mut</span> line = <span class="s">1</span>;</span>
-<span class="l">        <span class="k">let</span> <span class="k">mut</span> column = <span class="s">1</span>;</span>
-<span class="l">        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">chars</span>().<span class="f">take</span>(char_index) {</span>
-<span class="l">            <span class="k">if</span> ch == &#x27;\n&#x27; {</span>
-<span class="l">                line += <span class="s">1</span>;</span>
-<span class="l">                column = <span class="s">1</span>;</span>
-<span class="l">            } <span class="k">else</span> {</span>
-<span class="l">                column += <span class="s">1</span>;</span>
-<span class="l">            }</span>
-<span class="l">        }</span>
-<span class="l">        (line, column)</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    <span class="c">/// Just the file name, for the tab label.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {</span>
-<span class="l">        <span class="k">self</span>.path.<span class="f">rsplit</span>(&#x27;/&#x27;).<span class="f">next</span>().<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)</span>
-<span class="l">    }</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
-<span class="l">    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,</span>
-<span class="l">    active: usize,</span>
-<span class="l">    frame_ms: f32,</span>
-<span class="l">    line_col_us: f32,</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">impl</span> <span class="t">Editor</span> {</span>
-<span class="l">    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">String</span>]) -&gt; <span class="k">Self</span> {</span>
-<span class="l">        <span class="k">let</span> buffers = paths.<span class="f">iter</span>().<span class="f">map</span>(|p| <span class="t">Buffer</span>::<span class="f">open</span>(p)).<span class="f">collect</span>();</span>
-<span class="l">        <span class="k">Self</span> {</span>
-<span class="l">            buffers,</span>
-<span class="l">            active: <span class="s">0</span>,</span>
-<span class="l">            frame_ms: <span class="s">0</span>.<span class="s">0</span>,</span>
-<span class="l">            line_col_us: <span class="s">0</span>.<span class="s">0</span>,</span>
-<span class="l">        }</span>
-<span class="l">    }</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"></span>
-<span class="l"><span class="c">// highlight() is unchanged from lesson 8.</span></span>
-<span class="l"></span>
-<span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
-<span class="l">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
-<span class="l">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();</span>
-<span class="l">        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();</span>
-<span class="l"></span>
-<span class="l">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
-<span class="l">            ui.<span class="f">horizontal</span>(|ui| {</span>
-<span class="l">                <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {</span>
-<span class="l">                    <span class="k">let</span> selected = index == <span class="k">self</span>.active;</span>
-<span class="l">                    <span class="k">if</span> ui</span>
-<span class="l">                        .<span class="f">selectable_label</span>(selected, <span class="k">self</span>.buffers[index].<span class="f">name</span>())</span>
-<span class="l">                        .<span class="f">clicked</span>()</span>
-<span class="l">                    {</span>
-<span class="l">                        <span class="k">self</span>.active = index;</span>
-<span class="l">                    }</span>
-<span class="l">                }</span>
-<span class="l">            });</span>
-<span class="l"></span>
-<span class="l">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];</span>
-<span class="l"></span>
-<span class="l">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
-<span class="l">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = buffer.<span class="f">save</span>() {</span>
-<span class="l">                buffer.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);</span>
-<span class="l">            }</span>
-<span class="l"><span class="c">            // … the text box, position readout and labels, now reading</span></span>
-<span class="l"><span class="c">            // `buffer` instead of `self` …</span></span>
-<span class="l">        });</span>
-<span class="l"></span>
-<span class="l">        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;</span>
-<span class="l">    }</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
-<span class="l">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();</span>
-<span class="l">    <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {</span>
-<span class="l">        vec![<span class="s">&quot;scratch.md&quot;</span>.<span class="f">to_owned</span>()]</span>
-<span class="l">    } <span class="k">else</span> {</span>
-<span class="l">        paths</span>
-<span class="l">    };</span>
-<span class="l"></span>
-<span class="l">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span>
-<span class="l">        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800</span>.<span class="s">0</span>, <span class="s">600</span>.<span class="s">0</span>]),</span>
-<span class="l">        ..<span class="t">Default</span>::<span class="f">default</span>()</span>
-<span class="l">    };</span>
-<span class="l"></span>
-<span class="l">    eframe::<span class="f">run_native</span>(</span>
-<span class="l">        <span class="s">&quot;editor&quot;</span>,</span>
-<span class="l">        options,</span>
-<span class="l">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="f">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)))),</span>
-<span class="l">    )</span>
-<span class="l">}</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">Buffer and Editor, replacing the old Editor</span></p>
+<pre><code><span class="k">struct</span> <span class="t">Buffer</span> {
+    path: <span class="t">String</span>,
+    text: <span class="t">String</span>,
+    status: <span class="t">String</span>,
+}
+
+<span class="k">impl</span> <span class="t">Buffer</span> {
+    <span class="c">/// Open a file. A file that doesn&#x27;t exist yet is a new file, not an error.</span>
+    <span class="k">fn</span> <span class="f">open</span>(path: &amp;str) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
+            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
+                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {path}&quot;</span>))
+            }
+            <span class="f">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;could not open {path}: {error}&quot;</span>)),
+        };
+        <span class="k">Self</span> {
+            path: path.<span class="f">to_owned</span>(),
+            text,
+            status,
+        }
+    }
+
+    <span class="c">/// Write the buffer back to the file it came from.</span>
+    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
+        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;
+        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);
+        <span class="f">Ok</span>(())
+    }
+
+    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: usize) -&gt; (usize, usize) {
+        <span class="k">let</span> <span class="k">mut</span> line = <span class="s">1</span>;
+        <span class="k">let</span> <span class="k">mut</span> column = <span class="s">1</span>;
+        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">chars</span>().<span class="f">take</span>(char_index) {
+            <span class="k">if</span> ch == &#x27;\n&#x27; {
+                line += <span class="s">1</span>;
+                column = <span class="s">1</span>;
+            } <span class="k">else</span> {
+                column += <span class="s">1</span>;
+            }
+        }
+        (line, column)
+    }
+
+    <span class="c">/// Just the file name, for the tab label.</span>
+    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {
+        <span class="k">self</span>.path.<span class="f">rsplit</span>(&#x27;/&#x27;).<span class="f">next</span>().<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)
+    }
+}
+
+<span class="k">struct</span> <span class="t">Editor</span> {
+    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
+    active: usize,
+    frame_ms: f32,
+    line_col_us: f32,
+}
+
+<span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">String</span>]) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> buffers = paths.<span class="f">iter</span>().<span class="f">map</span>(|p| <span class="t">Buffer</span>::<span class="f">open</span>(p)).<span class="f">collect</span>();
+        <span class="k">Self</span> {
+            buffers,
+            active: <span class="s">0</span>,
+            frame_ms: <span class="s">0</span>.<span class="s">0</span>,
+            line_col_us: <span class="s">0</span>.<span class="s">0</span>,
+        }
+    }
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">The constants and fn highlight sit here, unchanged</span>
+  About ninety lines — <code>KEYWORDS</code>, the colours, <code>HIGHLIGHT_LIMIT</code>
+  and all of <code>highlight</code> — are exactly as
+  <a href="0008-knowing-when-to-stop.html#where-you-ended-up">lesson 8</a> left them.
+  Nothing in this lesson goes near them.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">the whole of fn ui, plus main</span></p>
+<pre><code><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
+        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
+        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
+
+        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
+            ui.<span class="f">horizontal</span>(|ui| {
+                <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {
+                    <span class="k">let</span> selected = index == <span class="k">self</span>.active;
+                    <span class="k">if</span> ui
+                        .<span class="f">selectable_label</span>(selected, <span class="k">self</span>.buffers[index].<span class="f">name</span>())
+                        .<span class="f">clicked</span>()
+                    {
+                        <span class="k">self</span>.active = index;
+                    }
+                }
+            });
+
+            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];
+
+            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));
+            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = buffer.<span class="f">save</span>() {
+                buffer.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);
+            }
+<span class="gap">the text box, position readout and labels — unchanged, but reading <code>buffer</code> rather than <code>self</code></span>
+        });
+
+        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;
+    }
+}
+
+<span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {
+    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();
+    <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {
+        vec![<span class="s">&quot;scratch.md&quot;</span>.<span class="f">to_owned</span>()]
+    } <span class="k">else</span> {
+        paths
+    };
+
+    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {
+        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800</span>.<span class="s">0</span>, <span class="s">600</span>.<span class="s">0</span>]),
+        ..<span class="t">Default</span>::<span class="f">default</span>()
+    };
+
+    eframe::<span class="f">run_native</span>(
+        <span class="s">&quot;editor&quot;</span>,
+        options,
+        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="f">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)))),
+    )
+}</code></pre>
+
+<p>227 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

@@ -128,6 +128,19 @@ gets skimmed past, because the reader's attention is spent on the first. When a 
 needs several, say so up front ("this stage takes three separate edits"), number them in
 the prose, and warn if the file won't compile until all of them are in.
 
+**Abridged checkpoints are split, not commented.** A checkpoint that elides unchanged
+code must never do it with a `// … unchanged …` line inside the listing — a reader
+skimming code reads that as something to type, and it hides how much is missing. Instead:
+break the listing into separate `<pre>` pieces, each with its own file tab and location
+hint, and put a `<div class="callout note">` between them naming exactly what sits in the
+gap and roughly how long it is. Where the gap falls *inside* a function body, so splitting
+is impossible, mark it with `<span class="gap">` — a centred, ruled-off marker that cannot
+be mistaken for code.
+
+**Abridged checkpoints are never numbered.** Line numbers on a complete file are stable
+and useful; on a fragment they run 1..N and quietly disagree with the reader's real file.
+Only a full-file checkpoint gets `<pre class="numbered">`.
+
 **A `.run` block is a command and its output — nothing else.** Every line in one is
 read as "type this" or "see this". So an *action* tucked into a `<span class="note">` at
 the bottom reads as more output and gets skipped. If the reader must do something —

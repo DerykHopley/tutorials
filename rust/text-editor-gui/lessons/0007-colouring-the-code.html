@@ -274,6 +274,22 @@ pre .del {
 }
 pre .dim { opacity: 0.5; }
 
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
 /* Sits directly on top of its code block, like a file tab. */
 .filename {
   display: inline-block;
@@ -1106,85 +1122,93 @@ cargo run<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>172 lines. Only the imports and <code>fn ui</code>'s text box changed; everything else
-here is new.</p>
+<p>172 lines in total. Almost everything here is new — the constants and the
+<code>highlight</code> function — plus one small change inside <code>fn ui</code>.</p>
 
-<p class="filename">editor/src/main.rs<span class="where">the new parts</span></p>
-<pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
-<span class="l"><span class="k">use</span> egui::text::<span class="t">LayoutJob</span>;</span>
-<span class="l"><span class="k">use</span> std::env;</span>
-<span class="l"><span class="k">use</span> std::fs;</span>
-<span class="l"><span class="k">use</span> std::io;</span>
-<span class="l"><span class="k">use</span> std::sync::<span class="t">Arc</span>;</span>
-<span class="l"><span class="k">use</span> std::time::<span class="t">Instant</span>;</span>
-<span class="l"></span>
-<span class="l"><span class="c">/// Words the highlighter treats as keywords.</span></span>
-<span class="l"><span class="k">const</span> <span class="t">KEYWORDS</span>: &amp;[&amp;<span class="k">str</span>] = &amp;[</span>
-<span class="l">    <span class="s">"as"</span>, <span class="s">"const"</span>, <span class="s">"else"</span>, <span class="s">"enum"</span>, <span class="s">"fn"</span>, <span class="s">"for"</span>, <span class="s">"if"</span>, <span class="s">"impl"</span>, <span class="s">"in"</span>, <span class="s">"let"</span>, <span class="s">"match"</span>, <span class="s">"mod"</span>, <span class="s">"move"</span>,</span>
-<span class="l">    <span class="s">"mut"</span>, <span class="s">"pub"</span>, <span class="s">"return"</span>, <span class="s">"self"</span>, <span class="s">"struct"</span>, <span class="s">"trait"</span>, <span class="s">"use"</span>, <span class="s">"while"</span>,</span>
-<span class="l">];</span>
-<span class="l"></span>
-<span class="l"><span class="k">const</span> <span class="t">PLAIN</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xe8</span>, <span class="s">0xe5</span>, <span class="s">0xde</span>);</span>
-<span class="l"><span class="k">const</span> <span class="t">KEYWORD</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xcf</span>, <span class="s">0x9b</span>, <span class="s">0xe0</span>);</span>
-<span class="l"><span class="k">const</span> <span class="t">STRING</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xa3</span>, <span class="s">0xcf</span>, <span class="s">0x8c</span>);</span>
-<span class="l"><span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);</span>
-<span class="l"></span>
-<span class="l"><span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span></span>
-<span class="l"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
-<span class="l">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
-<span class="l">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
-<span class="l">    job.wrap.max_width = wrap_width;</span>
-<span class="l"></span>
-<span class="l">    <span class="k">let</span> <span class="k">mut</span> rest = text;</span>
-<span class="l">    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {</span>
-<span class="l">        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">"//"</span>) {</span>
-<span class="l">            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">'\n'</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());</span>
-<span class="l">            (&amp;rest[..end], <span class="t">COMMENT</span>)</span>
-<span class="l">        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">'"'</span>) {</span>
-<span class="l">            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">'"'</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);</span>
-<span class="l">            (&amp;rest[..end], <span class="t">STRING</span>)</span>
-<span class="l">        } <span class="k">else</span> <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {</span>
-<span class="l">            <span class="k">let</span> end = rest</span>
-<span class="l">                .<span class="f">find</span>(|c: <span class="k">char</span>| !(c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>))</span>
-<span class="l">                .<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());</span>
-<span class="l">            <span class="k">let</span> word = &amp;rest[..end];</span>
-<span class="l">            <span class="k">let</span> colour = <span class="k">if</span> <span class="t">KEYWORDS</span>.<span class="f">contains</span>(&amp;word) {</span>
-<span class="l">                <span class="t">KEYWORD</span></span>
-<span class="l">            } <span class="k">else</span> {</span>
-<span class="l">                <span class="t">PLAIN</span></span>
-<span class="l">            };</span>
-<span class="l">            (word, colour)</span>
-<span class="l">        } <span class="k">else</span> {</span>
-<span class="l">            <span class="k">let</span> end = rest.<span class="f">char_indices</span>().<span class="f">nth</span>(<span class="s">1</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |(i, _)| i);</span>
-<span class="l">            (&amp;rest[..end], <span class="t">PLAIN</span>)</span>
-<span class="l">        };</span>
-<span class="l"></span>
-<span class="l">        job.<span class="f">append</span>(</span>
-<span class="l">            chunk,</span>
-<span class="l">            <span class="s">0.0</span>,</span>
-<span class="l">            egui::<span class="t">TextFormat</span> {</span>
-<span class="l">                font_id: font.<span class="f">clone</span>(),</span>
-<span class="l">                color: colour,</span>
-<span class="l">                ..<span class="t">Default</span>::<span class="f">default</span>()</span>
-<span class="l">            },</span>
-<span class="l">        );</span>
-<span class="l">        rest = &amp;rest[chunk.<span class="f">len</span>()..];</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="c">// struct Editor, impl Editor and main() are unchanged from lesson 6.</span></span>
-<span class="l"><span class="c">// Inside fn ui, only the text box changed:</span></span>
-<span class="l"></span>
-<span class="l">            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {</span>
-<span class="l">                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)</span>
-<span class="l">            };</span>
-<span class="l"></span>
-<span class="l">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
-<span class="l">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
-<span class="l">                .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)</span>
-<span class="l">                .<span class="f">show</span>(ui);</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">new, above struct Editor</span></p>
+<pre><code><span class="k">use</span> eframe::egui;
+<span class="k">use</span> egui::text::<span class="t">LayoutJob</span>;
+<span class="k">use</span> std::env;
+<span class="k">use</span> std::fs;
+<span class="k">use</span> std::io;
+<span class="k">use</span> std::sync::<span class="t">Arc</span>;
+<span class="k">use</span> std::time::<span class="t">Instant</span>;
+
+<span class="c">/// Words the highlighter treats as keywords.</span>
+<span class="k">const</span> <span class="t">KEYWORDS</span>: &amp;[&amp;<span class="k">str</span>] = &amp;[
+    <span class="s">"as"</span>, <span class="s">"const"</span>, <span class="s">"else"</span>, <span class="s">"enum"</span>, <span class="s">"fn"</span>, <span class="s">"for"</span>, <span class="s">"if"</span>, <span class="s">"impl"</span>, <span class="s">"in"</span>, <span class="s">"let"</span>, <span class="s">"match"</span>, <span class="s">"mod"</span>, <span class="s">"move"</span>,
+    <span class="s">"mut"</span>, <span class="s">"pub"</span>, <span class="s">"return"</span>, <span class="s">"self"</span>, <span class="s">"struct"</span>, <span class="s">"trait"</span>, <span class="s">"use"</span>, <span class="s">"while"</span>,
+];
+
+<span class="k">const</span> <span class="t">PLAIN</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xe8</span>, <span class="s">0xe5</span>, <span class="s">0xde</span>);
+<span class="k">const</span> <span class="t">KEYWORD</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xcf</span>, <span class="s">0x9b</span>, <span class="s">0xe0</span>);
+<span class="k">const</span> <span class="t">STRING</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xa3</span>, <span class="s">0xcf</span>, <span class="s">0x8c</span>);
+<span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);
+
+<span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span>
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
+    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
+    job.wrap.max_width = wrap_width;
+
+    <span class="k">let</span> <span class="k">mut</span> rest = text;
+    <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
+        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">"//"</span>) {
+            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">'\n'</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
+            (&amp;rest[..end], <span class="t">COMMENT</span>)
+        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">'"'</span>) {
+            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">'"'</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);
+            (&amp;rest[..end], <span class="t">STRING</span>)
+        } <span class="k">else</span> <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {
+            <span class="k">let</span> end = rest
+                .<span class="f">find</span>(|c: <span class="k">char</span>| !(c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>))
+                .<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
+            <span class="k">let</span> word = &amp;rest[..end];
+            <span class="k">let</span> colour = <span class="k">if</span> <span class="t">KEYWORDS</span>.<span class="f">contains</span>(&amp;word) {
+                <span class="t">KEYWORD</span>
+            } <span class="k">else</span> {
+                <span class="t">PLAIN</span>
+            };
+            (word, colour)
+        } <span class="k">else</span> {
+            <span class="k">let</span> end = rest.<span class="f">char_indices</span>().<span class="f">nth</span>(<span class="s">1</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |(i, _)| i);
+            (&amp;rest[..end], <span class="t">PLAIN</span>)
+        };
+
+        job.<span class="f">append</span>(
+            chunk,
+            <span class="s">0.0</span>,
+            egui::<span class="t">TextFormat</span> {
+                font_id: font.<span class="f">clone</span>(),
+                color: colour,
+                ..<span class="t">Default</span>::<span class="f">default</span>()
+            },
+        );
+        rest = &amp;rest[chunk.<span class="f">len</span>()..];
+    }
+
+    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Roughly ninety lines between these two are unchanged</span>
+  <code>struct Editor</code>, all of <code>impl Editor</code>, and <code>main</code> are
+  exactly as <a href="0006-measure-before-you-optimise.html#where-you-ended-up">lesson 6</a>
+  left them. Inside <code>fn ui</code>, only the text box changed — everything around it,
+  including the save handling and the labels, stays put.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the text box</span></p>
+<pre><code>            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
+            };
+
+            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)
+                .<span class="f">show</span>(ui);</code></pre>
+
+<p>172 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

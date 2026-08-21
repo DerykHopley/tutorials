@@ -274,6 +274,22 @@ pre .del {
 }
 pre .dim { opacity: 0.5; }
 
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
 /* Sits directly on top of its code block, like a file tab. */
 .filename {
   display: inline-block;
@@ -1182,99 +1198,99 @@ cargo run<br>
 <p>312 lines, 10 tests passing.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the parts that changed</span></p>
-<pre class="numbered"><code><span class="l"><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span></span>
-<span class="l"><span class="c">/// so it can be tested directly.</span></span>
-<span class="l"><span class="k">fn</span> <span class="f">scan</span>(text: &amp;str) -&gt; <span class="t">Vec</span>&lt;(&amp;str, egui::<span class="t">Color32</span>)&gt; {</span>
-<span class="l">    <span class="k">let</span> <span class="k">mut</span> runs = <span class="t">Vec</span>::<span class="f">new</span>();</span>
-<span class="l"><span class="c">    // … the same if-chain as lesson 7 …</span></span>
-<span class="l">        runs.<span class="f">push</span>((chunk, colour));</span>
-<span class="l">        rest = &amp;rest[chunk.<span class="f">len</span>()..];</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    runs</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="c">/// Lay `text` out for egui, colouring it unless the file is too big.</span></span>
-<span class="l"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;str, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
-<span class="l">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
-<span class="l">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
-<span class="l">    job.wrap.max_width = wrap_width;</span>
-<span class="l"></span>
-<span class="l">    <span class="k">let</span> runs = <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {</span>
-<span class="l">        vec![(text, <span class="t">PLAIN</span>)]</span>
-<span class="l">    } <span class="k">else</span> {</span>
-<span class="l">        <span class="f">scan</span>(text)</span>
-<span class="l">    };</span>
-<span class="l"></span>
-<span class="l">    <span class="k">for</span> (chunk, colour) <span class="k">in</span> runs {</span>
-<span class="l">        job.<span class="f">append</span>(</span>
-<span class="l">            chunk,</span>
-<span class="l">            <span class="s">0</span>.<span class="s">0</span>,</span>
-<span class="l">            egui::<span class="t">TextFormat</span> {</span>
-<span class="l">                font_id: font.<span class="f">clone</span>(),</span>
-<span class="l">                color: colour,</span>
-<span class="l">                ..<span class="t">Default</span>::<span class="f">default</span>()</span>
-<span class="l">            },</span>
-<span class="l">        );</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))</span>
-<span class="l"></span>
-<span class="l"></span>
-<span class="l">    <span class="c">/// Just the file name, for the tab label.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {</span>
-<span class="l">        <span class="k">self</span>.path</span>
-<span class="l">            .<span class="f">trim_end_matches</span>(&#x27;/&#x27;)</span>
-<span class="l">            .<span class="f">rsplit</span>(&#x27;/&#x27;)</span>
-<span class="l">            .<span class="f">next</span>()</span>
-<span class="l">            .<span class="f">filter</span>(|name| !name.<span class="f">is_empty</span>())</span>
-<span class="l">            .<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">#[<span class="f">cfg</span>(test)]</span>
-<span class="l"><span class="k">mod</span> tests {</span>
-<span class="l">    <span class="k">use</span> super::*;</span>
-<span class="l"></span>
-<span class="l">    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;str) -&gt; <span class="t">Buffer</span> {</span>
-<span class="l">        <span class="t">Buffer</span> {</span>
-<span class="l">            path: <span class="s">&quot;test.rs&quot;</span>.<span class="f">to_owned</span>(),</span>
-<span class="l">            text: text.<span class="f">to_owned</span>(),</span>
-<span class="l">            status: <span class="t">String</span>::<span class="f">new</span>(),</span>
-<span class="l">        }</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    #[test]</span>
-<span class="l">    <span class="k">fn</span> <span class="f">line_col_starts_at_one_one</span>() {</span>
-<span class="l">        <span class="f">assert_eq</span>!(<span class="f">buffer_with</span>(<span class="s">&quot;abc&quot;</span>).<span class="f">line_col</span>(<span class="s">0</span>), (<span class="s">1</span>, <span class="s">1</span>));</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    #[test]</span>
-<span class="l">    <span class="k">fn</span> <span class="f">line_col_counts_newlines</span>() {</span>
-<span class="l">        <span class="k">let</span> b = <span class="f">buffer_with</span>(<span class="s">&quot;ab\ncd&quot;</span>);</span>
-<span class="l">        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">2</span>), (<span class="s">1</span>, <span class="s">3</span>));</span>
-<span class="l">        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">3</span>), (<span class="s">2</span>, <span class="s">1</span>));</span>
-<span class="l">        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">5</span>), (<span class="s">2</span>, <span class="s">3</span>));</span>
-<span class="l"><span class="c">    // … the remaining line_col and name tests …</span></span>
-<span class="l">    #[test]</span>
-<span class="l">    <span class="k">fn</span> <span class="f">scan_colours_keywords_only</span>() {</span>
-<span class="l">        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;let x&quot;</span>);</span>
-<span class="l">        <span class="f">assert_eq</span>!(runs[<span class="s">0</span>], (<span class="s">&quot;let&quot;</span>, <span class="t">KEYWORD</span>));</span>
-<span class="l">        <span class="f">assert_eq</span>!(runs[<span class="s">2</span>], (<span class="s">&quot;x&quot;</span>, <span class="t">PLAIN</span>));</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    #[test]</span>
-<span class="l">    <span class="k">fn</span> <span class="f">scan_handles_an_unterminated_string</span>() {</span>
-<span class="l">        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;s = \&quot;oops&quot;</span>);</span>
-<span class="l">        <span class="f">assert_eq</span>!(runs.<span class="f">last</span>().<span class="f">unwrap</span>(), &amp;(<span class="s">&quot;\&quot;oops&quot;</span>, <span class="t">STRING</span>));</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    #[test]</span>
-<span class="l">    <span class="k">fn</span> <span class="f">scan_reassembles_the_original_text</span>() {</span>
-<span class="l">        <span class="k">let</span> text = <span class="s">&quot;fn a() { // hi\n  let s = \&quot;x\&quot;;\n}\n&quot;</span>;</span>
-<span class="l">        <span class="k">let</span> joined: <span class="t">String</span> = <span class="f">scan</span>(text).<span class="f">iter</span>().<span class="f">map</span>(|(c, _)| *c).<span class="f">collect</span>();</span>
-<span class="l">        <span class="f">assert_eq</span>!(joined, text);</span>
-<span class="l">    }</span>
-<span class="l">}</span></code></pre>
+<pre><code><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span>
+<span class="c">/// so it can be tested directly.</span>
+<span class="k">fn</span> <span class="f">scan</span>(text: &amp;str) -&gt; <span class="t">Vec</span>&lt;(&amp;str, egui::<span class="t">Color32</span>)&gt; {
+    <span class="k">let</span> <span class="k">mut</span> runs = <span class="t">Vec</span>::<span class="f">new</span>();
+<span class="gap">the same if-chain as lesson 7</span>
+        runs.<span class="f">push</span>((chunk, colour));
+        rest = &amp;rest[chunk.<span class="f">len</span>()..];
+    }
+
+    runs
+}
+
+<span class="c">/// Lay `text` out for egui, colouring it unless the file is too big.</span>
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;str, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
+    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
+    job.wrap.max_width = wrap_width;
+
+    <span class="k">let</span> runs = <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+        vec![(text, <span class="t">PLAIN</span>)]
+    } <span class="k">else</span> {
+        <span class="f">scan</span>(text)
+    };
+
+    <span class="k">for</span> (chunk, colour) <span class="k">in</span> runs {
+        job.<span class="f">append</span>(
+            chunk,
+            <span class="s">0</span>.<span class="s">0</span>,
+            egui::<span class="t">TextFormat</span> {
+                font_id: font.<span class="f">clone</span>(),
+                color: colour,
+                ..<span class="t">Default</span>::<span class="f">default</span>()
+            },
+        );
+    }
+
+    ui.<span class="f">ctx</span>().<span class="f">fonts_mut</span>(|f| f.<span class="f">layout_job</span>(job))
+
+
+    <span class="c">/// Just the file name, for the tab label.</span>
+    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;str {
+        <span class="k">self</span>.path
+            .<span class="f">trim_end_matches</span>(&#x27;/&#x27;)
+            .<span class="f">rsplit</span>(&#x27;/&#x27;)
+            .<span class="f">next</span>()
+            .<span class="f">filter</span>(|name| !name.<span class="f">is_empty</span>())
+            .<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)
+    }
+
+#[<span class="f">cfg</span>(test)]
+<span class="k">mod</span> tests {
+    <span class="k">use</span> super::*;
+
+    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;str) -&gt; <span class="t">Buffer</span> {
+        <span class="t">Buffer</span> {
+            path: <span class="s">&quot;test.rs&quot;</span>.<span class="f">to_owned</span>(),
+            text: text.<span class="f">to_owned</span>(),
+            status: <span class="t">String</span>::<span class="f">new</span>(),
+        }
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">line_col_starts_at_one_one</span>() {
+        <span class="f">assert_eq</span>!(<span class="f">buffer_with</span>(<span class="s">&quot;abc&quot;</span>).<span class="f">line_col</span>(<span class="s">0</span>), (<span class="s">1</span>, <span class="s">1</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">line_col_counts_newlines</span>() {
+        <span class="k">let</span> b = <span class="f">buffer_with</span>(<span class="s">&quot;ab\ncd&quot;</span>);
+        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">2</span>), (<span class="s">1</span>, <span class="s">3</span>));
+        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">3</span>), (<span class="s">2</span>, <span class="s">1</span>));
+        <span class="f">assert_eq</span>!(b.<span class="f">line_col</span>(<span class="s">5</span>), (<span class="s">2</span>, <span class="s">3</span>));
+<span class="gap">the remaining line_col and name tests</span>
+    #[test]
+    <span class="k">fn</span> <span class="f">scan_colours_keywords_only</span>() {
+        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;let x&quot;</span>);
+        <span class="f">assert_eq</span>!(runs[<span class="s">0</span>], (<span class="s">&quot;let&quot;</span>, <span class="t">KEYWORD</span>));
+        <span class="f">assert_eq</span>!(runs[<span class="s">2</span>], (<span class="s">&quot;x&quot;</span>, <span class="t">PLAIN</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">scan_handles_an_unterminated_string</span>() {
+        <span class="k">let</span> runs = <span class="f">scan</span>(<span class="s">&quot;s = \&quot;oops&quot;</span>);
+        <span class="f">assert_eq</span>!(runs.<span class="f">last</span>().<span class="f">unwrap</span>(), &amp;(<span class="s">&quot;\&quot;oops&quot;</span>, <span class="t">STRING</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">scan_reassembles_the_original_text</span>() {
+        <span class="k">let</span> text = <span class="s">&quot;fn a() { // hi\n  let s = \&quot;x\&quot;;\n}\n&quot;</span>;
+        <span class="k">let</span> joined: <span class="t">String</span> = <span class="f">scan</span>(text).<span class="f">iter</span>().<span class="f">map</span>(|(c, _)| *c).<span class="f">collect</span>();
+        <span class="f">assert_eq</span>!(joined, text);
+    }
+}</code></pre>
 
 <h2 id="check-yourself">Check yourself</h2>
 

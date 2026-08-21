@@ -274,6 +274,22 @@ pre .del {
 }
 pre .dim { opacity: 0.5; }
 
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
 /* Sits directly on top of its code block, like a file tab. */
 .filename {
   display: inline-block;
@@ -1103,65 +1119,69 @@ it, and still leaves the document untouched.</p>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>97 lines. Only <code>open</code> and <code>main</code> changed from lesson 4.</p>
+<p>97 lines in total — but only two parts of the file changed this lesson, and they sit at
+opposite ends of it. Here they are separately, with the untouched middle described rather
+than reprinted.</p>
 
-<p class="filename">editor/src/main.rs<span class="where">the parts that changed</span></p>
-<pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
-<span class="l"><span class="k">use</span> std::env;</span>
-<span class="l"><span class="k">use</span> std::fs;</span>
-<span class="l"><span class="k">use</span> std::io;</span>
-<span class="l"></span>
-<span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
-<span class="l">    path: <span class="t">String</span>,</span>
-<span class="l">    text: <span class="t">String</span>,</span>
-<span class="l">    status: <span class="t">String</span>,</span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">impl</span> <span class="t">Editor</span> {</span>
-<span class="l">    <span class="c">/// Open a file into a new editor. A file that doesn't exist yet is not an</span></span>
-<span class="l">    <span class="c">/// error — it's a new file, and starts empty.</span></span>
-<span class="l">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {</span>
-<span class="l">        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
-<span class="l">            <span class="t">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),</span>
-<span class="l">            <span class="t">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {</span>
-<span class="l">                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"new file: {path}"</span>))</span>
-<span class="l">            }</span>
-<span class="l">            <span class="t">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"could not open {path}: {error}"</span>)),</span>
-<span class="l">        };</span>
-<span class="l">        <span class="t">Self</span> {</span>
-<span class="l">            path: path.<span class="f">to_owned</span>(),</span>
-<span class="l">            text,</span>
-<span class="l">            status,</span>
-<span class="l">        }</span>
-<span class="l">    }</span>
-<span class="l"></span>
-<span class="l">    <span class="c">// save() and line_col() are unchanged from lesson 4.</span></span>
-<span class="l">}</span>
-<span class="l"></span>
-<span class="l"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
-<span class="l">    <span class="k">let</span> path = env::<span class="f">args</span>()</span>
-<span class="l">        .<span class="f">nth</span>(<span class="s">1</span>)</span>
-<span class="l">        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());</span>
-<span class="l"></span>
-<span class="l">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span>
-<span class="l">        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),</span>
-<span class="l">        ..<span class="t">Default</span>::<span class="f">default</span>()</span>
-<span class="l">    };</span>
-<span class="l"></span>
-<span class="l">    eframe::<span class="f">run_native</span>(</span>
-<span class="l">        <span class="s">"editor"</span>,</span>
-<span class="l">        options,</span>
-<span class="l">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span>
-<span class="l">    )</span>
-<span class="l">}</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">the top of the file</span></p>
+<pre><code><span class="k">use</span> eframe::egui;
+<span class="k">use</span> std::env;
+<span class="k">use</span> std::fs;
+<span class="k">use</span> std::io;
 
-<div class="callout warn">
-  <span class="label">This listing is abridged</span>
-  Unlike every other checkpoint, this one elides <code>save</code>, <code>line_col</code>
-  and the whole of <code>impl eframe::App</code>, because none of them changed. Your file
-  should still contain them. If yours is 97 lines and <code>cargo clippy</code> is silent,
-  you're in the right place.
+<span class="k">struct</span> <span class="t">Editor</span> {
+    path: <span class="t">String</span>,
+    text: <span class="t">String</span>,
+    status: <span class="t">String</span>,
+}
+
+<span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="c">/// Open a file into a new editor. A file that doesn't exist yet is not an</span>
+    <span class="c">/// error — it's a new file, and starts empty.</span>
+    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {
+        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="t">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
+            <span class="t">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
+                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"new file: {path}"</span>))
+            }
+            <span class="t">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format!</span>(<span class="s">"could not open {path}: {error}"</span>)),
+        };
+        <span class="t">Self</span> {
+            path: path.<span class="f">to_owned</span>(),
+            text,
+            status,
+        }
+    }</code></pre>
+
+<div class="callout note">
+  <span class="label">About fifty lines follow here, all unchanged — don't delete them</span>
+  The <code>impl Editor</code> block carries on after <code>open</code> with
+  <code>save</code> and <code>line_col</code>, then closes. After it comes the whole of
+  <code>impl eframe::App for Editor</code>. Every line of that is exactly as
+  <a href="0004-where-is-the-cursor.html#where-you-ended-up">lesson 4</a> left it, which
+  is the only reason it isn't printed again.
 </div>
+
+<p class="filename">editor/src/main.rs<span class="where">the bottom of the file</span></p>
+<pre><code><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {
+    <span class="k">let</span> path = env::<span class="f">args</span>()
+        .<span class="f">nth</span>(<span class="s">1</span>)
+        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());
+
+    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {
+        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),
+        ..<span class="t">Default</span>::<span class="f">default</span>()
+    };
+
+    eframe::<span class="f">run_native</span>(
+        <span class="s">"editor"</span>,
+        options,
+        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),
+    )
+}</code></pre>
+
+<p>If your file is 97 lines and <code>cargo clippy</code> is silent, you're in the right
+place.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

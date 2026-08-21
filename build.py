@@ -283,6 +283,39 @@ def check_checkpoints(docs: list[pathlib.Path]) -> int:
     return problems
 
 
+BAND = re.compile(r'<span class="(?:add|del)">')
+
+
+def check_band_lines(docs: list[pathlib.Path]) -> int:
+    """A `.add` or `.del` band must start at the beginning of its line.
+
+    Both are `display: inline-block; width: 100%` — a full-width row, because
+    that is what makes a diff readable at a glance. Open one in the middle of a
+    line and the fragment claims a row of its own, so a single line of code
+    renders as two or three stacked bands. Lesson 7 shipped one: `let (chunk,
+    colour) = ` was dimmed and the `if` that followed it on the same line
+    opened a green band.
+
+    The fix is always the same — band whole lines. If only part of a line
+    changed, show the old line as `.del` and the new one as `.add`.
+    """
+    problems = 0
+    for doc in docs:
+        body = doc.read_text()
+        for pre in PRE.finditer(body):
+            first = body[: pre.start(1)].count("\n") + 1
+            for offset, line in enumerate(pre.group(1).split("\n")):
+                for band in BAND.finditer(line):
+                    before = re.sub(r"<[^>]+>", "", line[: band.start()])
+                    if before.strip():
+                        print(
+                            f"  WARN    {doc.relative_to(ROOT)}:{first + offset}: band "
+                            f'opens mid-line, after "{before.strip()[:40]}"'
+                        )
+                        problems += 1
+    return problems
+
+
 def main() -> None:
     docs = sorted(
         p
@@ -322,6 +355,13 @@ def main() -> None:
         "Checkpoints: every listing runs to the end of its file."
         if not cut
         else f"Checkpoints: {cut} listing(s) truncated or elided with a comment."
+    )
+
+    bands = check_band_lines(docs)
+    print(
+        "Diff bands: every add/del covers a whole line."
+        if not bands
+        else f"Diff bands: {bands} band(s) open mid-line and will render broken."
     )
 
 

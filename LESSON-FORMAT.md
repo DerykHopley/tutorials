@@ -128,6 +128,15 @@ gets skimmed past, because the reader's attention is spent on the first. When a 
 needs several, say so up front ("this stage takes three separate edits"), number them in
 the prose, and warn if the file won't compile until all of them are in.
 
+**A `.run` block is a command and its output — nothing else.** Every line in one is
+read as "type this" or "see this". So an *action* tucked into a `<span class="note">` at
+the bottom reads as more output and gets skipped. If the reader must do something —
+delete a scratch file, undo a `chmod`, make a directory — it goes in its own run block or
+a `<div class="callout note">` that says what breaks if they don't. Real case: lesson 5
+ended a run block with "Then: rm editor/notes.md", which was a prerequisite for the next
+stage; skipping it made the fix look broken. `build.py` warns on commands found inside
+run-block notes.
+
 **If you announce a count, it must be right.** "Three edits" means exactly three code
 blocks in that stage. A reader tallies the edits as they go and stops when they reach the
 number — so under-counting silently leaves their file wrong, and the *next* lesson's diff

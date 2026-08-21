@@ -113,6 +113,32 @@ STAGE = re.compile(r'<section class="stage"[^>]*>(.*?)</section>', re.S)
 HEADING = re.compile(r"<h3[^>]*>(.*?)</h3>", re.S)
 
 
+ACTION = re.compile(r"\b(rm|rmdir|chmod|chown|mkdir|mv|cp|git\s+reset)\b")
+RUNBLOCK = re.compile(r'<p class="run">(.*?)</p>', re.S)
+NOTE = re.compile(r'<span class="note">(.*?)</span>', re.S)
+
+
+def check_hidden_actions(docs: list[pathlib.Path]) -> int:
+    """A `.run` block lists a command and its expected output. A `.note` inside
+    one is commentary — so a command hidden in a note reads as more output and
+    gets skipped. Deryk hit this with "Then: rm editor/notes.md", which was a
+    prerequisite for the next stage, not a footnote. Actions belong in their own
+    run block or a callout.
+    """
+    problems = 0
+    for doc in docs:
+        for run in RUNBLOCK.finditer(doc.read_text()):
+            for note in NOTE.finditer(run.group(1)):
+                text = " ".join(re.sub(r"<[^>]+>", " ", note.group(1)).split())
+                if ACTION.search(text):
+                    print(
+                        f"  WARN    {doc.relative_to(ROOT)}: command hidden in a "
+                        f'run-block note — "{text[:60]}"'
+                    )
+                    problems += 1
+    return problems
+
+
 def check_edit_counts(docs: list[pathlib.Path]) -> int:
     """A stage that says "Three edits" must contain three code blocks.
 
@@ -160,6 +186,13 @@ def main() -> None:
         "Edit counts: all stages agree with their code blocks."
         if not problems
         else f"Edit counts: {problems} stage(s) disagree — fix before publishing."
+    )
+
+    hidden = check_hidden_actions(docs)
+    print(
+        "Run blocks: no commands hidden in notes."
+        if not hidden
+        else f"Run blocks: {hidden} hidden command(s) — move them to a callout."
     )
 
 

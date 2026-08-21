@@ -1160,8 +1160,16 @@ often enough and it will teach you the idioms without you going looking for them
 permission to write the file:</p>
 
 <p class="run">chmod 444 editor/scratch.md<br>
-→ run again, edit, Ctrl+S: <em>save failed: Permission denied (os error 13)</em><br>
-<span class="note">Then give it back: chmod 644 editor/scratch.md</span></p>
+→ run again, edit, Ctrl+S: <em>save failed: Permission denied (os error 13)</em></p>
+
+<div class="callout note">
+  <span class="label">Give yourself write permission back</span>
+  <code>chmod 444</code> made the file read-only, and it will stay that way. Every save
+  from here on fails until you undo it — including in later lessons, where the failure
+  would look like a bug you'd just introduced.
+  <br><br>
+  Run: <code>chmod 644 editor/scratch.md</code>
+</div>
 
 <p>The editor stayed open, kept your text, and told you what went wrong. Compare that with
 the two alternatives you've now seen: <code>unwrap()</code> would have killed the process

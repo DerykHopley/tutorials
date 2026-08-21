@@ -1085,16 +1085,19 @@ code are comments and string literals. <strong>Two edits.</strong></p>
 <span class="add"><span class="k">const</span> <span class="t">STRING</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0xa3</span>, <span class="s">0xcf</span>, <span class="s">0x8c</span>);
 <span class="k">const</span> <span class="t">COMMENT</span>: egui::<span class="t">Color32</span> = egui::<span class="t">Color32</span>::<span class="f">from_rgb</span>(<span class="s">0x8b</span>, <span class="s">0x92</span>, <span class="s">0x9c</span>);</span></code></pre>
 
-<p>Second — two new arms, <em>before</em> the word arm:</p>
+<p>Second — two new arms, <em>before</em> the word arm. The line you already have gets
+pushed down to third place, so it's the same condition with <code>} else</code> in front
+of it instead of <code>let (chunk, colour) =</code>:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn highlight, the top of the if-chain</span></p>
-<pre><code><span class="dim">        <span class="k">let</span> (chunk, colour) = </span><span class="add"><span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">"//"</span>) {
-            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">'\n'</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());
-            (&amp;rest[..end], <span class="t">COMMENT</span>)
-        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">'"'</span>) {
-            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">'"'</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);
-            (&amp;rest[..end], <span class="t">STRING</span>)
-        } <span class="k">else</span> </span><span class="dim"><span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">'_'</span>) {</span></code></pre>
+<pre><code><span class="del">        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">&#x27;_&#x27;</span>) {</span>
+<span class="add">        <span class="k">let</span> (chunk, colour) = <span class="k">if</span> rest.<span class="f">starts_with</span>(<span class="s">&quot;//&quot;</span>) {</span>
+<span class="add">            <span class="k">let</span> end = rest.<span class="f">find</span>(<span class="s">&#x27;\n&#x27;</span>).<span class="f">unwrap_or</span>(rest.<span class="f">len</span>());</span>
+<span class="add">            (&amp;rest[..end], <span class="t">COMMENT</span>)</span>
+<span class="add">        } <span class="k">else</span> <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(after_quote) = rest.<span class="f">strip_prefix</span>(<span class="s">&#x27;&quot;&#x27;</span>) {</span>
+<span class="add">            <span class="k">let</span> end = after_quote.<span class="f">find</span>(<span class="s">&#x27;&quot;&#x27;</span>).<span class="f">map_or</span>(rest.<span class="f">len</span>(), |i| i + <span class="s">2</span>);</span>
+<span class="add">            (&amp;rest[..end], <span class="t">STRING</span>)</span>
+<span class="add">        } <span class="k">else</span> <span class="k">if</span> rest.<span class="f">starts_with</span>(|c: <span class="k">char</span>| c.<span class="f">is_alphanumeric</span>() || c == <span class="s">&#x27;_&#x27;</span>) {</span></code></pre>
 
 <div class="callout note">
   <span class="label">Order is the logic</span>

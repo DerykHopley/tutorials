@@ -184,6 +184,14 @@ status label read `self.line_col_us`, a field stage 4 adds, so stage 3 wouldn't 
 Watch indentation too — the same stage nested the match arms one level deeper, so stage
 4's context lines no longer matched what the reader had in front of them.
 
+**A `.add` or `.del` band covers a whole line, never part of one.** Both are
+`display: inline-block; width: 100%` — a full-width row, which is what makes a diff
+scannable. Open a band mid-line and the fragment claims a row of its own, so one line of
+code renders as two or three stacked bands with the text flung to the right. Lesson 7
+shipped one: `let (chunk, colour) = ` was dimmed and the `if` that followed it on the same
+line opened the band. When only part of a line changes, show the old line as `.del` and the
+new one as `.add` — never split the line. `build.py` warns on a band that opens mid-line.
+
 **Show every edit, including token-level ones.** If a stage changes something *inside* a
 line the reader already has — a renamed parameter, a dropped underscore — the green
 `.add` band alone will not register it, because the whole line looks new. Pair it with a

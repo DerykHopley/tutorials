@@ -17,7 +17,22 @@ KEYWORDS = {
     "as", "const", "else", "enum", "fn", "for", "if", "impl", "in", "let", "match", "mod",
     "move", "mut", "pub", "return", "self", "Self", "struct", "trait", "use", "while",
     "true", "false", "dyn", "where", "crate",
+    # Primitives, marked like keywords to match how the lessons were written by hand.
+    "char", "str", "usize", "bool",
 }
+
+
+def char_literal(line: str, i: int) -> str | None:
+    """Return the char literal starting at `i`, or None if that quote is a lifetime.
+
+    `'a'`, `'\\n'` and `'"'` are literals; `'static` and `&'a str` are not.
+    """
+    if line.startswith("'\\", i):
+        end = line.find("'", i + 2)
+        return line[i : end + 1] if end != -1 else None
+    if len(line) > i + 2 and line[i + 2] == "'":
+        return line[i : i + 3]
+    return None
 
 
 def markup(line: str) -> str:
@@ -29,7 +44,13 @@ def markup(line: str) -> str:
     out, i = [], 0
     while i < len(line):
         ch = line[i]
-        if ch == '"':
+        if ch == "'" and (lit := char_literal(line, i)):
+            # Must come before the string case: `'"'` is a char literal whose
+            # content is a quote, and reading that quote as the start of a
+            # string mangles the rest of the line.
+            out.append(f'<span class="s">{html.escape(lit)}</span>')
+            i += len(lit)
+        elif ch == '"':
             j = i + 1
             while j < len(line):
                 if line[j] == "\\":

@@ -903,7 +903,7 @@ still only one of the second.</p>
 
 <h2>Where you're starting</h2>
 
-<p>Lesson 8's 196 lines, with highlighting and the size limit. Check against
+<p>Lesson 8's 208 lines, with highlighting and the size limit. Check against
 <a href="0008-knowing-when-to-stop.html#where-you-ended-up">lesson 8's checkpoint</a>.</p>
 
 <p class="legend">
@@ -918,7 +918,8 @@ still only one of the second.</p>
 <p class="goal">Identical behaviour, honest names — one file, still working.</p>
 
 <p>This stage changes no behaviour at all. It renames the thing you have and builds a new
-thing around it. <strong>Six edits</strong>, and it won't compile until all six are in.</p>
+thing around it. <strong>Seven edits</strong>, and it won't compile until all seven are
+in.</p>
 
 <p>First — rename the struct. The file-shaped fields stay; the app-shaped ones leave:</p>
 
@@ -929,19 +930,21 @@ thing around it. <strong>Six edits</strong>, and it won't compile until all six 
 <span class="dim">    path: <span class="t">String</span>,
     text: <span class="t">String</span>,
     status: <span class="t">String</span>,</span>
+<span class="del">    position: <span class="t">String</span>,</span>
 <span class="del">    frame_ms: f32,</span>
 <span class="del">    line_col_us: f32,</span>
 <span class="dim">}</span></code></pre>
 
-<p>Second — the <code>impl</code> block moves with it, and <code>open</code> stops
-setting the counters:</p>
+<p>Second — the <code>impl</code> block moves with it, and <code>open</code> stops setting
+the three fields that just left the struct:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the impl block</span></p>
 <pre><code><span class="del"><span class="k">impl</span> <span class="t">Editor</span> {</span>
 <span class="add"><span class="k">impl</span> <span class="t">Buffer</span> {</span>
-<span class="dim">    <span class="c">/// Open a file. …</span>
-            text,
+<span class="gap">open, save and line_col carry on unchanged — only the tail of open loses lines</span>
+<span class="dim">            text,
             status,</span>
+<span class="del">            position: <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),</span>
 <span class="del">            frame_ms: <span class="s">0.0</span>,</span>
 <span class="del">            line_col_us: <span class="s">0.0</span>,</span>
 <span class="dim">        }
@@ -967,6 +970,7 @@ owns. Remember this method. Lesson 10 comes back for it.</p>
 <pre><code><span class="add"><span class="k">struct</span> <span class="t">Editor</span> {
     buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
     active: <span class="k">usize</span>,
+    position: <span class="t">String</span>,
     frame_ms: f32,
     line_col_us: f32,
 }
@@ -977,32 +981,55 @@ owns. Remember this method. Lesson 10 comes back for it.</p>
         <span class="t">Self</span> {
             buffers,
             active: <span class="s">0</span>,
+            position: <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),
             frame_ms: <span class="s">0.0</span>,
             line_col_us: <span class="s">0.0</span>,
         }
     }
 }</span></code></pre>
 
-<p>Fifth — inside <code>fn ui</code>, reach the current file once at the top and use it
-throughout:</p>
+<p>Fifth — the status panel. It reads the file's text and status, and there is no longer
+a single file to read them from, so it goes through the active buffer:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the bottom panel</span></p>
+<pre><code><span class="dim">        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">&quot;status&quot;</span>).<span class="f">show</span>(ui, |ui| {</span>
+<span class="del">            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {</span>
+<span class="add">            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active].text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {</span>
+<span class="gap">the two arms and the start of the label, unchanged</span>
+<span class="dim">                <span class="k">self</span>.position,</span>
+<span class="del">                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
+<span class="add">                <span class="k">self</span>.buffers[<span class="k">self</span>.active].text.<span class="f">len</span>(),</span>
+<span class="dim">                <span class="k">self</span>.line_col_us,
+                <span class="k">self</span>.frame_ms
+            ));</span>
+<span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
+<span class="add">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.buffers[<span class="k">self</span>.active].status);</span>
+<span class="dim">        });</span></code></pre>
+
+<p class="sidenote">Why not <code>let buffer = …</code> up here too? Because this closure
+runs before the one below it, and each panel borrows <code>self</code> separately — a
+binding made here wouldn't be in scope down there. Three uses isn't enough repetition to
+be worth restructuring for.</p>
+
+<p>Sixth — the central panel, where it <em>is</em> worth it. Reach the current file once
+at the top and use it throughout:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the central panel closure</span></p>
 <pre><code><span class="add">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];
 </span><span class="dim">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(…);</span></code></pre>
 
 <div class="callout note">
-  <span class="label">Then every <code>self.</code> in the panel becomes <code>buffer.</code></span>
+  <span class="label">Then every <code>self.</code> in that panel becomes <code>buffer.</code></span>
   <code>self.save()</code> → <code>buffer.save()</code>, <code>self.status</code> →
-  <code>buffer.status</code>, <code>&amp;mut self.text</code> →
-  <code>&amp;mut buffer.text</code>, <code>self.line_col(…)</code> →
-  <code>buffer.line_col(…)</code>, <code>self.text.len()</code> →
-  <code>buffer.text.len()</code>. The two counters — <code>self.line_col_us</code> and
-  <code>self.frame_ms</code> — stay on <code>self</code>, because they belong to the
-  application. The compiler will find every one you miss; work through them until it
-  stops complaining.
+  <code>buffer.status</code>, <code>&amp;self.path</code> → <code>&amp;buffer.path</code>,
+  <code>&amp;mut self.text</code> → <code>&amp;mut buffer.text</code>, and
+  <code>self.line_col(…)</code> → <code>buffer.line_col(…)</code>. Three stay on
+  <code>self</code> — <code>self.position</code>, <code>self.line_col_us</code> and
+  <code>self.frame_ms</code> — because they belong to the application, not the file. The
+  compiler will find every one you miss; work through them until it stops complaining.
 </div>
 
-<p>Sixth — <code>main</code> now passes a slice:</p>
+<p>Seventh — <code>main</code> now passes a slice:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
 <pre><code><span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span>
@@ -1054,7 +1081,7 @@ cargo run -- one.rs two.rs<br>
 <p><strong>One edit</strong>, at the very top of the panel — above the
 <code>let buffer = …</code> line you added in stage 1:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the central panel closure</span></p>
 <pre><code><span class="add">            ui.<span class="f">horizontal</span>(|ui| {
                 <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {
                     <span class="k">let</span> selected = index == <span class="k">self</span>.active;
@@ -1126,7 +1153,7 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>245 lines in total. The restructure touches the top of the file and the whole of
+<p>246 lines in total. The restructure touches the top of the file and the whole of
 <code>fn ui</code>; the highlighting code in between is untouched.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">Buffer and Editor, replacing the old Editor</span></p>
@@ -1257,11 +1284,12 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
             ui.<span class="f">heading</span>(&amp;buffer.path);
 
-            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
-                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
-            };
-
             egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {
+                <span class="k">let</span> <span class="k">mut</span> layouter =
+                    |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                        <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
+                    };
+
                 <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> buffer.text)
                     .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
                     .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)
@@ -1303,7 +1331,7 @@ cargo fmt &amp;&amp; cargo clippy<br>
     )
 }</code></pre>
 
-<p>245 lines, <code>cargo clippy</code> silent.</p>
+<p>246 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

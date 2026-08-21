@@ -904,7 +904,7 @@ decide what <em>not</em> to do.</p>
 
 <h2>Where you're starting</h2>
 
-<p>Lesson 7's 172 lines, with highlighting. Check against
+<p>Lesson 7's 184 lines, with highlighting. Check against
 <a href="0007-colouring-the-code.html#where-you-ended-up">lesson 7's checkpoint</a>.</p>
 
 <p class="legend">
@@ -1034,17 +1034,19 @@ cargo run --release -- big-10000.rs<br>
 <p>An editor that silently stops highlighting looks broken. One that says <em>"highlighting
 off (file too large)"</em> looks considered. <strong>One edit.</strong></p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
-<pre><code><span class="add">            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
-                <span class="s">"highlighting off (file too large)"</span>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, inside the bottom panel</span></p>
+<pre><code><span class="dim">        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">&quot;status&quot;</span>).<span class="f">show</span>(ui, |ui| {</span>
+<span class="add">            <span class="k">let</span> highlighting = <span class="k">if</span> <span class="k">self</span>.text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> {
+                <span class="s">&quot;highlighting off (file too large)&quot;</span>
             } <span class="k">else</span> {
-                <span class="s">"highlighting on"</span>
+                <span class="s">&quot;highlighting on&quot;</span>
             };
-
-</span><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
-<span class="del">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
-<span class="add">                <span class="s">"{position}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
-<span class="dim">                <span class="k">self</span>.text.<span class="f">len</span>(),
+</span>
+<span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
+<span class="del">                <span class="s">&quot;{}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,</span>
+<span class="add">                <span class="s">&quot;{}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,</span>
+<span class="dim">                <span class="k">self</span>.position,
+                <span class="k">self</span>.text.<span class="f">len</span>(),
                 <span class="k">self</span>.line_col_us,
                 <span class="k">self</span>.frame_ms
             ));</span></code></pre>
@@ -1088,7 +1090,7 @@ cargo fmt &amp;&amp; cargo clippy<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>207 lines in total. Two small regions changed: the top of <code>highlight</code>, and
+<p>208 lines in total. Two small regions changed: the top of <code>highlight</code>, and
 the status line in the bottom panel.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the constant, and the top of fn highlight</span></p>
@@ -1143,11 +1145,9 @@ the status line in the bottom panel.</p>
                 <span class="k">self</span>.frame_ms
             ));
             ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);
-        });
+        });</code></pre>
 
-        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</code></pre>
-
-<p>207 lines, <code>cargo clippy</code> silent.</p>
+<p>208 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

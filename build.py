@@ -38,6 +38,7 @@ Editing the generated <style> block inside an HTML file works until the next
 build, then gets silently overwritten. Edit the asset instead.
 """
 
+import html
 import pathlib
 import re
 import sys
@@ -168,6 +169,75 @@ def check_edit_counts(docs: list[pathlib.Path]) -> int:
     return problems
 
 
+FIELD_USE = re.compile(r"\bself\.([a-z_][a-z0-9_]*)\b")
+FIELD_DECL = re.compile(r"^\s*([a-z_][a-z0-9_]*):\s*\S")
+OPEN_SPAN = re.compile(r"<span\b")
+ADD_SPAN = re.compile(r'<span class="add">')
+PRE = re.compile(r"<pre[^>]*>(.*?)</pre>", re.S)
+
+
+def spans(body: str, opener: re.Pattern[str]):
+    """Yield (offset, inner markup) for each matching span, honouring nesting.
+
+    A non-greedy `(.*?)</span>` stops at the first close tag, which inside
+    syntax-highlighted code is usually one token in. That regex silently
+    truncated this audit's input to the word `Panel` and reported all clear.
+    """
+    for match in opener.finditer(body):
+        i, depth = match.end(), 1
+        while depth:
+            nxt = body.find("</span>", i)
+            if nxt < 0:
+                break
+            depth += len(OPEN_SPAN.findall(body, i, nxt)) - 1
+            i = nxt + len("</span>")
+        yield match.start(), body[match.end() : i - len("</span>")]
+
+
+def plain(markup: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", markup))
+
+
+def check_field_order(docs: list[pathlib.Path]) -> int:
+    """A stage may not use a field that a later stage introduces.
+
+    Stage listings get generated from the finished source, so it is easy to
+    paste the end-state version of a line into an early stage and ship code
+    that cannot compile yet. Lesson 6 did exactly that: stage 2's status label
+    read `self.line_col_us`, a field stage 4 adds, so anyone following along
+    hit E0609 at stage 3 with no way to tell whose mistake it was.
+
+    Declarations come from `.add` spans, uses from any code inside a stage.
+    Fields inherited from an earlier lesson are already in the reader's file,
+    so a lesson that never adds a field never checks it.
+    """
+    problems = 0
+    for doc in docs:
+        body = doc.read_text()
+        declared: dict[str, int] = {}
+        for at, markup in spans(body, ADD_SPAN):
+            for line in plain(markup).splitlines():
+                decl = FIELD_DECL.match(line)
+                if decl and "(" not in line:
+                    declared.setdefault(decl.group(1), at)
+
+        used: dict[str, int] = {}
+        for stage in STAGE.finditer(body):
+            for block in PRE.finditer(stage.group(1)):
+                at = stage.start() + block.start()
+                for use in FIELD_USE.finditer(plain(block.group(1))):
+                    used.setdefault(use.group(1), at)
+
+        for name, first_use in sorted(used.items(), key=lambda kv: kv[1]):
+            if name in declared and first_use < declared[name]:
+                print(
+                    f"  WARN    {doc.relative_to(ROOT)}: uses self.{name} before "
+                    f"the stage that adds the field"
+                )
+                problems += 1
+    return problems
+
+
 def main() -> None:
     docs = sorted(
         p
@@ -193,6 +263,13 @@ def main() -> None:
         "Run blocks: no commands hidden in notes."
         if not hidden
         else f"Run blocks: {hidden} hidden command(s) — move them to a callout."
+    )
+
+    early = check_field_order(docs)
+    print(
+        "Field order: no stage uses a field a later stage adds."
+        if not early
+        else f"Field order: {early} forward reference(s) — a stage won't compile."
     )
 
 

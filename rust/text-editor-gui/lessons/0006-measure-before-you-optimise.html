@@ -947,9 +947,9 @@ closure, one at the very top of <code>ui</code> and one at the very bottom:</p>
 <span class="add">        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
         ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
 </span>
-<span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
-            <span class="c">// … everything as before …</span>
-        });</span>
+<span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="gap">everything already inside the central panel, unchanged</span>
+<span class="dim">        });</span>
 <span class="add">
         <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;</span>
 <span class="dim">    }</span></code></pre>
@@ -1008,7 +1008,8 @@ read isn't an instrument.</p>
 
 <p><a href="0001-your-first-window.html#stage-3">Lesson 1</a> promised this fix: "later
 you'll add a top panel for tabs and a bottom one for a status bar, and the central panel
-will shrink to fit around them automatically." <strong>Four edits.</strong></p>
+will shrink to fit around them automatically." <strong>Four edits</strong>, and this is
+surgery — the file will not compile until all four are in. Do them all, then run.</p>
 
 <p>First — the editor needs to remember the position between frames, because the status
 bar is now drawn <em>before</em> the text box that computes it:</p>
@@ -1033,10 +1034,9 @@ bar is now drawn <em>before</em> the text box that computes it:</p>
 </span>
 <span class="add">        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">"status"</span>).<span class="f">show</span>(ui, |ui| {
             ui.<span class="f">label</span>(<span class="f">format!</span>(
-                <span class="s">"{}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
+                <span class="s">"{}  ·  {} bytes  ·  {:.2} ms/frame"</span>,
                 <span class="k">self</span>.position,
                 <span class="k">self</span>.text.<span class="f">len</span>(),
-                <span class="k">self</span>.line_col_us,
                 <span class="k">self</span>.frame_ms
             ));
             ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);
@@ -1064,8 +1064,8 @@ box in a scroll area, and store the position instead of printing it:</p>
 
 <span class="del">            <span class="k">let</span> position = <span class="k">match</span> output.cursor_range {</span>
 <span class="add">                <span class="k">self</span>.position = <span class="k">match</span> output.cursor_range {</span>
-<span class="dim">                    <span class="c">// … the two arms, unchanged, just indented one more level …</span>
-                };</span>
+<span class="gap">the two match arms, unchanged — just indented one level further</span>
+<span class="dim">                };</span>
 <span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  …"</span>));</span>
 <span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
 <span class="add">            });</span>
@@ -1156,24 +1156,24 @@ So measure it rather than assuming. <strong>Four edits.</strong></p>
 <span class="add">            line_col_us: <span class="s">0.0</span>,</span>
 <span class="dim">        }</span></code></pre>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, the Some arm</span></p>
-<pre><code><span class="dim">                <span class="t">Some</span>(range) =&gt; {</span>
-<span class="add">                    <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();</span>
-<span class="dim">                    <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
-<span class="add">                    <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;</span>
-<span class="dim">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
-                }</span></code></pre>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the Some arm inside the scroll area</span></p>
+<pre><code><span class="dim">                    <span class="t">Some</span>(range) =&gt; {</span>
+<span class="add">                        <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();</span>
+<span class="dim">                        <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);</span>
+<span class="add">                        <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000.0</span>;</span>
+<span class="dim">                        <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
+                    }</span></code></pre>
 
 <p>Fourth — microseconds this time, not milliseconds — if you measure a small thing in big units
 you get <code>0.00</code> and learn nothing. Add it to the label:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the label in the bottom panel</span></p>
 <pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
-<span class="del">                <span class="s">"{position}  ·  {} bytes  ·  {:.2} ms/frame"</span>,</span>
-<span class="del">                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
-<span class="add">                <span class="s">"{position}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,
-                <span class="k">self</span>.text.<span class="f">len</span>(),
-                <span class="k">self</span>.line_col_us,</span>
+<span class="del">                <span class="s">"{}  ·  {} bytes  ·  {:.2} ms/frame"</span>,</span>
+<span class="add">                <span class="s">"{}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame"</span>,</span>
+<span class="dim">                <span class="k">self</span>.position,
+                <span class="k">self</span>.text.<span class="f">len</span>(),</span>
+<span class="add">                <span class="k">self</span>.line_col_us,</span>
 <span class="dim">                <span class="k">self</span>.frame_ms
             ));</span></code></pre>
 

@@ -107,6 +107,41 @@ def build(doc: pathlib.Path) -> bool:
     return True
 
 
+WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7}
+COUNT = re.compile(r"\b(one|two|three|four|five|six|seven)\s+edits?\b", re.I)
+STAGE = re.compile(r'<section class="stage"[^>]*>(.*?)</section>', re.S)
+HEADING = re.compile(r"<h3[^>]*>(.*?)</h3>", re.S)
+
+
+def check_edit_counts(docs: list[pathlib.Path]) -> int:
+    """A stage that says "Three edits" must contain three code blocks.
+
+    Under-counting is the worst defect this format has: a reader tallies the
+    edits, stops early, and silently ends up with a file that no longer matches
+    the next lesson. It happened for real — lesson 3 claimed four edits and had
+    five, so the status label never got added and lesson 4's diff didn't apply.
+    """
+    problems = 0
+    for doc in docs:
+        body = doc.read_text()
+        for stage in STAGE.finditer(body):
+            seg = stage.group(1)
+            claim = COUNT.search(re.sub(r"<[^>]+>", " ", seg))
+            if not claim:
+                continue
+            blocks = seg.count('<p class="filename">')
+            says = WORDS[claim.group(1).lower()]
+            if says != blocks:
+                title = HEADING.search(seg)
+                title = re.sub(r"<[^>]+>", "", title.group(1)).strip() if title else "?"
+                print(
+                    f"  WARN    {doc.relative_to(ROOT)}: stage \"{title}\" "
+                    f"says {says} edit(s) but has {blocks} code block(s)"
+                )
+                problems += 1
+    return problems
+
+
 def main() -> None:
     docs = sorted(
         p
@@ -119,6 +154,13 @@ def main() -> None:
     print(f"Inlining assets into {len(docs)} document(s):")
     changed = sum(build(p) for p in docs)
     print(f"\n{changed} updated, {len(docs) - changed} already current.")
+
+    problems = check_edit_counts(docs)
+    print(
+        "Edit counts: all stages agree with their code blocks."
+        if not problems
+        else f"Edit counts: {problems} stage(s) disagree — fix before publishing."
+    )
 
 
 if __name__ == "__main__":

@@ -904,7 +904,7 @@ the most reliable way to spend a week making no difference.</p>
 
 <p class="goal">The editor reports how long its own frame took.</p>
 
-<p><strong>Four edits.</strong> First, the standard library's clock:</p>
+<p><strong>Five edits.</strong> First, the standard library's clock:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
 <pre><code><span class="dim"><span class="k">use</span> std::io;</span>
@@ -938,7 +938,7 @@ closure, one at the very top of <code>ui</code> and one at the very bottom:</p>
         <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000.0</span>;</span>
 <span class="dim">    }</span></code></pre>
 
-<p>And show it, in the label you already have:</p>
+<p>Fifth — show it, in the byte-count label you already have:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
 <pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
@@ -1027,10 +1027,10 @@ reference tells you a debug-build editor feeling sluggish on a big file is not a
 
 <p class="goal">Time your own code separately, and stop guessing.</p>
 
-<p>7 ms per keystroke in release is still 43% of a frame. Something is doing real work.
+<p>7&nbsp;ms per keystroke in release is still 43% of a frame. Something is doing real work.
 The obvious suspect is <code>line_col</code> from lesson 4 — it walks the text from the
 start on every single frame, which is exactly the kind of thing that should scale badly.
-So measure it rather than assuming. <strong>Three edits.</strong></p>
+So measure it rather than assuming. <strong>Four edits.</strong></p>
 
 <p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
 <pre><code><span class="dim">    frame_ms: f32,</span>
@@ -1050,7 +1050,7 @@ So measure it rather than assuming. <strong>Three edits.</strong></p>
 <span class="dim">                    <span class="f">format!</span>(<span class="s">"Ln {line}, Col {column}"</span>)
                 }</span></code></pre>
 
-<p>Microseconds this time, not milliseconds — if you measure a small thing in big units
+<p>Fourth — microseconds this time, not milliseconds — if you measure a small thing in big units
 you get <code>0.00</code> and learn nothing. Add it to the label:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>

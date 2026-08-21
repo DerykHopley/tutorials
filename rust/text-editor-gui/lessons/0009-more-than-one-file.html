@@ -902,7 +902,7 @@ still only one of the second.</p>
 <p class="goal">Identical behaviour, honest names — one file, still working.</p>
 
 <p>This stage changes no behaviour at all. It renames the thing you have and builds a new
-thing around it. <strong>Four edits</strong>, and it won't compile until all four are in.</p>
+thing around it. <strong>Six edits</strong>, and it won't compile until all six are in.</p>
 
 <p>First — rename the struct. The file-shaped fields stay; the app-shaped ones leave:</p>
 
@@ -967,7 +967,7 @@ owns. Remember this method. Lesson 10 comes back for it.</p>
     }
 }</span></code></pre>
 
-<p>Inside <code>fn ui</code>, reach the current file once at the top and use it
+<p>Fifth — inside <code>fn ui</code>, reach the current file once at the top and use it
 throughout:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
@@ -986,7 +986,7 @@ throughout:</p>
   stops complaining.
 </div>
 
-<p>And <code>main</code> now passes a slice:</p>
+<p>Sixth — <code>main</code> now passes a slice:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
 <pre><code><span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span>

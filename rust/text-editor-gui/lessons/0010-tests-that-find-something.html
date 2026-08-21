@@ -977,7 +977,7 @@ delete — worth knowing it returns the end rather than panicking.</p>
 <p class="goal">A red test — on code from lesson 9.</p>
 
 <p><code>Buffer::name()</code> is a one-liner that chops a path down to a filename. It's
-the newest code in the project and the least examined. <strong>One edit</strong>, inside
+the newest code in the project and the least examined. <strong>Two edits.</strong> First, inside
 the test module:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in mod tests</span></p>
@@ -1023,8 +1023,8 @@ test result: FAILED. 9 passed; 1 failed</code></pre>
 </details>
 
 <p>A blank tab label isn't fatal, but it's the kind of thing a reviewer clicks on in the
-first minute. Fix it by trimming the trailing separator before splitting, and rejecting an
-empty answer:</p>
+first minute. Second edit — fix it by trimming the trailing separator before splitting,
+and rejecting an empty answer:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in impl Buffer</span></p>
 <pre><code><span class="dim">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
@@ -1063,7 +1063,7 @@ from lesson 5, earning its keep.</p>
 <p><code>highlight</code> can't be tested: it needs a <code>&amp;egui::Ui</code>, which
 only exists mid-frame inside a running application. But the <em>decisions</em> it makes —
 which run of characters is which colour — need no egui at all. They're tangled up with the
-drawing, so untangle them. <strong>Two edits.</strong></p>
+drawing, so untangle them. <strong>Four edits.</strong></p>
 
 <p>First — split the function in half. The scanning half returns a list of runs:</p>
 
@@ -1083,8 +1083,8 @@ drawing, so untangle them. <strong>Two edits.</strong></p>
     <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
         <span class="c">// … the if-chain, unchanged …</span></span></code></pre>
 
-<p>The bottom of the loop pushes instead of appending, and the function returns the
-list:</p>
+<p>Second — the bottom of the loop pushes instead of appending, and the function returns
+the list:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn scan, the end of the loop</span></p>
 <pre><code><span class="del">        job.<span class="f">append</span>(chunk, <span class="s">0.0</span>, egui::<span class="t">TextFormat</span> { … });</span>
@@ -1095,7 +1095,7 @@ list:</p>
 <span class="add">    runs</span>
 <span class="dim">}</span></code></pre>
 
-<p>Second — a new <code>highlight</code> that turns runs into a galley. It's short,
+<p>Third — a new <code>highlight</code> that turns runs into a galley. It's short,
 because all the thinking now happens elsewhere:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">below fn scan</span></p>
@@ -1135,7 +1135,7 @@ because all the thinking now happens elsewhere:</p>
   moved a decision somewhere it can be read.
 </div>
 
-<p>Now the tests, which need no <code>Ui</code> at all:</p>
+<p>Fourth — the tests, which need no <code>Ui</code> at all:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in mod tests</span></p>
 <pre><code><span class="add">

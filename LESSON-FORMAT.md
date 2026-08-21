@@ -128,6 +128,14 @@ gets skimmed past, because the reader's attention is spent on the first. When a 
 needs several, say so up front ("this stage takes three separate edits"), number them in
 the prose, and warn if the file won't compile until all of them are in.
 
+**If you announce a count, it must be right.** "Three edits" means exactly three code
+blocks in that stage. A reader tallies the edits as they go and stops when they reach the
+number — so under-counting silently leaves their file wrong, and the *next* lesson's diff
+then fails to apply against it. This is not hypothetical: lesson 3 claimed four edits and
+had five, the status label never got added, and lesson 4's replacement had nothing to
+match. `python3 build.py` now audits every stage and warns on a mismatch. Never let a
+single ordinal ("Fourth — …") introduce two blocks.
+
 **Show every edit, including token-level ones.** If a stage changes something *inside* a
 line the reader already has — a renamed parameter, a dropped underscore — the green
 `.add` band alone will not register it, because the whole line looks new. Pair it with a

@@ -1066,8 +1066,7 @@ box in a scroll area, and store the position instead of printing it:</p>
 <span class="add">                <span class="k">self</span>.position = <span class="k">match</span> output.cursor_range {</span>
 <span class="gap">the two match arms, unchanged — just indented one level further</span>
 <span class="dim">                };</span>
-<span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  …"</span>));</span>
-<span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
+<span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
 <span class="add">            });</span>
 <span class="dim">        });</span></code></pre>
 
@@ -1210,8 +1209,22 @@ and it doesn't know that you can only see forty lines of it.</p>
 </div>
 
 <p>This is the whole reason the lesson exists. The rope isn't wrong — it becomes right at
-a size and an edit pattern we haven't reached. But "obviously O(n) therefore obviously the
-bottleneck" is the most expensive kind of obvious.</p>
+a size and an edit pattern we haven't reached. But "obviously <em>O(n)</em>, therefore
+obviously the bottleneck" is the most expensive kind of obvious.</p>
+
+<p class="sidenote"><strong>O(n)</strong>, said "order n", is shorthand for how an
+operation's cost <em>grows</em> with the size of its input — O(n) means double the text,
+double the work. <code>String::insert</code> is O(n) because everything after the cursor
+shifts along to make room.</p>
+
+<p>The trap is that big-O describes the <em>shape</em> of that growth, not its height: it
+throws away the cost of each unit of work, which is the part that decides whether you
+notice. Look again at <a href="#where-time-goes">the table above</a> — egui's text layout
+is O(n) in the file size too. Both suspects were linear, so the complexity class could not
+tell them apart at all — and the one that mattered cost some 560&nbsp;times more per
+frame, because shaping a glyph and deciding where a line wraps is vastly more work than
+copying a byte. What big-O <em>is</em> good for is predicting what breaks later — it's
+a claim about scaling, not a measurement of what you have now.</p>
 
 <p class="run">rm editor/big.rs<br>
 cargo fmt &amp;&amp; cargo clippy<br>
@@ -1344,8 +1357,9 @@ cargo fmt &amp;&amp; cargo clippy<br>
     <li>It depends entirely on available system memory</li>
   </ul>
   <p class="why">11 µs, roughly 0.2% of the frame. Copying a megabyte is genuinely cheap
-  on modern hardware. "Obviously O(n), therefore obviously the bottleneck" is exactly the
-  reasoning this lesson exists to break.
+  on modern hardware, so an O(n) operation — one whose cost grows in step with the file —
+  can still be linear <em>and</em> negligible. "Obviously O(n), therefore obviously the
+  bottleneck" is exactly the reasoning this lesson exists to break.
   <a class="review" href="#where-time-goes">↑ Review: where the time goes (stage 3)</a>
   </p>
 </div>

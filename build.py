@@ -238,6 +238,51 @@ def check_field_order(docs: list[pathlib.Path]) -> int:
     return problems
 
 
+CHECKPOINT = re.compile(r'<h2[^>]*id="where-you-ended-up"[^>]*>(.*?)<h2', re.S)
+GAP = re.compile(r'<span class="gap">')
+ELISION = re.compile(r'<span class="c">\s*//\s*[…\.]')
+
+
+def check_checkpoints(docs: list[pathlib.Path]) -> int:
+    """A checkpoint listing must be a whole file, minus marked gaps.
+
+    Two things go wrong here, and both did. A listing can get truncated when a
+    generator writes it — lessons 7 and 8 each shipped one that stopped in the
+    middle of a closure, so the reader had nothing to diff the end of their
+    file against. And a gap can get marked with a `// … unchanged …` comment
+    instead of a `.gap` span, which reads as a line to type.
+
+    The brace test is the cheap version of "is this a whole file": every
+    marked gap can swallow at most a few, so a large imbalance means the
+    listing simply stops.
+    """
+    problems = 0
+    for doc in docs:
+        body = doc.read_text()
+        seg = CHECKPOINT.search(body)
+        if not seg:
+            continue
+        seg = seg.group(1)
+        gaps = len(GAP.findall(seg))
+        depth = 0
+        for block in PRE.finditer(seg):
+            code = plain(block.group(1))
+            depth += code.count("{") - code.count("}")
+        if depth > gaps + 1:
+            print(
+                f"  WARN    {doc.relative_to(ROOT)}: checkpoint has {depth} unclosed "
+                f"brace(s) but only {gaps} marked gap(s) — a listing is truncated"
+            )
+            problems += 1
+        for hit in ELISION.finditer(seg):
+            print(
+                f"  WARN    {doc.relative_to(ROOT)}: checkpoint elides code with a "
+                f"comment — use <span class=\"gap\"> so it can't be mistaken for code"
+            )
+            problems += 1
+    return problems
+
+
 def main() -> None:
     docs = sorted(
         p
@@ -270,6 +315,13 @@ def main() -> None:
         "Field order: no stage uses a field a later stage adds."
         if not early
         else f"Field order: {early} forward reference(s) — a stage won't compile."
+    )
+
+    cut = check_checkpoints(docs)
+    print(
+        "Checkpoints: every listing runs to the end of its file."
+        if not cut
+        else f"Checkpoints: {cut} listing(s) truncated or elided with a comment."
     )
 
 

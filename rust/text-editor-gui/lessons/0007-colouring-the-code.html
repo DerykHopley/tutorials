@@ -904,7 +904,7 @@ the cursor — stays exactly as it is.</p>
 
 <h2>Where you're starting</h2>
 
-<p>Lesson 6's 114 lines, with the frame-time readout. Check against
+<p>Lesson 6's 121 lines, with the frame-time readout and the status panel. Check against
 <a href="0006-measure-before-you-optimise.html#where-you-ended-up">lesson 6's
 checkpoint</a>.</p>
 
@@ -967,16 +967,26 @@ your long lines run off the edge.</p>
 
 <p>Third — tell <code>TextEdit</code> to use it:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, the text box</span></p>
-<pre><code><span class="add">            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
-                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
-            };
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, inside the scroll area</span></p>
+<pre><code><span class="dim">            egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="add">                <span class="k">let</span> <span class="k">mut</span> layouter =
+                    |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                        <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
+                    };
 
-</span><span class="dim">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
-<span class="del">                .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
-<span class="dim">                .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
-<span class="add">                .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)</span>
-<span class="dim">                .<span class="f">show</span>(ui);</span></code></pre>
+</span><span class="dim">                <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="del">                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="dim">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)</span>
+<span class="add">                    .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)</span>
+<span class="dim">                    .<span class="f">show</span>(ui);</span></code></pre>
+
+<div class="callout note">
+  <span class="label">It goes inside the scroll area</span>
+  Lesson 6 wrapped the text box in <code>egui::ScrollArea::vertical()</code>, so the
+  closure belongs in there with it, one indent level deeper than the rest of the central
+  panel. That extra indent is also why <code>cargo fmt</code> splits the closure across
+  two lines — the one-line version no longer fits in 100 columns.
+</div>
 
 <div class="callout note">
   <span class="label"><code>.font(…)</code> comes out</span>
@@ -1122,7 +1132,7 @@ cargo run<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>183 lines in total. Almost everything here is new — the constants and the
+<p>184 lines in total. Almost everything here is new — the constants and the
 <code>highlight</code> function — plus one small change inside <code>fn ui</code>.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">new, above struct Editor</span></p>
@@ -1191,15 +1201,31 @@ cargo run<br>
 }</code></pre>
 
 <div class="callout note">
-  <span class="label">Roughly eighty lines between these two are unchanged</span>
-  <code>struct Editor</code>, all of <code>impl Editor</code>, the status panel and
-  <code>main</code> are exactly as
+  <span class="label">Fifty-odd lines between these two are unchanged</span>
+  <code>struct Editor</code> and the whole of <code>impl Editor</code> — <code>open</code>,
+  <code>save</code>, <code>line_col</code> — are exactly as
   <a href="0006-measure-before-you-optimise.html#where-you-ended-up">lesson 6</a> left
-  them. Inside <code>fn ui</code>, only the text box changed.
+  them, and so is <code>fn main</code> below. Inside <code>fn ui</code>, only the text box
+  changed.
 </div>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, inside the scroll area</span></p>
-<pre><code>
+<p class="filename">editor/src/main.rs<span class="where">the whole of fn ui</span></p>
+<pre><code><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
+        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
+        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
+
+        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">&quot;status&quot;</span>).<span class="f">show</span>(ui, |ui| {
+            ui.<span class="f">label</span>(<span class="f">format</span>!(
+                <span class="s">&quot;{}  ·  {} bytes  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,
+                <span class="k">self</span>.position,
+                <span class="k">self</span>.text.<span class="f">len</span>(),
+                <span class="k">self</span>.line_col_us,
+                <span class="k">self</span>.frame_ms
+            ));
+            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);
+        });
+
         egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
             <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));
             <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
@@ -1208,10 +1234,34 @@ cargo run<br>
 
             ui.<span class="f">heading</span>(&amp;<span class="k">self</span>.path);
 
-            <span class="k">let</span> <span class="k">mut</span> layouter = |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
-                <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)</code></pre>
+            egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {
+                <span class="k">let</span> <span class="k">mut</span> layouter =
+                    |ui: &amp;egui::<span class="t">Ui</span>, buffer: &amp;<span class="k">dyn</span> egui::<span class="t">TextBuffer</span>, wrap_width: f32| {
+                        <span class="f">highlight</span>(ui, buffer.<span class="f">as_str</span>(), wrap_width)
+                    };
 
-<p>183 lines, <code>cargo clippy</code> silent.</p>
+                <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                    .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)
+                    .<span class="f">show</span>(ui);
+
+                <span class="k">self</span>.position = <span class="k">match</span> output.cursor_range {
+                    <span class="f">Some</span>(range) =&gt; {
+                        <span class="k">let</span> started = <span class="t">Instant</span>::<span class="f">now</span>();
+                        <span class="k">let</span> (line, column) = <span class="k">self</span>.<span class="f">line_col</span>(range.primary.index.<span class="s">0</span>);
+                        <span class="k">self</span>.line_col_us = started.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1_000_000</span>.<span class="s">0</span>;
+                        <span class="f">format</span>!(<span class="s">&quot;Ln {line}, Col {column}&quot;</span>)
+                    }
+                    <span class="t">None</span> =&gt; <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),
+                };
+            });
+        });
+
+        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;
+    }
+}</code></pre>
+
+<p>184 lines, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

@@ -137,6 +137,22 @@ gap and roughly how long it is. Where the gap falls *inside* a function body, so
 is impossible, mark it with `<span class="gap">` — a centred, ruled-off marker that cannot
 be mistaken for code.
 
+**Generate checkpoints from the file you compiled, and check they reach the end.** Lessons
+7 and 8 both shipped a checkpoint that stopped in the middle of a closure — the reader had
+nothing to diff the tail of their file against, and the listing that was supposed to be the
+authority was the least trustworthy thing on the page. `mkcode.py` exists so a listing can
+be generated from real source; `build.py` now warns when a checkpoint has more unclosed
+braces than it has marked gaps.
+
+**When a lesson's code changes, its stages change too — not just its checkpoint.** The
+checkpoints for lessons 7–10 were regenerated after lesson 6 gained a scroll area and a
+status panel; the *stages* were not, so lesson 7 told the reader to put a closure at the
+wrong indent level, lesson 8 patched a status label that no longer existed in that form,
+and lesson 9 never mentioned a field it had to move. Re-derive every downstream lesson's
+source end to end and rebuild both halves. Watch for knock-on formatting: an extra indent
+level pushed one line past 100 columns, so `cargo fmt` split it and every later listing had
+to agree.
+
 **Abridged checkpoints are never numbered.** Line numbers on a complete file are stable
 and useful; on a fragment they run 1..N and quietly disagree with the reader's real file.
 Only a full-file checkpoint gets `<pre class="numbered">`.

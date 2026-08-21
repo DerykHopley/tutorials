@@ -903,7 +903,7 @@ one testable improves the design.</p>
 
 <h2>Where you're starting</h2>
 
-<p>Lesson 9's 227 lines, with tabs. Check against
+<p>Lesson 9's 246 lines, with tabs. Check against
 <a href="0009-more-than-one-file.html#where-you-ended-up">lesson 9's checkpoint</a>.</p>
 
 <p class="legend">
@@ -1089,7 +1089,7 @@ drawing, so untangle them. <strong>Four edits.</strong></p>
 <span class="del">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
 <span class="del">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
 <span class="del">    job.wrap.max_width = wrap_width;</span>
-<span class="del">    <span class="c">// … the HIGHLIGHT_LIMIT early return …</span></span>
+<span class="del">    <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> { … }  <span class="c">// the whole early return</span></span>
 <span class="add"><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span>
 <span class="c">/// so it can be tested directly.</span>
 <span class="k">fn</span> <span class="f">scan</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Vec</span>&lt;(&amp;<span class="k">str</span>, egui::<span class="t">Color32</span>)&gt; {
@@ -1097,13 +1097,13 @@ drawing, so untangle them. <strong>Four edits.</strong></p>
 <span class="dim">
     <span class="k">let</span> <span class="k">mut</span> rest = text;
     <span class="k">while</span> !rest.<span class="f">is_empty</span>() {
-        <span class="c">// … the if-chain, unchanged …</span></span></code></pre>
+</span><span class="gap">the if-chain that picks each run's colour, unchanged</span></code></pre>
 
 <p>Second — the bottom of the loop pushes instead of appending, and the function returns
 the list:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn scan, the end of the loop</span></p>
-<pre><code><span class="del">        job.<span class="f">append</span>(chunk, <span class="s">0.0</span>, egui::<span class="t">TextFormat</span> { … });</span>
+<pre><code><span class="gap">the job.append(…) call that used to end the loop — delete all nine lines of it</span>
 <span class="add">        runs.<span class="f">push</span>((chunk, colour));</span>
 <span class="dim">        rest = &amp;rest[chunk.<span class="f">len</span>()..];
     }
@@ -1195,7 +1195,7 @@ cargo run<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>330 lines, 10 tests passing. Two regions changed: <code>highlight</code> split in two,
+<p>331 lines, 10 tests passing. Two regions changed: <code>highlight</code> split in two,
 and <code>name</code> fixed — plus the new test module at the very bottom.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">fn scan and fn highlight, replacing the old highlight</span></p>
@@ -1302,7 +1302,7 @@ and <code>name</code> fixed — plus the new test module at the very bottom.</p>
     }
 }</code></pre>
 
-<p>330 lines; <code>cargo test</code> green, <code>cargo clippy</code> silent.</p>
+<p>331 lines; <code>cargo test</code> green, <code>cargo clippy</code> silent.</p>
 
 <h2 id="check-yourself">Check yourself</h2>
 

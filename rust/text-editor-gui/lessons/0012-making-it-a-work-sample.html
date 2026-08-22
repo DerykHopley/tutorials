@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 12 — Making It a Work Sample</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 12 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~35 minutes</p>
+  <h1>Making It a Work Sample</h1>
+  <p class="subtitle">Four stages, three of them outside <code>main.rs</code> — and the last lesson of the tutorial.</p>
+</header>
+
+<p>The editor works. That was never the whole mission: it says this repo is something a
+hiring manager can open, run, and judge in sixty seconds, and that "legibility counts as
+much as features".</p>
+
+<p>So this lesson changes almost no behaviour. It takes out a line that has been lying to
+you since lesson 6, moves a promise from your head into the build, makes the binary worth
+downloading, and writes the file a reviewer actually reads first.</p>
+
+<div class="thesis">
+  A promise in a comment is a wish. A promise in <code>Cargo.toml</code> is a build error.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 11's 415 lines, with the rope. Check against
+<a href="0011-earning-the-rope.html#where-you-ended-up">lesson 11's checkpoint</a>.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-repaint">
+<h3>Stop burning a core</h3>
+
+<p class="goal">The editor goes back to sleep when you stop typing.</p>
+
+<p><a href="0001-your-first-window.html#repaints">Lesson 1</a> made a claim about
+immediate-mode GUIs that has been false in your editor since lesson 6: that egui only
+repaints when something happens, so an idle editor costs nothing. Lesson 6 needed a live
+frame counter, so it added this — and
+<a href="0006-measure-before-you-optimise.html#last-frame">said at the time</a> that it
+was exactly what you'd take out afterwards. This is afterwards. <strong>One edit.</strong></p>
+
+<p class="filename">editor/src/main.rs<span class="where">at the top of fn ui</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
+        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();</span>
+<span class="del">        ui.<span class="f">ctx</span>().<span class="f">request_repaint</span>();
+</span>
+<span class="dim">        egui::<span class="t">Panel</span>::<span class="f">bottom</span>(<span class="s">"status"</span>).<span class="f">show</span>(ui, |ui| {</span></code></pre>
+
+<h4 id="what-it-was-doing">What that line was actually doing</h4>
+
+<p>Every frame, egui reports how long the host should wait before drawing again. I
+measured it with the widget idle and nothing happening:</p>
+
+<table id="repaint-delay">
+  <tr><th>Idle frame</th><th>Next repaint requested in</th></tr>
+  <tr><td>with <code>request_repaint()</code></td><td><code>0ns</code> — immediately, forever</td></tr>
+  <tr><td>without it</td><td><strong>never</strong> — wait for input</td></tr>
+</table>
+
+<p>Not "sooner". <em>Zero.</em> The window was asking to be redrawn as fast as the display
+could take it, for as long as it was open, whether or not anything had changed — which on
+a laptop is a fan and an hour of battery. Removing one line turns a busy loop into a
+program that sleeps.</p>
+
+<div class="callout note">
+  <span class="label">The readout still works — it just holds still</span>
+  <code>frame_ms</code> and <code>line_col</code> now update only on frames that actually
+  happen, which is to say the frames you caused. Type, and the numbers move. Stop, and
+  they hold the cost of the last real frame. That's more useful than the flicker, and it's
+  the number you wanted all along: what a keystroke costs.
+</div>
+
+<p class="run">cargo run -- src/main.rs<br>
+→ type, and ms/frame moves; stop, and it holds<br>
+→ the process goes idle instead of spinning<br>
+<span class="note">If you have a system monitor open, this is the most visible change in the lesson.</span></p>
+</section>
+
+<section class="stage" id="stage-lints">
+<h3>Move a promise into the build</h3>
+
+<p class="goal"><code>cargo clippy</code> fails if anyone adds an <code>unwrap()</code>.</p>
+
+<p>Your mission says "no <code>unwrap()</code> in the hot path, errors handled
+deliberately". You've kept that since lesson 2 — there is not one <code>unwrap()</code> in
+the program outside the tests. But nothing enforces it, and a promise nothing enforces is
+a promise until the first hurried afternoon. <strong>Two edits.</strong></p>
+
+<p>First — say it in the manifest:</p>
+
+<p class="filename">editor/Cargo.toml<span class="where">at the bottom</span></p>
+<pre><code><span class="add">
+<span class="c"># The mission says "no unwrap() in the hot path". This is that promise, enforced.</span>
+[lints.clippy]
+unwrap_used = <span class="s">"deny"</span>
+expect_used = <span class="s">"deny"</span></span></code></pre>
+
+<p>A <code>[lints]</code> table applies to the whole crate and travels with the repo, so
+it holds for anyone who clones it — unlike a flag you remember to type.</p>
+
+<p class="run">cargo clippy<br>
+→ silent</p>
+
+<p>Silent — and that is the trap. Run it the other way:</p>
+
+<p class="run">cargo clippy --all-targets<br>
+→ <em>error: used `unwrap()` on an `Option` value</em><br>
+→ <em>--&gt; src/main.rs:406:20</em></p>
+
+<h4 id="all-targets">Clippy has been skipping your tests this whole time</h4>
+
+<p>By default <code>cargo clippy</code> checks the binary and nothing else.
+<code>--all-targets</code> adds tests, benches and examples. Every
+<code>cargo clippy</code> you've run since lesson 1 has been ignoring the test module —
+which is not a small thing, given lesson 10 put a tenth of the program in there.</p>
+
+<p>The error it finds is real, and the right fix is <em>not</em> to remove the
+<code>unwrap()</code>. In a test, a panic <em>is</em> the failure report: that's what
+<code>assert_eq!</code> does. The lint is right about production code and wrong about
+tests, so say so, in the one place it applies:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">above mod tests</span></p>
+<pre><code><span class="dim">#[<span class="f">cfg</span>(test)]</span>
+<span class="add">#[<span class="f">allow</span>(clippy::unwrap_used, reason = <span class="s">"a panic is how a test reports failure"</span>)]</span>
+<span class="dim"><span class="k">mod</span> tests {</span></code></pre>
+
+<p class="sidenote">The <code>reason = "…"</code> is not decoration. An
+<code>#[allow]</code> without one is indistinguishable from an <code>#[allow]</code> that
+somebody added to make a warning go away, and reviewers treat them the same.</p>
+
+<div class="callout note">
+  <span class="label">A lint I considered and didn't take</span>
+  <code>indexing_slicing = "warn"</code> flags every <code>&amp;rest[..end]</code> in the
+  scanner and every <code>self.buffers[self.active]</code> — five sites, all safe by
+  construction, none of which I'd change. A lint that produces warnings you intend to
+  ignore trains you to ignore warnings, so it's worse than no lint. Enable the ones you
+  will actually obey.
+</div>
+
+<p class="run">cargo clippy --all-targets<br>
+→ silent<br>
+<span class="note">Use this form from now on. It is the one that checks everything.</span></p>
+</section>
+
+<section class="stage" id="stage-release">
+<h3>Ship a binary worth downloading</h3>
+
+<p class="goal">The release build is 40% smaller.</p>
+
+<p>Cargo's default release profile optimises for a reasonable build time, because that's
+what you want a hundred times a day. A binary someone downloads once is the other case.
+<strong>One edit.</strong></p>
+
+<p class="filename">editor/Cargo.toml<span class="where">above the lints table</span></p>
+<pre><code><span class="add">
+<span class="c"># A binary someone downloads is worth 50 seconds of build time.</span>
+[profile.release]
+lto = <span class="s">"fat"</span>
+codegen-units = <span class="s">1</span>
+strip = <span class="k">true</span></span></code></pre>
+
+<h4 id="what-each-does">What you're buying, and what it costs</h4>
+
+<p>Measured on this machine, building the editor from clean:</p>
+
+<table id="profile-numbers">
+  <tr><th>Profile</th><th>Binary</th><th>Clean release build</th></tr>
+  <tr><td>Cargo's default</td><td>26.0 MB</td><td>39.0 s</td></tr>
+  <tr><td><code>strip = true</code> alone</td><td>19.3 MB</td><td>37.4 s</td></tr>
+  <tr><td><code>lto = "fat"</code> alone</td><td>25.4 MB<span class="note"> (thin)</span></td><td>37.8 s</td></tr>
+  <tr><td>all three together</td><td><strong>15.5 MB</strong></td><td>89.1 s</td></tr>
+</table>
+
+<p><strong><code>strip = true</code></strong> throws away debug symbols. It is 6.7 MB for
+free — no build cost at all — and it is the one to take if you take only one. You lose
+readable backtraces from a release binary, which is a real cost if you ever debug one in
+the field, and not one that matters for a work sample.</p>
+
+<p><strong><code>lto = "fat"</code></strong> is link-time optimisation: the compiler
+optimises across crate boundaries instead of one crate at a time, so unused code from
+<code>eframe</code> and <code>ropey</code> can be discarded and small functions inlined.
+<strong><code>codegen-units = 1</code></strong> compiles the crate as one unit rather than
+sixteen parallel ones, which loses build parallelism and gains optimisation scope. They
+work together, and together they cost you 50 seconds.</p>
+
+<div class="callout note">
+  <span class="label">Measure this on your own machine before quoting it</span>
+  These numbers are from mine. Build times especially depend on your core count —
+  <code>codegen-units = 1</code> hurts more the more cores you have, because it's the
+  setting that gives up parallelism. The shape of the result will hold; the seconds
+  won't.
+</div>
+
+<p class="run">cargo build --release<br>
+ls -lh target/release/editor<br>
+→ about 15 MB, and it took roughly twice as long</p>
+</section>
+
+<section class="stage" id="stage-readme">
+<h3>Write the file they read first</h3>
+
+<p class="goal">A README that answers "should I keep reading?" in twenty seconds.</p>
+
+<p>This is the deliverable the mission has been pointing at since lesson 1. Nobody reviewing
+your repo starts at <code>main.rs</code>. They read the README, decide whether the person
+who wrote it thinks clearly, and then either open the code or close the tab.</p>
+
+<p>Most portfolio READMEs describe features. Yours has something better to say: it can
+show measurements, and the decisions those measurements settled — including the ones that
+went against you. <strong>One edit</strong>, a new file:</p>
+
+<p class="filename">editor/README.md<span class="where">new file</span></p>
+<pre><code># editor
+
+A small code editor in Rust, written to be read.
+
+It opens files, edits them, saves them, highlights Rust syntax, and switches between
+several open buffers. It is about 400 lines. Every decision in it was measured before it
+was made, and the ones that were measured and *rejected* are written down too.
+
+```
+cargo run -- src/main.rs
+```
+
+## What it does
+
+- Opens any file named on the command line; several at once become tabs
+- Edits and saves with `Ctrl+S`, without corrupting UTF-8
+- Highlights Rust keywords, strings and comments with a hand-written scanner
+- Reports cursor position, file size and frame time in a status bar
+- Falls back to plain text above 512 KB, and says so
+
+## What it does not do
+
+No LSP, no plugins, no modal editing, no search, no line numbers. The scope is
+deliberately small: an editor you can read in a sitting is more useful as a work sample
+than a half-finished IDE.
+
+## Decisions worth reading
+
+**The buffer is a rope, and the reason is not the one you&#x27;d expect.**
+`String::insert` on a 2.3 MB file costs 12 µs — the textbook argument for a rope does not
+apply here. What does cost is egui&#x27;s character-index-to-byte-index conversion, which runs
+three times per keystroke and walks the buffer. That is 3.05 ms of a 13 ms frame, and a
+rope answers it in O(log n). The full argument, including the cheaper option I rejected
+and what the rope costs in memory, is in [docs/why-a-rope.md](docs/why-a-rope.md).
+
+**Syntax highlighting stops at 512 KB.** Measured: highlighting costs 4–5× plain layout
+and crosses the 16.7 ms frame budget between 10,000 and 25,000 lines. Above the limit the
+editor draws plain text and puts &quot;highlighting off (file too large)&quot; in the status bar,
+because an editor that silently degrades looks broken.
+
+**There is no highlight cache.** The obvious one — compare the text, keep the last galley
+— took idle frames from 26.8 ms to 5.4 ms and typing from 47.1 ms to 186.2 ms. The parts I
+measured account for 0.15 ms of that 139 ms regression, so I do not know what causes it.
+Shipping an optimisation I cannot explain seemed worse than shipping none.
+
+**`active: usize`, not `&amp;mut Buffer`.** A struct cannot own a `Vec` and hold a reference
+into it at the same time; that is a self-referential struct, and safe Rust rejects it.
+Owning the collection and referring to a member by index is the shape that survives being
+moved, which is why arenas and ECS libraries all look like this.
+
+## Layout
+
+`src/main.rs` is the whole program, in reading order: the highlighter, then `Text` (the
+rope and egui&#x27;s `TextBuffer` implementation), then `Buffer` (one open file), then `Editor`
+(the app), then `main`, then the tests.
+
+## Testing
+
+```
+cargo test
+cargo clippy --all-targets
+```
+
+Ten unit tests. `--all-targets` matters: without it, clippy skips the test module
+entirely. `Cargo.toml` denies `unwrap` and `expect` outside tests, so the mission&#x27;s &quot;no
+`unwrap()` in the hot path&quot; is enforced by the build rather than by good intentions.
+
+## Built with
+
+[`eframe`/`egui`](https://github.com/emilk/egui) 0.36 for the window and immediate-mode
+UI, and [`ropey`](https://github.com/cessen/ropey) 1.6 for the text buffer.</code></pre>
+
+<h4 id="what-makes-it-work">Why this reads differently from most</h4>
+
+<p>Three things, and none of them are about the editor:</p>
+
+<p><strong>It says what the project does not do.</strong> A scope you chose is a decision;
+a scope you drifted into is an accident, and a reviewer can tell the difference instantly.
+"No LSP, no plugins, no search" reads as confidence when the reasons are there.</p>
+
+<p><strong>It leads with the decision that went against the obvious.</strong> "The buffer
+is a rope, and the reason is not the one you'd expect" invites the reader to test you.
+Every strong technical README has a paragraph a knowledgeable reader wants to argue with,
+because that is the paragraph that proves a person was thinking.</p>
+
+<p><strong>It includes an optimisation that isn't there.</strong> The highlight cache
+section says what was tried, what it measured, and that the regression is still
+unexplained. That is the hardest thing to write and the most convincing thing to read:
+it is evidence of a person who measures, and who won't ship what they can't explain.</p>
+
+<div class="callout key">
+  <span class="label">The interview this is really for</span>
+  You will be asked "tell me about a technical decision you made". Every claim in that
+  README is one, with a number behind it, and you took every one of those measurements
+  yourself. That was the point of doing it in this order.
+</div>
+
+<p class="run">cd editor<br>
+cargo fmt &amp;&amp; cargo clippy --all-targets &amp;&amp; cargo test<br>
+→ silent, silent, ten green</p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>415 lines of Rust, ten tests, a README, and a justification document. Nothing in
+<code>main.rs</code> changed except the line that came out and the attribute above the
+tests — for the body of the file, the
+<a href="0011-earning-the-rope.html#where-you-ended-up">lesson 11 checkpoint</a> is still
+the one to diff against:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the top of fn ui</span></p>
+<pre><code><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
+        <span class="k">let</span> frame_start = <span class="t">Instant</span>::<span class="f">now</span>();
+<span class="gap">both panels, unchanged — exactly as lesson 11 left them</span>
+
+        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;
+    }
+}</code></pre>
+
+<p>And the manifest, which is now four lines longer and says two things it didn't:</p>
+
+<p class="filename">editor/Cargo.toml<span class="where">the whole file</span></p>
+<pre><code>[package]
+name = <span class="s">&quot;editor&quot;</span>
+version = <span class="s">&quot;0.1.0&quot;</span>
+edition = <span class="s">&quot;2024&quot;</span>
+
+[dependencies]
+eframe = <span class="s">&quot;0.36.1&quot;</span>
+ropey = <span class="s">&quot;1.6.1&quot;</span>
+
+<span class="c"># A binary someone downloads is worth 50 seconds of build time.</span>
+[profile.release]
+lto = <span class="s">&quot;fat&quot;</span>
+codegen-units = <span class="s">1</span>
+strip = <span class="k">true</span>
+
+<span class="c"># The mission says &quot;no unwrap() in the hot path&quot;. This is that promise, enforced.</span>
+[lints.clippy]
+unwrap_used = <span class="s">&quot;deny&quot;</span>
+expect_used = <span class="s">&quot;deny&quot;</span></code></pre>
+
+<h2 id="what-you-built">What you built</h2>
+
+<p>Twelve lessons ago you had never written a line of Rust. The editor you now have opens
+files, edits them without corrupting UTF-8, saves them, highlights Rust with a scanner you
+wrote, holds several buffers behind tabs, degrades honestly on files too large to
+highlight, keeps its text in a rope you can justify, and tests the parts that are worth
+testing.</p>
+
+<p>Along the way, the language: ownership and borrowing, <code>Result</code> and
+<code>Option</code>, <code>match</code> and its guards, traits and the newtype pattern,
+lifetimes by way of the struct that couldn't hold a reference, iterators and their
+combinators, and the difference between a byte and a character.</p>
+
+<p>The habit is worth more than any of it. <strong>Roughly one premise in three, checked
+against a compiler or a benchmark, turned out to be false</strong> — including the one
+this tutorial was originally built around. Lesson 6 was going to introduce the rope by
+making you feel <code>String</code> hurt; it doesn't hurt, so lesson 6 became a profiling
+lesson and the rope waited five lessons for a measurement that actually justified it.
+Lesson 10 was going to be undo, until reading egui's source showed it already had one.</p>
+
+<div class="thesis">
+  You now have a repo where every significant claim has a number behind it,<br>
+  and you took every one of those measurements yourself.
+</div>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">What did <code>request_repaint()</code> ask the host to do on an idle frame?</p>
+  <ul class="options">
+    <li data-correct>Redraw again immediately, with no delay</li>
+    <li>Redraw once more, then wait for input</li>
+    <li>Redraw at the monitor's refresh rate</li>
+    <li>Recompute the layout without redrawing</li>
+  </ul>
+  <p class="why">Measured, the requested delay was <code>0ns</code> — as fast as the
+  display can take it, forever. Without it, egui asks to wait for input instead, which is
+  what lesson 1 promised immediate mode would do.
+  <a class="review" href="#what-it-was-doing">↑ Review: what that line was doing (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does <code>cargo clippy</code> alone miss the <code>unwrap()</code> in your tests?</p>
+  <ul class="options">
+    <li data-correct>It only checks the binary unless given <code>--all-targets</code></li>
+    <li><code>#[cfg(test)]</code> code is exempt from all lints</li>
+    <li>The <code>[lints]</code> table doesn't apply to test builds</li>
+    <li>Lints inside macros like <code>assert_eq!</code> are skipped</li>
+  </ul>
+  <p class="why">By default clippy checks the default target only.
+  <code>--all-targets</code> adds tests, benches and examples — which means every clippy
+  run before this lesson had been ignoring a tenth of the program.
+  <a class="review" href="#all-targets">↑ Review: clippy has been skipping your tests (stage 2)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Which release setting gives the biggest size win for no build cost?</p>
+  <ul class="options">
+    <li data-correct><code>strip = true</code></li>
+    <li><code>lto = "fat"</code></li>
+    <li><code>codegen-units = 1</code></li>
+    <li><code>opt-level = 3</code></li>
+  </ul>
+  <p class="why">Stripping debug symbols took 26.0 MB to 19.3 MB with build time
+  unchanged. LTO and <code>codegen-units = 1</code> buy a further 3.8 MB but cost about 50
+  seconds, and <code>opt-level = 3</code> is already the release default.
+  <a class="review" href="#what-each-does">↑ Review: what you're buying (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does the README describe an optimisation that isn't in the code?</p>
+  <ul class="options">
+    <li data-correct>An unexplained regression is a reason not to ship</li>
+    <li>It documents work that a future version will include</li>
+    <li>Reviewers expect a list of known performance issues</li>
+    <li>The cache exists but is disabled behind a flag</li>
+  </ul>
+  <p class="why">The naive highlight cache made typing four times worse and the parts
+  measured don't explain it. Writing down what was tried, what it cost, and that the cause
+  is still unknown is stronger evidence of judgement than the optimisation would have
+  been.
+  <a class="review" href="#what-makes-it-work">↑ Review: why this reads differently (stage 4)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Where to go next</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://doc.rust-lang.org/cargo/reference/profiles.html">The Cargo Book —
+Profiles</a>, and
+<a href="https://doc.rust-lang.org/cargo/reference/manifest.html#the-lints-section">the
+<code>[lints]</code> section</a> of the manifest reference. Both are short, and both are
+the kind of thing worth knowing exists rather than memorising.</p>
+
+<p>Four things this editor would want next, roughly in order of how much you'd learn:</p>
+
+<ul>
+  <li><strong>Find the highlight cache regression.</strong> The measurement is written
+  down and the cause is not. This is a real, open profiling problem in code you understand
+  completely — which is a rare and excellent thing to practise on.</li>
+  <li><strong>Search.</strong> The most-missed feature, and it puts the rope's line index
+  to work for something other than a status bar.</li>
+  <li><strong>A second language for the highlighter.</strong> The scanner is forty lines
+  and hard-codes Rust. Making it table-driven is a design exercise with an obvious test.</li>
+  <li><strong>Line numbers in the gutter.</strong> Harmless-looking, and the first thing
+  that will make you want to paint text yourself rather than hand it to
+  <code>TextEdit</code> — which is the fork
+  <a href="0007-colouring-the-code.html">lesson 7</a> chose not to take.</li>
+</ul>
+
+<div class="ask">
+  <strong>I'm your teacher here — and this is the last lesson, so ask me the big ones.</strong>
+  Anything in these 415 lines you couldn't defend in an interview, tell me and we'll go
+  back over it until you can; that was the actual goal, not the line count. And if you
+  want to take on the cache regression, I'd like to work that one with you — I don't know
+  the answer either, which makes it the most interesting thing left in the repo.
+</div>
+
+<nav class="footer-nav">
+  <a href="0011-earning-the-rope.html">← Lesson 11: Earning the Rope</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <span>End of the tutorial</span>
+</nav>
+
+</body>
+</html>

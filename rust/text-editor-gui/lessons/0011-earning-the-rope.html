@@ -959,48 +959,48 @@ use std::io;</span>
 directly above <code>struct Buffer</code>:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">above the Buffer struct</span></p>
-<pre><code><span class="add"><span class="c">/// The text of one buffer.</span></span>
-<span class="add"><span class="c">///</span></span>
-<span class="add"><span class="c">/// A wrapper around `String` that does nothing yet. It exists so there is one</span></span>
-<span class="add"><span class="c">/// place to change when the thing inside stops being a `String`.</span></span>
-<span class="add"><span class="k">struct</span> <span class="f">Text</span>(<span class="t">String</span>);</span>
-<span class="add"></span>
-<span class="add"><span class="k">impl</span> <span class="t">Text</span> {</span>
-<span class="add">    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {</span>
-<span class="add">        <span class="k">Self</span>(text.<span class="f">to_owned</span>())</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
-<span class="add">        &amp;<span class="k">self</span>.<span class="s">0</span></span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {</span>
-<span class="add">        <span class="k">self</span>.<span class="s">0</span>.<span class="f">len</span>()</span>
-<span class="add">    }</span>
-<span class="add">}</span>
-<span class="add"></span>
-<span class="add"><span class="c">/// Let egui&#x27;s `TextEdit` edit a `Text` instead of a bare `String`.</span></span>
-<span class="add"><span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {</span>
-<span class="add">    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {</span>
-<span class="add">        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {</span>
-<span class="add">        <span class="k">true</span></span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
-<span class="add">        &amp;<span class="k">self</span>.<span class="s">0</span></span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {</span>
-<span class="add">        <span class="k">self</span>.<span class="s">0</span>.<span class="f">insert_text</span>(text, char_index)</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {</span>
-<span class="add">        <span class="k">self</span>.<span class="s">0</span>.<span class="f">delete_char_range</span>(char_range);</span>
-<span class="add">    }</span>
-<span class="add">}</span></code></pre>
+<pre><code><span class="add"><span class="c">/// The text of one buffer.</span>
+<span class="c">///</span>
+<span class="c">/// A wrapper around `String` that does nothing yet. It exists so there is one</span>
+<span class="c">/// place to change when the thing inside stops being a `String`.</span>
+<span class="k">struct</span> <span class="f">Text</span>(<span class="t">String</span>);
+
+<span class="k">impl</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">Self</span>(text.<span class="f">to_owned</span>())
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.<span class="s">0</span>
+    }
+
+    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.<span class="s">0</span>.<span class="f">len</span>()
+    }
+}
+
+<span class="c">/// Let egui&#x27;s `TextEdit` edit a `Text` instead of a bare `String`.</span>
+<span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {
+        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()
+    }
+
+    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {
+        <span class="k">true</span>
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.<span class="s">0</span>
+    }
+
+    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.<span class="s">0</span>.<span class="f">insert_text</span>(text, char_index)
+    }
+
+    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {
+        <span class="k">self</span>.<span class="s">0</span>.<span class="f">delete_char_range</span>(char_range);
+    }
+}</span></code></pre>
 
 <h4 id="newtype">What the wrapper buys you</h4>
 
@@ -1190,8 +1190,8 @@ changes — that was the whole point of stage 1.</p>
 <p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
 <pre><code><span class="dim">use eframe::egui;</span>
 <span class="del">use egui::text::{<span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};</span>
-<span class="add">use egui::text::{<span class="t">ByteIndex</span>, <span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};</span>
-<span class="add">use ropey::<span class="t">Rope</span>;</span>
+<span class="add">use egui::text::{<span class="t">ByteIndex</span>, <span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};
+use ropey::<span class="t">Rope</span>;</span>
 <span class="dim">use std::env;</span></code></pre>
 
 <p class="sidenote"><code>ropey</code> sorts above <code>std</code> because
@@ -1208,38 +1208,38 @@ changes — that was the whole point of stage 1.</p>
 </div>
 
 <p class="filename">editor/src/main.rs<span class="where">the Text struct and its impl</span></p>
-<pre><code><span class="add"><span class="c">/// The text of one buffer, backed by a rope.</span></span>
-<span class="add"><span class="c">///</span></span>
-<span class="add"><span class="c">/// A rope stores text as a tree of small chunks, so an edit rewrites one chunk</span></span>
-<span class="add"><span class="c">/// and an index lookup walks the tree instead of the text.</span></span>
-<span class="add"><span class="k">struct</span> <span class="t">Text</span> {</span>
-<span class="add">    rope: <span class="t">Rope</span>,</span>
-<span class="add">    <span class="c">/// egui&#x27;s `TextBuffer::as_str` must return a *borrowed contiguous* `&amp;str`,</span></span>
-<span class="add">    <span class="c">/// and a rope has no such slice to lend. So we keep a flattened copy here</span></span>
-<span class="add">    <span class="c">/// and rebuild it on every edit.</span></span>
-<span class="add">    flat: <span class="t">String</span>,</span>
-<span class="add">}</span>
-<span class="add"></span>
-<span class="add"><span class="k">impl</span> <span class="t">Text</span> {</span>
-<span class="add">    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {</span>
-<span class="add">        <span class="k">Self</span> {</span>
-<span class="add">            rope: <span class="t">Rope</span>::<span class="f">from_str</span>(text),</span>
-<span class="add">            flat: text.<span class="f">to_owned</span>(),</span>
-<span class="add">        }</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
-<span class="add">        &amp;<span class="k">self</span>.flat</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {</span>
-<span class="add">        <span class="k">self</span>.flat.<span class="f">len</span>()</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">sync</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) {</span>
-<span class="add">        <span class="k">self</span>.flat = <span class="k">self</span>.rope.<span class="f">to_string</span>();</span>
-<span class="add">    }</span>
-<span class="add">}</span></code></pre>
+<pre><code><span class="add"><span class="c">/// The text of one buffer, backed by a rope.</span>
+<span class="c">///</span>
+<span class="c">/// A rope stores text as a tree of small chunks, so an edit rewrites one chunk</span>
+<span class="c">/// and an index lookup walks the tree instead of the text.</span>
+<span class="k">struct</span> <span class="t">Text</span> {
+    rope: <span class="t">Rope</span>,
+    <span class="c">/// egui&#x27;s `TextBuffer::as_str` must return a *borrowed contiguous* `&amp;str`,</span>
+    <span class="c">/// and a rope has no such slice to lend. So we keep a flattened copy here</span>
+    <span class="c">/// and rebuild it on every edit.</span>
+    flat: <span class="t">String</span>,
+}
+
+<span class="k">impl</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">Self</span> {
+            rope: <span class="t">Rope</span>::<span class="f">from_str</span>(text),
+            flat: text.<span class="f">to_owned</span>(),
+        }
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.flat
+    }
+
+    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.flat.<span class="f">len</span>()
+    }
+
+    <span class="k">fn</span> <span class="f">sync</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) {
+        <span class="k">self</span>.flat = <span class="k">self</span>.rope.<span class="f">to_string</span>();
+    }
+}</span></code></pre>
 
 <h4 id="the-flat-copy">The price of the trait</h4>
 
@@ -1267,47 +1267,47 @@ again: this is a replacement for the whole <code>impl egui::TextBuffer for Text<
 block, not an addition to it.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">impl egui::TextBuffer for Text</span></p>
-<pre><code><span class="add"><span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {</span>
-<span class="add">    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {</span>
-<span class="add">        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {</span>
-<span class="add">        <span class="k">true</span></span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
-<span class="add">        &amp;<span class="k">self</span>.flat</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {</span>
-<span class="add">        <span class="k">self</span>.rope</span>
-<span class="add">            .<span class="f">insert</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>()), text);</span>
-<span class="add">        <span class="k">self</span>.<span class="f">sync</span>();</span>
-<span class="add">        text.<span class="f">chars</span>().<span class="f">count</span>()</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {</span>
-<span class="add">        <span class="k">let</span> end = <span class="k">self</span>.rope.<span class="f">len_chars</span>();</span>
-<span class="add">        <span class="k">self</span>.rope</span>
-<span class="add">            .<span class="f">remove</span>(char_range.start.<span class="s">0</span>.<span class="f">min</span>(end)..char_range.end.<span class="s">0</span>.<span class="f">min</span>(end));</span>
-<span class="add">        <span class="k">self</span>.<span class="f">sync</span>();</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">byte_index_from_char_index</span>(&amp;<span class="k">self</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="t">ByteIndex</span> {</span>
-<span class="add">        <span class="f">ByteIndex</span>(</span>
-<span class="add">            <span class="k">self</span>.rope</span>
-<span class="add">                .<span class="f">char_to_byte</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>())),</span>
-<span class="add">        )</span>
-<span class="add">    }</span>
-<span class="add"></span>
-<span class="add">    <span class="k">fn</span> <span class="f">char_index_from_byte_index</span>(&amp;<span class="k">self</span>, byte_index: <span class="t">ByteIndex</span>) -&gt; <span class="t">CharIndex</span> {</span>
-<span class="add">        <span class="f">CharIndex</span>(</span>
-<span class="add">            <span class="k">self</span>.rope</span>
-<span class="add">                .<span class="f">byte_to_char</span>(byte_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_bytes</span>())),</span>
-<span class="add">        )</span>
-<span class="add">    }</span>
-<span class="add">}</span></code></pre>
+<pre><code><span class="add"><span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {
+        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()
+    }
+
+    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {
+        <span class="k">true</span>
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.flat
+    }
+
+    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.rope
+            .<span class="f">insert</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>()), text);
+        <span class="k">self</span>.<span class="f">sync</span>();
+        text.<span class="f">chars</span>().<span class="f">count</span>()
+    }
+
+    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {
+        <span class="k">let</span> end = <span class="k">self</span>.rope.<span class="f">len_chars</span>();
+        <span class="k">self</span>.rope
+            .<span class="f">remove</span>(char_range.start.<span class="s">0</span>.<span class="f">min</span>(end)..char_range.end.<span class="s">0</span>.<span class="f">min</span>(end));
+        <span class="k">self</span>.<span class="f">sync</span>();
+    }
+
+    <span class="k">fn</span> <span class="f">byte_index_from_char_index</span>(&amp;<span class="k">self</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="t">ByteIndex</span> {
+        <span class="f">ByteIndex</span>(
+            <span class="k">self</span>.rope
+                .<span class="f">char_to_byte</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>())),
+        )
+    }
+
+    <span class="k">fn</span> <span class="f">char_index_from_byte_index</span>(&amp;<span class="k">self</span>, byte_index: <span class="t">ByteIndex</span>) -&gt; <span class="t">CharIndex</span> {
+        <span class="f">CharIndex</span>(
+            <span class="k">self</span>.rope
+                .<span class="f">byte_to_char</span>(byte_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_bytes</span>())),
+        )
+    }
+}</span></code></pre>
 
 <h4 id="overriding-defaults">Overriding a default you were given</h4>
 
@@ -1349,15 +1349,15 @@ gone, which promotes it. <strong>Two edits.</strong></p>
 rope:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in impl Text, after len</span></p>
-<pre><code><span class="add">    <span class="c">/// Turn a character offset into a 1-based line and column.</span></span>
-<span class="add">    <span class="c">///</span></span>
-<span class="add">    <span class="c">/// The rope indexes its own lines, so this is a walk down a tree rather</span></span>
-<span class="add">    <span class="c">/// than a walk through the text: 0.23 µs where lesson 6 measured 875 µs.</span></span>
-<span class="add">    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {</span>
-<span class="add">        <span class="k">let</span> char_index = char_index.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>());</span>
-<span class="add">        <span class="k">let</span> line = <span class="k">self</span>.rope.<span class="f">char_to_line</span>(char_index);</span>
-<span class="add">        (line + <span class="s">1</span>, char_index - <span class="k">self</span>.rope.<span class="f">line_to_char</span>(line) + <span class="s">1</span>)</span>
-<span class="add">    }</span></code></pre>
+<pre><code><span class="add">    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="c">///</span>
+    <span class="c">/// The rope indexes its own lines, so this is a walk down a tree rather</span>
+    <span class="c">/// than a walk through the text: 0.23 µs where lesson 6 measured 875 µs.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {
+        <span class="k">let</span> char_index = char_index.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>());
+        <span class="k">let</span> line = <span class="k">self</span>.rope.<span class="f">char_to_line</span>(char_index);
+        (line + <span class="s">1</span>, char_index - <span class="k">self</span>.rope.<span class="f">line_to_char</span>(line) + <span class="s">1</span>)
+    }</span></code></pre>
 
 <p>Second — <code>Buffer::line_col</code> loses its loop and forwards instead:</p>
 

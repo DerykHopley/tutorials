@@ -1098,12 +1098,12 @@ drawing, so untangle them. <strong>Four edits.</strong></p>
 <p>First — split the function in half. The scanning half returns a list of runs:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">replacing the head of fn highlight</span></p>
-<pre><code><span class="del"><span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span></span>
-<span class="del"><span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {</span>
-<span class="del">    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());</span>
-<span class="del">    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();</span>
-<span class="del">    job.wrap.max_width = wrap_width;</span>
-<span class="del">    <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> { … }  <span class="c">// the whole early return</span></span>
+<pre><code><span class="del"><span class="c">/// Split `text` into coloured runs and hand egui a ready-made layout.</span>
+<span class="k">fn</span> <span class="f">highlight</span>(ui: &amp;egui::<span class="t">Ui</span>, text: &amp;<span class="k">str</span>, wrap_width: f32) -&gt; <span class="t">Arc</span>&lt;egui::<span class="t">Galley</span>&gt; {
+    <span class="k">let</span> font = egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>.<span class="f">resolve</span>(ui.<span class="f">style</span>());
+    <span class="k">let</span> <span class="k">mut</span> job = <span class="t">LayoutJob</span>::<span class="f">default</span>();
+    job.wrap.max_width = wrap_width;
+    <span class="k">if</span> text.<span class="f">len</span>() &gt; <span class="t">HIGHLIGHT_LIMIT</span> { … }  <span class="c">// the whole early return</span></span>
 <span class="add"><span class="c">/// Split `text` into runs of one colour each. Pure: no egui, no drawing,</span>
 <span class="c">/// so it can be tested directly.</span>
 <span class="k">fn</span> <span class="f">scan</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Vec</span>&lt;(&amp;<span class="k">str</span>, egui::<span class="t">Color32</span>)&gt; {

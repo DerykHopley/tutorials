@@ -1008,9 +1008,9 @@ compiles, and it's wrong here — stage 3 shows what it actually does. The
 
 <p class="filename">editor/src/main.rs<span class="where">in Default::default</span></p>
 <pre><code><span class="dim">    <span class="k">fn</span> <span class="f">default</span>() -&gt; <span class="t">Self</span> {</span>
-<span class="del">        <span class="t">Self</span> {</span>
-<span class="del">            text: fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>),</span>
-<span class="del">        }</span>
+<span class="del">        <span class="t">Self</span> {
+            text: fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>),
+        }</span>
 <span class="add">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(<span class="s">"src/main.rs"</span>) {
             <span class="t">Ok</span>(contents) =&gt; contents,
             <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open src/main.rs\n\n{error}"</span>),

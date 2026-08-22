@@ -944,9 +944,9 @@ in.</p>
 <span class="dim">    path: <span class="t">String</span>,
     text: <span class="t">String</span>,
     status: <span class="t">String</span>,</span>
-<span class="del">    position: <span class="t">String</span>,</span>
-<span class="del">    frame_ms: f32,</span>
-<span class="del">    line_col_us: f32,</span>
+<span class="del">    position: <span class="t">String</span>,
+    frame_ms: f32,
+    line_col_us: f32,</span>
 <span class="dim">}</span></code></pre>
 
 <p>Second — the <code>impl</code> block moves with it, and <code>open</code> stops setting
@@ -958,9 +958,9 @@ the three fields that just left the struct:</p>
 <span class="gap">open, save and line_col carry on unchanged — only the tail of open loses lines</span>
 <span class="dim">            text,
             status,</span>
-<span class="del">            position: <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),</span>
-<span class="del">            frame_ms: <span class="s">0.0</span>,</span>
-<span class="del">            line_col_us: <span class="s">0.0</span>,</span>
+<span class="del">            position: <span class="s">"no cursor"</span>.<span class="f">to_owned</span>(),
+            frame_ms: <span class="s">0.0</span>,
+            line_col_us: <span class="s">0.0</span>,</span>
 <span class="dim">        }
     }</span></code></pre>
 
@@ -1080,10 +1080,10 @@ this line with the real thing:</p>
 <code>skip(1)</code> takes all of them:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">top of main</span></p>
-<pre><code><span class="del">    <span class="k">let</span> path = env::<span class="f">args</span>()</span>
-<span class="del">        .<span class="f">nth</span>(<span class="s">1</span>)</span>
-<span class="del">        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());</span>
-<span class="del">    <span class="k">let</span> paths = <span class="f">vec</span>![path];</span>
+<pre><code><span class="del">    <span class="k">let</span> path = env::<span class="f">args</span>()
+        .<span class="f">nth</span>(<span class="s">1</span>)
+        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());
+    <span class="k">let</span> paths = <span class="f">vec</span>![path];</span>
 <span class="add">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();
     <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {
         <span class="f">vec</span>![<span class="s">"scratch.md"</span>.<span class="f">to_owned</span>()]

@@ -918,7 +918,7 @@ still only one of the second.</p>
 <p class="goal">Identical behaviour, honest names — one file, still working.</p>
 
 <p>This stage changes no behaviour at all. It renames the thing you have and builds a new
-thing around it. <strong>Seven edits</strong>, and it won't compile until all seven are
+thing around it. <strong>Eight edits</strong>, and it won't compile until all eight are
 in.</p>
 
 <p>First — rename the struct. The file-shaped fields stay; the app-shaped ones leave:</p>
@@ -1029,7 +1029,17 @@ at the top and use it throughout:</p>
   compiler will find every one you miss; work through them until it stops complaining.
 </div>
 
-<p>Seventh — <code>main</code> now passes a slice:</p>
+<p>Seventh — <code>Editor::open</code> wants a slice of paths, and <code>main</code>
+still has a single <code>String</code>. Wrap it in a one-element vector; stage 2 replaces
+this line with the real thing:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of main</span></p>
+<pre><code><span class="dim">    <span class="k">let</span> path = env::<span class="f">args</span>()
+        .<span class="f">nth</span>(<span class="s">1</span>)
+        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());</span>
+<span class="add">    <span class="k">let</span> paths = <span class="f">vec</span>![path];</span></code></pre>
+
+<p>Eighth — and now <code>main</code> can pass it:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
 <pre><code><span class="del">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">open</span>(&amp;path)))),</span>
@@ -1038,6 +1048,13 @@ at the top and use it throughout:</p>
 <p class="run">cargo run<br>
 → exactly what you had before<br>
 <span class="note">A refactor that changes nothing visible is the safest kind, and the only kind you can be sure you got right.</span></p>
+
+<div class="callout note">
+  <span class="label">One warning is expected here</span>
+  <code>method `name` is never used</code> — you wrote the tab label in the third edit and
+  nothing calls it until stage 3 draws the tabs. Rust warns about dead code by default,
+  which is usually what you want; here it's just telling you the lesson isn't finished.
+</div>
 </section>
 
 <section class="stage" id="stage-2">
@@ -1052,6 +1069,7 @@ at the top and use it throughout:</p>
 <pre><code><span class="del">    <span class="k">let</span> path = env::<span class="f">args</span>()</span>
 <span class="del">        .<span class="f">nth</span>(<span class="s">1</span>)</span>
 <span class="del">        .<span class="f">unwrap_or_else</span>(|| <span class="s">"scratch.md"</span>.<span class="f">to_owned</span>());</span>
+<span class="del">    <span class="k">let</span> paths = <span class="f">vec</span>![path];</span>
 <span class="add">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();
     <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {
         <span class="f">vec</span>![<span class="s">"scratch.md"</span>.<span class="f">to_owned</span>()]

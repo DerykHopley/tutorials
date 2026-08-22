@@ -52,9 +52,10 @@ language concept the next editor feature demands.
 11. ✅ Earning the rope — newtype + `egui::TextBuffer`, `ropey`, and the justification doc
    _(written 2026-08-22; 415 lines, 10 tests; the rope is justified by egui's char→byte
    conversion, not by insertion cost)_
-12. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
+12. ✅ Making it a work sample — remove `request_repaint`, `[lints]` table, release
+   profile, README _(written 2026-08-22; 415 lines; the tutorial's last lesson)_
 
-**Estimated total: 12.** Undo/redo was dropped — egui already provides it (see below).
+**Final total: 12.** Undo/redo was dropped — egui already provides it (see below).
 
 ### Three planned premises that measurement killed
 
@@ -124,6 +125,35 @@ Bonus, on our own code: `line_col` was a `chars().take()` walk measured at 875 �
 lesson 6 (1000 µs here). `Rope::char_to_line` + `line_to_char` is **0.23 µs** — 4,000×.
 `Rope::clone` is 0.02 µs against 41.72 µs for `String`, which is the undo-snapshot
 argument if we ever want it.
+
+### Lesson 12 measurements (2026-08-22)
+
+**`request_repaint()` costs a core.** Probed `FullOutput`'s `repaint_delay` on idle
+frames: with the call, `0ns` — redraw immediately, forever. Without it, `Duration::MAX`,
+i.e. wait for input. Lesson 1's claim about immediate mode was false in our editor from
+lesson 6 until lesson 12 removed it.
+
+**Release profile, clean builds of the editor:**
+
+| Profile | Binary | Build |
+| --- | --- | --- |
+| default | 26.0 MB | 39.0 s |
+| `strip = true` | 19.3 MB | 37.4 s |
+| `lto = "thin"` | 25.4 MB | 37.8 s |
+| `lto = "fat"` + `codegen-units = 1` + `strip` | **15.5 MB** | 89.1 s |
+
+`strip` is the free win; LTO buys 3.8 MB more for ~50 s. `panic = "abort"` not taken —
+it complicates `cargo test` for no measured gain here.
+
+**The unwrap audit found nothing** — there is no `unwrap()`/`expect()` outside the tests,
+and `clippy::pedantic` is clean; `clippy::nursery` finds one `missing_const_for_fn`. So
+lesson 12 enforces the standard rather than fixing violations. The real finding was that
+**`cargo clippy` never checked the test module**: `--all-targets` is required, and with it
+the `[lints]` deny fires on the tests' legitimate `.unwrap()`, which is why `mod tests`
+carries an `#[allow(..., reason = "…")]`.
+
+**`indexing_slicing` deliberately not enabled** — 5 sites, all safe by construction. A
+lint you intend to ignore trains you to ignore lints.
 
 ### Open question: the highlight cache
 

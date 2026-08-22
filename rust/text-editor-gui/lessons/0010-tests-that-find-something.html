@@ -290,6 +290,20 @@ pre .gap {
   border-bottom: 1px dashed var(--code-border);
 }
 
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
 /* Sits directly on top of its code block, like a file tab. */
 .filename {
   display: inline-block;
@@ -1378,7 +1392,7 @@ and <code>name</code> fixed — plus the new test module at the very bottom.</p>
   <a href="0009-more-than-one-file.html">← Lesson 9: More Than One File</a>
   <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
   <a href="../MISSION.md">Mission</a>
-  <span>Next: Lesson 11 — the rope, if the numbers ask for it</span>
+  <a href="0011-earning-the-rope.html">Lesson 11: Earning the Rope →</a>
 </nav>
 
 </body>

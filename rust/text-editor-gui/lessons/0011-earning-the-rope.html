@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 11 — Earning the Rope</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 11 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> ~40 minutes</p>
+  <h1>Earning the Rope</h1>
+  <p class="subtitle">Five stages — and the reason every tutorial gives for a rope turns out to be the wrong one.</p>
+</header>
+
+<p>Your mission asks for "a text buffer backed by a rope, with a written justification of
+why not <code>String</code>". The justification is the deliverable. A rope you can't
+defend is worth less than a <code>String</code> you can.</p>
+
+<p>So this lesson goes in the order that makes the justification real: build a seam,
+measure through it, and only then decide. If the number had come back the other way this
+lesson would have been called <em>Declining the Rope</em>, and I'd have written that
+instead. It nearly was.</p>
+
+<div class="thesis">
+  The textbook argument for a rope is that <code>String</code> insertion is O(n).<br>
+  For this editor that argument is false — and there is a true one hiding underneath it.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 10's 331 lines, with ten passing tests. Check against
+<a href="0010-tests-that-find-something.html#where-you-ended-up">lesson 10's
+checkpoint</a>. Those tests are about to earn their keep: you're going to replace the data
+structure underneath them without changing a single one.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-seam">
+<h3>Give the text its own type</h3>
+
+<p class="goal">Everything behaves exactly as before — but now there is one place to change.</p>
+
+<p>Today <code>Buffer.text</code> is a <code>String</code>, and
+<code>TextEdit::multiline(&amp;mut buffer.text)</code> works because egui ships an
+implementation of its <code>TextBuffer</code> trait for <code>String</code>. To put
+anything else in there, you need that trait implemented for a type of your own.</p>
+
+<p>So this stage swaps in a wrapper that <em>does nothing</em>. That's the point: make the
+change that can't break anything before the change that can. <strong>Seven edits</strong>,
+and the file won't compile until all seven are in.</p>
+
+<p>First — two imports:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
+<pre><code><span class="dim">use eframe::egui;</span>
+<span class="del">use egui::text::<span class="t">LayoutJob</span>;</span>
+<span class="add">use egui::text::{<span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};</span>
+<span class="dim">use std::env;
+use std::fs;
+use std::io;</span>
+<span class="add">use std::ops::<span class="t">Range</span>;</span>
+<span class="dim">use std::sync::<span class="t">Arc</span>;</span></code></pre>
+
+<p>Second — the type, and the trait implementation that lets egui edit it. It goes
+directly above <code>struct Buffer</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">above the Buffer struct</span></p>
+<pre><code><span class="add"><span class="c">/// The text of one buffer.</span></span>
+<span class="add"><span class="c">///</span></span>
+<span class="add"><span class="c">/// A wrapper around `String` that does nothing yet. It exists so there is one</span></span>
+<span class="add"><span class="c">/// place to change when the thing inside stops being a `String`.</span></span>
+<span class="add"><span class="k">struct</span> <span class="f">Text</span>(<span class="t">String</span>);</span>
+<span class="add"></span>
+<span class="add"><span class="k">impl</span> <span class="t">Text</span> {</span>
+<span class="add">    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {</span>
+<span class="add">        <span class="k">Self</span>(text.<span class="f">to_owned</span>())</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
+<span class="add">        &amp;<span class="k">self</span>.<span class="s">0</span></span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {</span>
+<span class="add">        <span class="k">self</span>.<span class="s">0</span>.<span class="f">len</span>()</span>
+<span class="add">    }</span>
+<span class="add">}</span>
+<span class="add"></span>
+<span class="add"><span class="c">/// Let egui&#x27;s `TextEdit` edit a `Text` instead of a bare `String`.</span></span>
+<span class="add"><span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {</span>
+<span class="add">    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {</span>
+<span class="add">        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {</span>
+<span class="add">        <span class="k">true</span></span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
+<span class="add">        &amp;<span class="k">self</span>.<span class="s">0</span></span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {</span>
+<span class="add">        <span class="k">self</span>.<span class="s">0</span>.<span class="f">insert_text</span>(text, char_index)</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {</span>
+<span class="add">        <span class="k">self</span>.<span class="s">0</span>.<span class="f">delete_char_range</span>(char_range);</span>
+<span class="add">    }</span>
+<span class="add">}</span></code></pre>
+
+<h4 id="newtype">What the wrapper buys you</h4>
+
+<p><code>struct Text(String);</code> is a <strong>tuple struct</strong> — one unnamed
+field, reached as <code>self.0</code>. Wrapping a type you didn't write in a type you did
+is common enough in Rust to have a name, the <strong>newtype pattern</strong>, and it
+exists mostly to get around one rule.</p>
+
+<p>The rule: you may implement a trait for a type only if you own the trait or you own the
+type. You own neither <code>egui::TextBuffer</code> nor <code>String</code>, so
+<code>impl TextBuffer for String</code> is forbidden in your crate — egui already wrote
+that one, and two competing implementations would be ambiguous. Wrap the
+<code>String</code> in a type you <em>do</em> own and the restriction lifts.</p>
+
+<p>Notice how thin the implementation is: <code>self.0.insert_text(…)</code> calls egui's
+own <code>String</code> implementation. Behaviour is unchanged <em>by construction</em>,
+which is what you want from a stage whose only job is to open a seam.</p>
+
+<div class="callout note">
+  <span class="label">Two <code>as_str</code> methods, and that's deliberate</span>
+  One is an inherent method on <code>Text</code>, for your code to call. The other is the
+  trait's required method, for egui to call. Identical bodies today — but they answer to
+  different owners, and in stage 3 only one of them stays simple. Rust resolves the
+  inherent one first, so <code>self.text.as_str()</code> in your code never goes near the
+  trait.
+</div>
+
+<p>Third — the field changes type:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Buffer struct</span></p>
+<pre><code><span class="dim">struct <span class="t">Buffer</span> {
+    path: <span class="t">String</span>,</span>
+<span class="del">    text: <span class="t">String</span>,</span>
+<span class="add">    text: <span class="t">Text</span>,</span>
+<span class="dim">    status: <span class="t">String</span>,
+}</span></code></pre>
+
+<p>Fourth — <code>Buffer::open</code> builds one:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::open</span></p>
+<pre><code><span class="dim">        <span class="k">Self</span> {
+            path: path.<span class="f">to_owned</span>(),</span>
+<span class="del">            text,</span>
+<span class="add">            text: <span class="t">Text</span>::<span class="f">new</span>(&amp;text),</span>
+<span class="dim">            status,
+        }</span></code></pre>
+
+<p>Fifth — <code>save</code> reached into the <code>String</code> directly, and now goes
+through <code>as_str()</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::save</span></p>
+<pre><code><span class="del">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;</span>
+<span class="add">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, <span class="k">self</span>.text.<span class="f">as_str</span>())?;</span>
+<span class="dim">        <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"saved {} bytes to {}"</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);</span></code></pre>
+
+<p class="sidenote">The <code>self.text.len()</code> on the line below it doesn't change,
+because <code>Text</code> has a <code>len</code> of its own that forwards to the
+<code>String</code>. That's the newtype earning its keep already — call sites that only
+need the interface don't care what's behind it.</p>
+
+<p>Sixth — and <code>line_col</code>, which walks the characters:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::line_col</span></p>
+<pre><code><span class="del">        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">chars</span>().<span class="f">take</span>(char_index) {</span>
+<span class="add">        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">as_str</span>().<span class="f">chars</span>().<span class="f">take</span>(char_index) {</span></code></pre>
+
+<p>Seventh — and one the compiler won't mention until you run the tests, because
+<code>cargo build</code> doesn't compile the test module:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, fn buffer_with</span></p>
+<pre><code><span class="dim">        <span class="t">Buffer</span> {
+            path: <span class="s">"test.rs"</span>.<span class="f">to_owned</span>(),</span>
+<span class="del">            text: text.<span class="f">to_owned</span>(),</span>
+<span class="add">            text: <span class="t">Text</span>::<span class="f">new</span>(text),</span>
+<span class="dim">            status: <span class="t">String</span>::<span class="f">new</span>(),
+        }</span></code></pre>
+
+<p class="run">cargo test &amp;&amp; cargo run<br>
+→ <em>test result: ok. 10 passed; 0 failed</em><br>
+→ the editor is indistinguishable from lesson 10<br>
+<span class="note">Nothing observable changed. That is the success condition.</span></p>
+</section>
+
+<section class="stage" id="stage-measure">
+<h3>Find out what egui actually asks for</h3>
+
+<p class="goal">A number that says where a 13&nbsp;ms frame goes — and it isn't where you'd guess.</p>
+
+<p>No code this stage. Rebuild the big files from
+<a href="0008-knowing-when-to-stop.html#stage-1">lesson 8</a> and read the frame counter
+you already have:</p>
+
+<p class="run">cd editor<br>
+for n in 10000 50000; do<br>
+&nbsp;&nbsp;seq 1 $n | awk '{print "    let value_" $1 " = compute(" $1 "); // note"}' &gt; big-$n.rs<br>
+done<br>
+cargo run --release -- big-50000.rs<br>
+→ press Ctrl+End, then hold a key down<br>
+→ <em>… ~13 ms/frame</em></p>
+
+<p>Thirteen milliseconds is most of a 60fps frame budget of 16.7&nbsp;ms. Lesson 6 told
+you egui's layout was 87% of the cost at this size — but that was before the highlighter,
+and this file is over the 512&nbsp;KB limit so highlighting is off. So what is it now?</p>
+
+<h4 id="the-suspect">The obvious suspect, again</h4>
+
+<p>The obvious suspect is the same one lesson 6 cleared: <code>String::insert</code> has
+to shift everything after the cursor, so typing near the top of a 2.3&nbsp;MB file copies
+megabytes. That's the argument every rope tutorial opens with.</p>
+
+<p>It's still wrong. Measured on this machine, mid-file insertion into a 2.3&nbsp;MB
+<code>String</code> is <strong>12&nbsp;µs</strong> — 0.07% of the frame. Copying
+contiguous memory remains one of the things hardware is fastest at.</p>
+
+<h4 id="the-real-suspect">What the trait told me</h4>
+
+<p>The seam you built in stage 1 is what made the next part findable. Every call egui
+makes on the buffer now goes through <em>your</em> code, so you can count them. I put a
+timer in each method of <code>TextBuffer</code> and typed for forty frames. Per keystroke,
+on the 2.3&nbsp;MB file:</p>
+
+<table id="where-the-frame-goes">
+  <tr><th>What egui called</th><th>Times per keystroke</th><th>Cost per frame</th></tr>
+  <tr><td><code>as_str</code></td><td>7</td><td>free — it's already a <code>&amp;str</code></td></tr>
+  <tr><td><code>insert_text</code></td><td>1</td><td>1.05 ms</td></tr>
+  <tr><td><code>delete_char_range</code></td><td>1</td><td>2.01 ms</td></tr>
+  <tr><td><strong><code>byte_index_from_char_index</code></strong></td><td><strong>3</strong></td><td><strong>3.05 ms</strong></td></tr>
+</table>
+
+<p>The insert isn't 12&nbsp;µs after all — it's 1.05&nbsp;ms. And the reason is the row
+below it. <strong>Three times per keystroke, egui converts a character index into a byte
+index</strong>, and the insert and delete each pay for one of those conversions
+internally. Here is egui's implementation, from
+<code>src/text_selection/text_cursor_state.rs</code>:</p>
+
+<p class="filename ref">egui-0.36.1/src/text_selection/text_cursor_state.rs<span class="where">line 276</span></p>
+<pre><code><span class="k">pub</span> <span class="k">fn</span> <span class="f">byte_index_from_char_index</span>(s: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="t">ByteIndex</span> {
+    <span class="k">for</span> (ci, (bi, _)) <span class="k">in</span> s.<span class="f">char_indices</span>().<span class="f">enumerate</span>() {
+        <span class="k">if</span> ci == char_index.<span class="s">0</span> {
+            <span class="k">return</span> <span class="t">ByteIndex</span>(bi);
+        }
+    }
+    <span class="t">ByteIndex</span>(s.<span class="f">len</span>())
+}</code></pre>
+
+<p>It walks the text from the beginning, one character at a time, until it reaches the
+index you asked for. That is O(n) in the size of the file, and it runs three times for
+every character you type.</p>
+
+<div class="callout key">
+  <span class="label">This is the lesson</span>
+  The expensive thing was not the operation everyone warns about. It was a helper, in a
+  library, called on your behalf, three times per keystroke — and it only became visible
+  because stage 1 put a seam where you could see through it.
+  <br><br>
+  You could not have reasoned your way here. <code>UTF-8 means char index ≠ byte
+  index</code> is a fact you already knew from
+  <a href="0004-where-is-the-cursor.html#byte-vs-char">lesson 4</a>. That converting
+  between them costs 3&nbsp;ms is a measurement.
+</div>
+
+<p class="sidenote">Why three? One to place the caret, and one each for the delete and
+insert that a keystroke turns into — egui replaces the selection even when the selection
+is empty.</p>
+</section>
+
+<section class="stage" id="stage-rope">
+<h3>Put a rope inside</h3>
+
+<p class="goal">The same editor, with the 3&nbsp;ms gone.</p>
+
+<p>A <strong>rope</strong> stores text as a balanced tree of small chunks instead of one
+flat array. Each node knows how many bytes, characters and lines are beneath it, so
+converting between those three counts is a walk <em>down the tree</em> — O(log n) — rather
+than a walk through the text. That is precisely the operation that just cost you
+3&nbsp;ms.</p>
+
+<p class="run">cd editor<br>
+cargo add ropey<br>
+→ <em>Adding ropey v1.6.1 to dependencies</em></p>
+
+<p><strong>Three edits</strong>, all inside the seam. Nothing outside <code>Text</code>
+changes — that was the whole point of stage 1.</p>
+
+<p>First — two more imports:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
+<pre><code><span class="dim">use eframe::egui;</span>
+<span class="del">use egui::text::{<span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};</span>
+<span class="add">use egui::text::{<span class="t">ByteIndex</span>, <span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};</span>
+<span class="add">use ropey::<span class="t">Rope</span>;</span>
+<span class="dim">use std::env;</span></code></pre>
+
+<p class="sidenote"><code>ropey</code> sorts above <code>std</code> because
+<code>rustfmt</code> groups external crates before the standard library. Run
+<code>cargo fmt</code> if you put it elsewhere and it will move.</p>
+
+<p>Second — the type gains a rope, and the wrapper stops being a wrapper:</p>
+
+<div class="callout note">
+  <span class="label">This replaces stage 1's version — it doesn't sit beside it</span>
+  Delete <code>struct Text(String);</code> and the whole <code>impl Text</code> block you
+  wrote in stage 1, and put this in their place. Everything is tinted green because every
+  line of it is new, not because you're adding it to what's already there.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">the Text struct and its impl</span></p>
+<pre><code><span class="add"><span class="c">/// The text of one buffer, backed by a rope.</span></span>
+<span class="add"><span class="c">///</span></span>
+<span class="add"><span class="c">/// A rope stores text as a tree of small chunks, so an edit rewrites one chunk</span></span>
+<span class="add"><span class="c">/// and an index lookup walks the tree instead of the text.</span></span>
+<span class="add"><span class="k">struct</span> <span class="t">Text</span> {</span>
+<span class="add">    rope: <span class="t">Rope</span>,</span>
+<span class="add">    <span class="c">/// egui&#x27;s `TextBuffer::as_str` must return a *borrowed contiguous* `&amp;str`,</span></span>
+<span class="add">    <span class="c">/// and a rope has no such slice to lend. So we keep a flattened copy here</span></span>
+<span class="add">    <span class="c">/// and rebuild it on every edit.</span></span>
+<span class="add">    flat: <span class="t">String</span>,</span>
+<span class="add">}</span>
+<span class="add"></span>
+<span class="add"><span class="k">impl</span> <span class="t">Text</span> {</span>
+<span class="add">    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {</span>
+<span class="add">        <span class="k">Self</span> {</span>
+<span class="add">            rope: <span class="t">Rope</span>::<span class="f">from_str</span>(text),</span>
+<span class="add">            flat: text.<span class="f">to_owned</span>(),</span>
+<span class="add">        }</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
+<span class="add">        &amp;<span class="k">self</span>.flat</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {</span>
+<span class="add">        <span class="k">self</span>.flat.<span class="f">len</span>()</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">sync</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) {</span>
+<span class="add">        <span class="k">self</span>.flat = <span class="k">self</span>.rope.<span class="f">to_string</span>();</span>
+<span class="add">    }</span>
+<span class="add">}</span></code></pre>
+
+<h4 id="the-flat-copy">The price of the trait</h4>
+
+<p>That second field is the honest cost of this whole approach, and it's worth
+understanding before you accept it. Look again at what the trait demands:</p>
+
+<p class="filename ref">egui-0.36.1/src/widgets/text_edit/text_buffer.rs<span class="where">line 29</span></p>
+<pre><code>    <span class="c">/// Returns this buffer as a `str`.</span>
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span>;</code></pre>
+
+<p>A <code>&amp;str</code> is a pointer and a length: one contiguous run of bytes. A rope
+is deliberately <em>not</em> contiguous — that's how it makes edits cheap. And the
+signature borrows from <code>&amp;self</code>, so you can't build a temporary string and
+return a reference to it; it would be dead the moment the function returned.</p>
+
+<p>So there is no clever way out. Keeping <code>TextEdit</code> means keeping a flattened
+copy of the whole document beside the rope and rebuilding it on every edit. That costs
+<strong>0.08&nbsp;ms</strong> per keystroke on a 2.3&nbsp;MB file and <strong>doubles the
+memory</strong>. You are buying a 3&nbsp;ms saving for 0.08&nbsp;ms and some RAM — a good
+trade, but a trade, and the sort of thing that belongs in a comment rather than in your
+head.</p>
+
+<p>Third — the trait implementation stops delegating and starts using the rope. Same
+again: this is a replacement for the whole <code>impl egui::TextBuffer for Text</code>
+block, not an addition to it.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">impl egui::TextBuffer for Text</span></p>
+<pre><code><span class="add"><span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {</span>
+<span class="add">    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {</span>
+<span class="add">        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {</span>
+<span class="add">        <span class="k">true</span></span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {</span>
+<span class="add">        &amp;<span class="k">self</span>.flat</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {</span>
+<span class="add">        <span class="k">self</span>.rope</span>
+<span class="add">            .<span class="f">insert</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>()), text);</span>
+<span class="add">        <span class="k">self</span>.<span class="f">sync</span>();</span>
+<span class="add">        text.<span class="f">chars</span>().<span class="f">count</span>()</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {</span>
+<span class="add">        <span class="k">let</span> end = <span class="k">self</span>.rope.<span class="f">len_chars</span>();</span>
+<span class="add">        <span class="k">self</span>.rope</span>
+<span class="add">            .<span class="f">remove</span>(char_range.start.<span class="s">0</span>.<span class="f">min</span>(end)..char_range.end.<span class="s">0</span>.<span class="f">min</span>(end));</span>
+<span class="add">        <span class="k">self</span>.<span class="f">sync</span>();</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">byte_index_from_char_index</span>(&amp;<span class="k">self</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="t">ByteIndex</span> {</span>
+<span class="add">        <span class="f">ByteIndex</span>(</span>
+<span class="add">            <span class="k">self</span>.rope</span>
+<span class="add">                .<span class="f">char_to_byte</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>())),</span>
+<span class="add">        )</span>
+<span class="add">    }</span>
+<span class="add"></span>
+<span class="add">    <span class="k">fn</span> <span class="f">char_index_from_byte_index</span>(&amp;<span class="k">self</span>, byte_index: <span class="t">ByteIndex</span>) -&gt; <span class="t">CharIndex</span> {</span>
+<span class="add">        <span class="f">CharIndex</span>(</span>
+<span class="add">            <span class="k">self</span>.rope</span>
+<span class="add">                .<span class="f">byte_to_char</span>(byte_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_bytes</span>())),</span>
+<span class="add">        )</span>
+<span class="add">    }</span>
+<span class="add">}</span></code></pre>
+
+<h4 id="overriding-defaults">Overriding a default you were given</h4>
+
+<p><code>byte_index_from_char_index</code> and <code>char_index_from_byte_index</code> are
+<strong>default methods</strong> — the trait supplies a body, so an implementation that
+ignores them still compiles. That's why stage 1 worked without them, and it's why the
+3&nbsp;ms was invisible: you were inheriting a linear scan you never wrote.</p>
+
+<p>A default method is a library author saying "here's a correct answer; replace it if you
+can do better." The rope can do better, so it does. This is the same shape as
+<code>Iterator</code> giving you <code>count()</code> for free while
+<code>ExactSizeIterator</code> answers it instantly.</p>
+
+<p class="sidenote">The <code>.min(self.rope.len_chars())</code> calls are not paranoia.
+egui may hand you an index one past the end while a selection collapses, and
+<code>ropey</code> panics on an out-of-range index where a <code>String</code> slice would
+too. Clamping is the same instinct as <code>line_col</code>'s "past the end is the end"
+test from lesson 10.</p>
+
+<p class="run">cargo test &amp;&amp; cargo run --release -- big-50000.rs<br>
+→ <em>test result: ok. 10 passed; 0 failed</em><br>
+→ press Ctrl+End and type: <em>~8 ms/frame</em>, down from ~13<br>
+<span class="note">Ten tests you wrote in lesson 10, over a data structure that did not exist when you wrote them, still green.</span></p>
+</section>
+
+<section class="stage" id="stage-lines">
+<h3>Let the rope count the lines too</h3>
+
+<p class="goal">The Ln/Col readout stops walking the file.</p>
+
+<p>You now own a data structure that indexes lines, and there is code in this editor that
+has been counting them the hard way since lesson 4. <code>line_col</code> walks the text
+from the start on every frame — lesson 6 measured it at
+<a href="0006-measure-before-you-optimise.html#the-verdict">875&nbsp;µs</a> and shrugged,
+because it was an eighth of the cost of something bigger. That something bigger is now
+gone, which promotes it. <strong>Two edits.</strong></p>
+
+<p>First — <code>Text</code> learns to do it, because <code>Text</code> is what has the
+rope:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Text, after len</span></p>
+<pre><code><span class="add">    <span class="c">/// Turn a character offset into a 1-based line and column.</span></span>
+<span class="add">    <span class="c">///</span></span>
+<span class="add">    <span class="c">/// The rope indexes its own lines, so this is a walk down a tree rather</span></span>
+<span class="add">    <span class="c">/// than a walk through the text: 0.23 µs where lesson 6 measured 875 µs.</span></span>
+<span class="add">    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {</span>
+<span class="add">        <span class="k">let</span> char_index = char_index.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>());</span>
+<span class="add">        <span class="k">let</span> line = <span class="k">self</span>.rope.<span class="f">char_to_line</span>(char_index);</span>
+<span class="add">        (line + <span class="s">1</span>, char_index - <span class="k">self</span>.rope.<span class="f">line_to_char</span>(line) + <span class="s">1</span>)</span>
+<span class="add">    }</span></code></pre>
+
+<p>Second — <code>Buffer::line_col</code> loses its loop and forwards instead:</p>
+
+<div class="callout note">
+  <span class="label">This one is a deletion, mostly</span>
+  The whole <code>let mut line</code> / <code>for ch in …</code> body goes. Delete the
+  eleven lines between the signature and the closing brace, and put the single forwarding
+  line in their place. The method keeps its name and signature, which is why nothing that
+  calls it — including four of your tests — has to change.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer, replacing line_col's body</span></p>
+<pre><code><span class="dim">    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {</span>
+<span class="del">        <span class="k">let</span> <span class="k">mut</span> line = <span class="s">1</span>;
+        <span class="k">let</span> <span class="k">mut</span> column = <span class="s">1</span>;
+        <span class="k">for</span> ch <span class="k">in</span> <span class="k">self</span>.text.<span class="f">as_str</span>().<span class="f">chars</span>().<span class="f">take</span>(char_index) {
+            <span class="k">if</span> ch == <span class="s">'\n'</span> {
+                line += <span class="s">1</span>;
+                column = <span class="s">1</span>;
+            } <span class="k">else</span> {
+                column += <span class="s">1</span>;
+            }
+        }
+        (line, column)</span>
+<span class="add">        <span class="k">self</span>.text.<span class="f">line_col</span>(char_index)</span>
+<span class="dim">    }</span></code></pre>
+
+<h4 id="line-index">Why a rope knows this for free</h4>
+
+<p>Every node of the tree stores how many lines are in the subtree below it. Finding the
+line containing character 1,200,000 means descending from the root, at each step
+subtracting the counts of the subtrees you skip — a handful of comparisons for a file of
+any size. <code>char_to_line</code> then <code>line_to_char</code> gives you the line
+number and where that line began, and the column is the difference.</p>
+
+<p>Measured on the 2.3&nbsp;MB file: the walk was <strong>1,000&nbsp;µs</strong>, the rope
+is <strong>0.23&nbsp;µs</strong>. Four thousand times, on a readout that updates every
+frame.</p>
+
+<div class="callout note">
+  <span class="label">Watch the µs readout, not the ms one</span>
+  You built the <code>line_col</code> timer in
+  <a href="0006-measure-before-you-optimise.html#stage-4">lesson 6</a> and it has been
+  sitting in your status bar ever since. On <code>big-50000.rs</code> it read about
+  875&nbsp;µs. It now reads <code>0</code>, because it rounds to whole microseconds and
+  the answer is a quarter of one.
+</div>
+
+<p class="run">cargo test &amp;&amp; cargo run --release -- big-50000.rs<br>
+→ <em>test result: ok. 10 passed; 0 failed</em><br>
+→ <em>Ln 50000, Col 1 · 2400000 bytes · highlighting off (file too large) · line_col 0 µs · ~8 ms/frame</em></p>
+</section>
+
+<section class="stage" id="stage-justify">
+<h3>Write down why</h3>
+
+<p class="goal">A document that defends the decision — the thing the mission actually asked for.</p>
+
+<p>The rope is in. The mission's success criterion is not "a rope"; it is "a rope, with a
+written justification of why not <code>String</code>". Nobody reading your repo in an
+interview can see the measurements you just took. <strong>One edit</strong> — a new
+file:</p>
+
+<p class="filename">editor/docs/why-a-rope.md<span class="where">new file</span></p>
+<pre><code># Why this editor uses a rope
+
+`Buffer.text` is a `ropey::Rope` behind a `Text` wrapper, not a `String`. This is the
+reasoning, with the numbers it came from. Measured on a 2.3 MB / 50,000-line Rust file,
+release build, median of 40 frames while typing.
+
+## The reason it is *not*
+
+The usual argument is that `String::insert` is O(n) — inserting mid-file shifts everything
+after it. That is true and it does not matter here: **12 µs**, or 0.07% of a 16.7 ms frame.
+Copying contiguous memory is fast. If this were the only consideration, a `String` would
+win on simplicity.
+
+## The reason it is
+
+egui asks the buffer to convert a character index into a byte index **three times per
+keystroke**, and its default implementation walks the text from the start
+(`egui-0.36.1/src/text_selection/text_cursor_state.rs:276`).
+
+| Buffer | ms/frame while typing | of which char-&gt;byte |
+| --- | --- | --- |
+| `String` | 12.21 | 3.05 |
+| `Rope` | 7.74 | 0.00 |
+
+A rope&#x27;s nodes carry byte, char and line counts, so the conversion is a descent down a
+tree instead of a scan of the text. The same property makes `line_col` — which runs every
+frame to draw the Ln/Col readout — go from 1000 µs to 0.23 µs.
+
+## The option I rejected
+
+If the text is pure ASCII, char index and byte index are equal, so both conversions become
+`i.min(len)`. Three lines, no dependency, and it measures *better* than the rope: **7.33
+ms**. It is also fragile in a way that matters for a code editor:
+
+| 2.3 MB file | pure ASCII | with one `é` in it |
+| --- | --- | --- |
+| `String` | 12.21 ms | 10.70 ms |
+| `String` + ASCII fast path | **7.33 ms** | 10.39 ms |
+| `Rope` | 7.74 ms | **7.57 ms** |
+
+One accented character anywhere in the file and every keystroke pays the linear walk
+again. The rope has no fast path to fall off, and that predictability is what it is
+actually being bought for.
+
+## What it costs
+
+Stated plainly, because it is not free:
+
+- **Double the memory.** `TextBuffer::as_str` must return a borrowed contiguous `&amp;str`,
+  which a chunked rope cannot produce, so `Text` keeps a flattened `String` beside the
+  rope and rebuilds it on every edit: 0.08 ms per keystroke at 2.3 MB.
+- **Slower open.** `Rope::from_str` is 647 µs on 2.3 MB against roughly nothing for a
+  `String`.
+- **A dependency**, and a data structure a reader has to know to follow the code.
+
+## When this would change
+
+If the editor ever stopped using egui&#x27;s `TextEdit` and painted text itself, the flattened
+copy would go and the rope would get cheaper. If it only ever opened files under ~100 KB,
+none of this would be measurable and a `String` would be the better answer.</code></pre>
+
+<h4 id="the-alternative">The alternative I owe you</h4>
+
+<p>There is a cheaper fix than a rope, and leaving it out of that document would make the
+document dishonest. If the text is pure ASCII then character index and byte index are the
+same number, so both conversions become <code>i.min(len)</code> — three lines, no
+dependency, no second copy of the file in memory.</p>
+
+<p>It measures <em>better</em> than the rope: 7.33&nbsp;ms against 7.74. Most source code
+is ASCII, so most of the time it wins.</p>
+
+<p>Then someone types <code>café</code> in a comment:</p>
+
+<table id="the-ascii-trap">
+  <tr><th>2.3 MB file</th><th>pure ASCII</th><th>with one <code>é</code> in it</th></tr>
+  <tr><td><code>String</code></td><td>12.21 ms</td><td>10.70 ms</td></tr>
+  <tr><td><code>String</code> + ASCII fast path</td><td><strong>7.33 ms</strong></td><td>10.39 ms</td></tr>
+  <tr><td><code>Rope</code></td><td>7.74 ms</td><td><strong>7.57 ms</strong></td></tr>
+</table>
+
+<p>One accented character anywhere in the file and the fast path is gone — back to the
+linear walk, for every keystroke, for the rest of the session. The rope doesn't have a
+fast path to fall off. That is the argument, and it is not "ropes are faster": it is
+<strong>a rope's cost doesn't depend on what's in the file</strong>.</p>
+
+<div class="callout key">
+  <span class="label">This is what the justification is for</span>
+  A reviewer who knows this territory will ask "why not just index bytes and be done with
+  it?" — and it is a good question with a real answer. Having the numbers, including the
+  numbers for the option you rejected, is the difference between a decision and a
+  preference.
+</div>
+
+<p class="run">cd editor &amp;&amp; rm big-*.rs<br>
+cargo fmt &amp;&amp; cargo clippy &amp;&amp; cargo test<br>
+→ both silent, ten tests green</p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>415 lines, ten tests green, <code>cargo clippy</code> silent. One region changed: the
+new <code>Text</code> type and its trait implementation, plus a two-line
+<code>line_col</code> where eleven used to be.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Text type, above struct Buffer</span></p>
+<pre><code><span class="c">/// The text of one buffer, backed by a rope.</span>
+<span class="c">///</span>
+<span class="c">/// A rope stores text as a tree of small chunks, so an edit touches one chunk</span>
+<span class="c">/// and an index lookup walks the tree instead of the text. See</span>
+<span class="c">/// `docs/why-a-rope.md` for the measurements that chose it.</span>
+<span class="k">struct</span> <span class="t">Text</span> {
+    rope: <span class="t">Rope</span>,
+    <span class="c">/// egui&#x27;s `TextBuffer::as_str` must return a *borrowed contiguous* `&amp;str`,</span>
+    <span class="c">/// and a rope has no such slice to lend. So we keep a flattened copy here</span>
+    <span class="c">/// and rebuild it on every edit: 0.08 ms on a 2.3 MB file, against the</span>
+    <span class="c">/// 3.0 ms the rope saves. It also doubles the memory, which is the honest</span>
+    <span class="c">/// cost of staying inside egui&#x27;s `TextEdit`.</span>
+    flat: <span class="t">String</span>,
+}
+
+<span class="k">impl</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">Self</span> {
+            rope: <span class="t">Rope</span>::<span class="f">from_str</span>(text),
+            flat: text.<span class="f">to_owned</span>(),
+        }
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.flat
+    }
+
+    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.flat.<span class="f">len</span>()
+    }
+
+    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="c">///</span>
+    <span class="c">/// The rope indexes its own lines, so this is a walk down a tree rather</span>
+    <span class="c">/// than a walk through the text: 0.23 µs where lesson 6 measured 875 µs.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {
+        <span class="k">let</span> char_index = char_index.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>());
+        <span class="k">let</span> line = <span class="k">self</span>.rope.<span class="f">char_to_line</span>(char_index);
+        (line + <span class="s">1</span>, char_index - <span class="k">self</span>.rope.<span class="f">line_to_char</span>(line) + <span class="s">1</span>)
+    }
+
+    <span class="k">fn</span> <span class="f">sync</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) {
+        <span class="k">self</span>.flat = <span class="k">self</span>.rope.<span class="f">to_string</span>();
+    }
+}
+
+<span class="c">/// Let egui&#x27;s `TextEdit` edit a rope directly.</span>
+<span class="c">///</span>
+<span class="c">/// The two index conversions are the whole point: egui asks for them three</span>
+<span class="c">/// times per keystroke, and its default walks the text from the start.</span>
+<span class="k">impl</span> egui::<span class="t">TextBuffer</span> <span class="k">for</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">type_id</span>(&amp;<span class="k">self</span>) -&gt; std::any::<span class="t">TypeId</span> {
+        std::any::<span class="t">TypeId</span>::of::&lt;<span class="k">Self</span>&gt;()
+    }
+
+    <span class="k">fn</span> <span class="f">is_mutable</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {
+        <span class="k">true</span>
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.flat
+    }
+
+    <span class="k">fn</span> <span class="f">insert_text</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, text: &amp;<span class="k">str</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.rope
+            .<span class="f">insert</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>()), text);
+        <span class="k">self</span>.<span class="f">sync</span>();
+        text.<span class="f">chars</span>().<span class="f">count</span>()
+    }
+
+    <span class="k">fn</span> <span class="f">delete_char_range</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, char_range: <span class="t">Range</span>&lt;<span class="t">CharIndex</span>&gt;) {
+        <span class="k">let</span> end = <span class="k">self</span>.rope.<span class="f">len_chars</span>();
+        <span class="k">self</span>.rope
+            .<span class="f">remove</span>(char_range.start.<span class="s">0</span>.<span class="f">min</span>(end)..char_range.end.<span class="s">0</span>.<span class="f">min</span>(end));
+        <span class="k">self</span>.<span class="f">sync</span>();
+    }
+
+    <span class="k">fn</span> <span class="f">byte_index_from_char_index</span>(&amp;<span class="k">self</span>, char_index: <span class="t">CharIndex</span>) -&gt; <span class="t">ByteIndex</span> {
+        <span class="f">ByteIndex</span>(
+            <span class="k">self</span>.rope
+                .<span class="f">char_to_byte</span>(char_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>())),
+        )
+    }
+
+    <span class="k">fn</span> <span class="f">char_index_from_byte_index</span>(&amp;<span class="k">self</span>, byte_index: <span class="t">ByteIndex</span>) -&gt; <span class="t">CharIndex</span> {
+        <span class="f">CharIndex</span>(
+            <span class="k">self</span>.rope
+                .<span class="f">byte_to_char</span>(byte_index.<span class="s">0</span>.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_bytes</span>())),
+        )
+    }
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Everything else is as lesson 10 left it</span>
+  The constants, <code>scan</code>, <code>highlight</code>, <code>struct Buffer</code>,
+  <code>struct Editor</code>, the whole of <code>fn ui</code>, <code>fn main</code> and
+  the test module are unchanged — except <code>Buffer::line_col</code>, which now reads:
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer</span></p>
+<pre><code>    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {
+        <span class="k">self</span>.text.<span class="f">line_col</span>(char_index)
+    }</code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">What made <code>String</code> expensive here at 2.3 MB while typing?</p>
+  <ul class="options">
+    <li data-correct>Converting a character index to a byte index</li>
+    <li>Shifting the tail of the buffer on insert</li>
+    <li>Reallocating whenever the capacity was exceeded</li>
+    <li>Copying the whole buffer for the undo history</li>
+  </ul>
+  <p class="why">The insert itself is 12 µs. egui converts a char index to a byte index
+  three times per keystroke and walks the text to do it, which came to 3.05 ms of a
+  13 ms frame.
+  <a class="review" href="#the-real-suspect">↑ Review: what the trait told me (stage 2)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does <code>Text</code> keep a <code>String</code> beside the rope?</p>
+  <ul class="options">
+    <li data-correct><code>TextBuffer::as_str</code> must return contiguous bytes</li>
+    <li>Saving to disk needs the text in one piece</li>
+    <li>The rope cannot store text that isn't ASCII</li>
+    <li>Rebuilding it is cheaper than editing the rope</li>
+  </ul>
+  <p class="why">A <code>&amp;str</code> is a pointer and a length, and the signature
+  borrows from <code>&amp;self</code>, so no temporary can be returned. A rope is chunked
+  by design, so a flattened copy is the only way to satisfy that method.
+  <a class="review" href="#the-flat-copy">↑ Review: the price of the trait (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why implement the trait for <code>Text</code> rather than for <code>String</code>?</p>
+  <ul class="options">
+    <li data-correct>You own neither the trait nor <code>String</code></li>
+    <li>Traits cannot be implemented for standard library types</li>
+    <li><code>String</code> is not allowed to have extra methods</li>
+    <li>Implementing it twice would make compilation slower</li>
+  </ul>
+  <p class="why">A trait implementation needs you to own the trait or the type. egui owns
+  <code>TextBuffer</code> and already implements it for <code>String</code>, so the
+  wrapper is how you get a type of your own to attach to.
+  <a class="review" href="#newtype">↑ Review: what the wrapper buys you (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why did stage 1 exist, when it changed no behaviour at all?</p>
+  <ul class="options">
+    <li data-correct>Every call egui makes now passes through your code</li>
+    <li>It removed a dependency the rope would have conflicted with</li>
+    <li>Tuple structs compile faster than a bare <code>String</code> field</li>
+    <li>The tests could not have been written without it</li>
+  </ul>
+  <p class="why">The seam is what made stage 2 possible: you cannot time a call you never
+  see. It also meant the rope went in behind an interface that already existed, so nothing
+  outside <code>Text</code> had to change.
+  <a class="review" href="#stage-measure">↑ Review: what egui actually asks for (stage 2)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 12</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://docs.rs/ropey/latest/ropey/"><em>ropey</em> — API documentation</a>,
+and in particular its
+<a href="https://github.com/cessen/ropey/blob/master/design/design.md">design
+document</a>, which explains the chunk sizes and the tree invariants rather than just
+listing the methods.</p>
+
+<p>You used four of its methods today: <code>insert</code>, <code>remove</code>,
+<code>char_to_byte</code> and <code>char_to_line</code>. The one worth reading about next
+is <code>Rope::clone</code>, which is nearly free because clones share their chunks until
+one of them is written to. That is what would make an undo history cheap — and it's the
+first thing to reach for if you ever want one that egui's own <code>Ctrl+Z</code> doesn't
+give you.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> The number that surprised me was
+  <code>delete_char_range</code> costing 2 ms when nothing was selected; if you want to
+  chase why egui deletes an empty range on every keystroke, I'd read that with you. And if
+  you think the ASCII fast path was the better engineering call — it is genuinely faster
+  on the files you'll actually open — make that case. I'd want the rope anyway, but the
+  argument is closer than the table makes it look.
+</div>
+
+<nav class="footer-nav">
+  <a href="0010-tests-that-find-something.html">← Lesson 10: Tests That Find Something</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <span>Lesson 12: Polish →</span>
+</nav>
+
+</body>
+</html>

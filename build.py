@@ -344,6 +344,50 @@ def check_band_lines(docs: list[pathlib.Path]) -> int:
     return problems
 
 
+DEL_SPAN = re.compile(r'<span class="del">')
+
+
+def check_deleted_lines(docs: list[pathlib.Path]) -> int:
+    """A line the lesson deletes must not survive into its own checkpoint.
+
+    If a stage says "remove this" and the finished listing still has it, one of
+    the two is wrong, and the reader ends up with a file that no longer matches
+    the next lesson. Lesson 4 did exactly that: the stage deleted
+    `ui.label(&self.status);` when it meant to delete the byte-count label, and
+    the checkpoint agreed with the deletion — so the status label vanished in
+    lesson 4 and reappeared in lesson 6 with nothing having added it back.
+
+    A line deleted in one place and added in another is a move, not a
+    contradiction, so those are excluded.
+    """
+    problems = 0
+    for doc in docs:
+        body = doc.read_text()
+        checkpoint = CHECKPOINT.search(body)
+        if not checkpoint:
+            continue
+        final = set()
+        for block in PRE.finditer(checkpoint.group(1)):
+            final.update(l.strip() for l in plain(block.group(1)).splitlines() if l.strip())
+
+        readded = set()
+        for _, markup in spans(body, ADD_SPAN):
+            readded.update(l.strip() for l in plain(markup).splitlines() if l.strip())
+
+        seen = set()
+        for _, markup in spans(body, DEL_SPAN):
+            for line in plain(markup).splitlines():
+                line = line.strip()
+                if line and line in final and line not in readded and line not in seen:
+                    seen.add(line)
+                    print(
+                        f"  WARN    {doc.relative_to(ROOT)}: deletes \"{line[:52]}\" "
+                        f"but the checkpoint still has it"
+                    )
+                    problems += 1
+    return problems
+
+
 def main() -> None:
     docs = sorted(
         p
@@ -390,6 +434,13 @@ def main() -> None:
         "Diff bands: every add/del covers a whole line, one span per run."
         if not bands
         else f"Diff bands: {bands} problem(s) — a band will render broken or striped."
+    )
+
+    zombies = check_deleted_lines(docs)
+    print(
+        "Deletions: nothing deleted survives into a checkpoint."
+        if not zombies
+        else f"Deletions: {zombies} line(s) deleted by a stage but still in the checkpoint."
     )
 
 

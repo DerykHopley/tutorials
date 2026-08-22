@@ -209,6 +209,22 @@ shipped one: `let (chunk, colour) = ` was dimmed and the `if` that followed it o
 line opened the band. When only part of a line changes, show the old line as `.del` and the
 new one as `.add` — never split the line. `build.py` warns on a band that opens mid-line.
 
+**A line you delete must not reappear in your own checkpoint.** If a stage says "remove
+this" and the finished listing still contains it, one of the two is wrong and the reader
+ends up with a file the next lesson's diff won't apply to. Lesson 4 shipped this: the stage
+deleted `ui.label(&self.status);` when it meant the byte-count label, and the checkpoint
+agreed — so the status label disappeared in lesson 4 and was back in lesson 6 with nothing
+having re-added it. `build.py` now flags any deleted line that survives into the
+checkpoint, ignoring lines that are re-added elsewhere, since that is a move.
+
+**An in-place edit that only produces a warning is the worst kind.** The rule above covers
+edits that fail to compile; a `&` or a `mut` left behind often *does* compile. Deryk hit
+this in lesson 11: appending `.as_str()` to `&self.text` gives `&self.text.as_str()`, which
+works fine and earns a quiet clippy warning nobody sees until the next lesson runs clippy.
+When an edit changes a line rather than adding one, say "delete the line and type the new
+one", quote the warning, and put `cargo clippy` in that stage's run block rather than
+saving it for the end of the lesson.
+
 **Show every edit, including token-level ones.** If a stage changes something *inside* a
 line the reader already has — a renamed parameter, a dropped underscore — the green
 `.add` band alone will not register it, because the whole line looks new. Pair it with a

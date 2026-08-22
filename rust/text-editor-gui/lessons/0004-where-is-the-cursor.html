@@ -969,13 +969,13 @@ returns everything it learned while drawing. <strong>Three edits.</strong></p>
             };
 </span><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
 
-<p>Third — fold the position into the byte-count label. Note this replaces the
-<em>byte-count</em> label; the <code>ui.label(&amp;self.status)</code> line below it is
-untouched.</p>
+<p>Third — fold the position into the byte-count label. The status label below it is
+shown only so you can see where the change lands; leave that line alone.</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the byte-count label</span></p>
-<pre><code><span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
-<span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
+<pre><code><span class="del">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="dim">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span></code></pre>
 
 <h4 id="option">The other enum</h4>
 
@@ -1216,6 +1216,7 @@ clusters, not chars. We'll take that on when we paint text ourselves.</p>
 <span class="l">            };</span>
 <span class="l"></span>
 <span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{position}  ·  {} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="l">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.status);</span>
 <span class="l">        });</span>
 <span class="l">    }</span>
 <span class="l">}</span>

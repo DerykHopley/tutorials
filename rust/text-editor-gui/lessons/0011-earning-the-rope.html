@@ -1051,6 +1051,20 @@ which is what you want from a stage whose only job is to open a seam.</p>
 <p>Fifth — <code>save</code> reached into the <code>String</code> directly, and now goes
 through <code>as_str()</code>:</p>
 
+<div class="callout note">
+  <span class="label">The <code>&amp;</code> goes too — this is not just adding <code>.as_str()</code></span>
+  The natural way to make this edit is to type <code>.as_str()</code> on the end of what's
+  already there, which leaves you with
+  <code>&amp;self.text.as_str()</code>. That <em>compiles and works</em> — a
+  <code>&amp;&amp;str</code> still satisfies <code>fs::write</code> — so nothing goes red.
+  It just leaves a borrow of a borrow behind:
+  <br><br>
+  <code>warning: the borrowed expression implements the required traits<br>
+  help: change this to: <code>self.text.as_str()</code></code>
+  <br><br>
+  Delete the whole line and type the green one, rather than editing in place.
+</div>
+
 <p class="filename">editor/src/main.rs<span class="where">in Buffer::save</span></p>
 <pre><code><span class="del">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;</span>
 <span class="add">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, <span class="k">self</span>.text.<span class="f">as_str</span>())?;</span>
@@ -1078,10 +1092,15 @@ need the interface don't care what's behind it.</p>
 <span class="dim">            status: <span class="t">String</span>::<span class="f">new</span>(),
         }</span></code></pre>
 
-<p class="run">cargo test &amp;&amp; cargo run<br>
-→ <em>test result: ok. 10 passed; 0 failed</em><br>
+<p class="run">cargo clippy &amp;&amp; cargo test &amp;&amp; cargo run<br>
+→ silent, <em>test result: ok. 10 passed; 0 failed</em><br>
 → the editor is indistinguishable from lesson 10<br>
 <span class="note">Nothing observable changed. That is the success condition.</span></p>
+
+<p class="sidenote">Run <code>cargo clippy</code> at the end of every stage from here on, not
+just at the end of the lesson. Six of these seven edits change a line rather than add one,
+and a leftover <code>&amp;</code> or a stray <code>&amp;mut</code> is a warning, not an
+error — it will sit there quietly until something makes you look.</p>
 </section>
 
 <section class="stage" id="stage-measure">

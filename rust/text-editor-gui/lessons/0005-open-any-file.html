@@ -1057,15 +1057,15 @@ that failure could be data rather than a crash. But <code>text</code> is the
 <p><strong>One edit</strong>, replacing the body of <code>open</code>:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
-<pre><code><span class="del">    <span class="c">/// Open a file into a new editor. A failure becomes the buffer contents,</span></span>
-<span class="del">    <span class="c">/// so the window always opens.</span></span>
+<pre><code><span class="del">    <span class="c">/// Open a file into a new editor. A failure becomes the buffer contents,</span>
+    <span class="c">/// so the window always opens.</span></span>
 <span class="add">    <span class="c">/// Open a file into a new editor. A file that doesn't exist yet is not an</span>
     <span class="c">/// error — it's a new file, and starts empty.</span></span>
 <span class="dim">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="t">Self</span> {</span>
-<span class="del">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {</span>
-<span class="del">            <span class="t">Ok</span>(contents) =&gt; contents,</span>
-<span class="del">            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open {path}\n\n{error}"</span>),</span>
-<span class="del">        };</span>
+<span class="del">        <span class="k">let</span> text = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="t">Ok</span>(contents) =&gt; contents,
+            <span class="t">Err</span>(error) =&gt; <span class="f">format!</span>(<span class="s">"could not open {path}\n\n{error}"</span>),
+        };</span>
 <span class="add">        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
             <span class="t">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
             <span class="t">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {

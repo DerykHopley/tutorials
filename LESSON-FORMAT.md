@@ -192,6 +192,15 @@ status label read `self.line_col_us`, a field stage 4 adds, so stage 3 wouldn't 
 Watch indentation too — the same stage nested the match arms one level deeper, so stage
 4's context lines no longer matched what the reader had in front of them.
 
+**One span per run of changed lines, not one span per line.** A band is
+`display: inline-block; width: 100%` with an inset left bar, so wrapping each line
+separately draws a bar and a box *per line* — the block comes out striped, with the run
+broken into segments, instead of reading as one panel. Wrap the whole contiguous run in a
+single `<span class="add">…</span>` spanning newlines. Deryk spotted this in lesson 11,
+where a generator had emitted 125 one-line bands; the audit that came out of it then found
+the same thing in five earlier lessons. `build.py` warns on three or more consecutive
+one-line bands.
+
 **A `.add` or `.del` band covers a whole line, never part of one.** Both are
 `display: inline-block; width: 100%` — a full-width row, which is what makes a diff
 scannable. Open a band mid-line and the fragment claims a row of its own, so one line of

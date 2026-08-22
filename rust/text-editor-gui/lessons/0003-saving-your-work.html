@@ -1117,8 +1117,8 @@ something you have to type. The point isn't that you can never discard a
 arrives:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in impl Editor</span></p>
-<pre><code><span class="del">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {</span>
-<span class="del">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)</span>
+<pre><code><span class="del">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
+        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)</span>
 <span class="add">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
         fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, &amp;<span class="k">self</span>.text)?;
         <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"saved {} bytes to {}"</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);
@@ -1154,9 +1154,9 @@ borrow. Miss this edit and the compiler will tell you, in almost the same words 
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, top of the panel closure</span></p>
 <pre><code><span class="dim">            <span class="k">let</span> save_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">S</span>));</span>
-<span class="del">            <span class="k">if</span> save_requested {</span>
-<span class="del">                <span class="k">self</span>.<span class="f">save</span>();</span>
-<span class="del">            }</span>
+<span class="del">            <span class="k">if</span> save_requested {
+                <span class="k">self</span>.<span class="f">save</span>();
+            }</span>
 <span class="add">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="t">Err</span>(error) = <span class="k">self</span>.<span class="f">save</span>() {
                 <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">"save failed: {error}"</span>);
             }</span></code></pre>

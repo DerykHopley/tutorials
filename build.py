@@ -288,6 +288,7 @@ def check_checkpoints(docs: list[pathlib.Path]) -> int:
 
 
 BAND = re.compile(r'<span class="(?:add|del)">')
+ONE_LINE_BAND = re.compile(r'^<span class="(?:add|del)">.*</span>$')
 
 
 def check_band_lines(docs: list[pathlib.Path]) -> int:
@@ -308,6 +309,7 @@ def check_band_lines(docs: list[pathlib.Path]) -> int:
         body = doc.read_text()
         for pre in PRE.finditer(body):
             first = body[: pre.start(1)].count("\n") + 1
+            run, run_at = 0, 0
             for offset, line in enumerate(pre.group(1).split("\n")):
                 for band in BAND.finditer(line):
                     before = re.sub(r"<[^>]+>", "", line[: band.start()])
@@ -317,6 +319,28 @@ def check_band_lines(docs: list[pathlib.Path]) -> int:
                             f'opens mid-line, after "{before.strip()[:40]}"'
                         )
                         problems += 1
+
+                # A band per line draws a left bar and a box per line, so a
+                # block of new code comes out striped instead of as one panel.
+                # Deryk spotted it in lesson 11, where every line had its own.
+                if ONE_LINE_BAND.match(line):
+                    if run == 0:
+                        run_at = first + offset
+                    run += 1
+                else:
+                    if run > 2:
+                        print(
+                            f"  WARN    {doc.relative_to(ROOT)}:{run_at}: {run} "
+                            f"consecutive one-line bands — wrap the run in one span"
+                        )
+                        problems += 1
+                    run = 0
+            if run > 2:
+                print(
+                    f"  WARN    {doc.relative_to(ROOT)}:{run_at}: {run} consecutive "
+                    f"one-line bands — wrap the run in one span"
+                )
+                problems += 1
     return problems
 
 
@@ -363,9 +387,9 @@ def main() -> None:
 
     bands = check_band_lines(docs)
     print(
-        "Diff bands: every add/del covers a whole line."
+        "Diff bands: every add/del covers a whole line, one span per run."
         if not bands
-        else f"Diff bands: {bands} band(s) open mid-line and will render broken."
+        else f"Diff bands: {bands} problem(s) — a band will render broken or striped."
     )
 
 

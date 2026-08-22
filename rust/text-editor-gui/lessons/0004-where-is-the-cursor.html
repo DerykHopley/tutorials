@@ -940,11 +940,11 @@ returns everything it learned while drawing. <strong>Three edits.</strong></p>
 <p>First — swap <code>ui.add</code> for <code>.show</code> and keep the result:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, the text box</span></p>
-<pre><code><span class="del">            ui.<span class="f">add</span>(</span>
-<span class="del">                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
-<span class="del">                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
-<span class="del">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),</span>
-<span class="del">            );</span>
+<pre><code><span class="del">            ui.<span class="f">add</span>(
+                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),
+            );</span>
 <span class="add">            <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
                 .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
                 .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)

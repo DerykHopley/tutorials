@@ -174,6 +174,14 @@ had five, the status label never got added, and lesson 4's replacement had nothi
 match. `python3 build.py` now audits every stage and warns on a mismatch. Never let a
 single ordinal ("Fourth — …") introduce two blocks.
 
+**Compile the state at the end of every stage, not just the end of the lesson.** This is
+the rule most often skipped and it has the worst failure mode: the reader is stranded with
+an error the lesson caused. Lesson 9 stage 1 told them to pass `&paths` to `Editor::open`
+when `paths` isn't built until stage 2 — seven edits, all applied, still `error[E0425]`.
+Reconstruct each stage's file and run the real check on it. Where a stage legitimately
+produces a warning (a method written before its first caller), say so in a callout, or the
+reader will assume they broke something.
+
 **Never paste an end-state line into an early stage.** Stage listings get generated from
 the finished source, which makes it easy to lift a line that already mentions something a
 later stage introduces. The reader then hits a compiler error the lesson gave them no way

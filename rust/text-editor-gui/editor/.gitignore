@@ -1,3 +1,5 @@
 /target
 /scratch.md
-/big.rs
+/big*
+/one.rs
+/two.rs

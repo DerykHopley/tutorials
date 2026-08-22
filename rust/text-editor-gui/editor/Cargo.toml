@@ -5,3 +5,15 @@ edition = "2024"
 
 [dependencies]
 eframe = "0.36.1"
+ropey = "1.6.1"
+
+# A binary someone downloads is worth 50 seconds of build time.
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+
+# The mission says "no unwrap() in the hot path". This is that promise, enforced.
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"

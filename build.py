@@ -215,17 +215,21 @@ def check_field_order(docs: list[pathlib.Path]) -> int:
     for doc in docs:
         body = doc.read_text()
         declared: dict[str, int] = {}
-        for at, markup in spans(body, ADD_SPAN):
-            for line in plain(markup).splitlines():
-                decl = FIELD_DECL.match(line)
-                if decl and "(" not in line:
-                    declared.setdefault(decl.group(1), at)
-
         used: dict[str, int] = {}
+
+        # Both are keyed by the offset of the enclosing <pre>, so a field
+        # declared and used in the *same* block reads as simultaneous rather
+        # than as a use that precedes its declaration.
         for stage in STAGE.finditer(body):
             for block in PRE.finditer(stage.group(1)):
                 at = stage.start() + block.start()
-                for use in FIELD_USE.finditer(plain(block.group(1))):
+                markup = block.group(1)
+                for _, added in spans(markup, ADD_SPAN):
+                    for line in plain(added).splitlines():
+                        decl = FIELD_DECL.match(line)
+                        if decl and "(" not in line:
+                            declared.setdefault(decl.group(1), at)
+                for use in FIELD_USE.finditer(plain(markup)):
                     used.setdefault(use.group(1), at)
 
         for name, first_use in sorted(used.items(), key=lambda kv: kv[1]):

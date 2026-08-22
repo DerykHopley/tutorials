@@ -290,6 +290,20 @@ pre .gap {
   border-bottom: 1px dashed var(--code-border);
 }
 
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
 /* Sits directly on top of its code block, like a file tab. */
 .filename {
   display: inline-block;

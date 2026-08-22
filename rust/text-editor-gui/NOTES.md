@@ -42,14 +42,16 @@ language concept the next editor feature demands.
 6. ✅ Measure before you optimise — `Instant`, frame-time readout, status panel, real numbers
    _(written 2026-08-16; 121 lines; overturned the "String is the bottleneck" plan)_
 7. ✅ Colouring the code — `TextEdit::layouter`, `LayoutJob`, a 40-line scanner
-   _(written 2026-08-16; 183 lines)_
+   _(written 2026-08-16; 184 lines)_
 8. ✅ Knowing when to stop — measure highlighting, degrade above a measured limit
-   _(written 2026-08-16; 207 lines; deliberately ships NO cache — see below)_
+   _(written 2026-08-16; 208 lines; deliberately ships NO cache — see below)_
 9. ✅ More than one file — `Buffer`/`Editor` split, `Vec<Buffer>`, tabs, index-not-reference
-   _(written 2026-08-16; 245 lines)_
+   _(written 2026-08-16; 246 lines)_
 10. ✅ Tests that find something — `#[cfg(test)]`, a real red test, extract `scan` to test it
-   _(written 2026-08-16; 330 lines, 10 tests; found and fixed a real `name()` bug)_
-11. `ropey` — only if a measurement asks for it. **It may not.** See the open question below.
+   _(written 2026-08-16; 331 lines, 10 tests; found and fixed a real `name()` bug)_
+11. ✅ Earning the rope — newtype + `egui::TextBuffer`, `ropey`, and the justification doc
+   _(written 2026-08-22; 415 lines, 10 tests; the rope is justified by egui's char→byte
+   conversion, not by insertion cost)_
 12. Polish: README, release profile, `unwrap` audit, remove `request_repaint`
 
 **Estimated total: 12.** Undo/redo was dropped — egui already provides it (see below).
@@ -74,15 +76,54 @@ against the compiler or a benchmark, roughly one in three was false.**
 
 **Standing instruction: verify the premise before writing the lesson, not after.**
 
-### Open question: whether the rope is ever justified
+### RESOLVED 2026-08-22: the rope is justified — but not for the reason anyone says
 
-Lesson 11 is `ropey`, gated on a measurement — and the measurements so far do not support
-it. `String` edits are 11 µs on 2 MB; the frame cost is egui layout and our scanner. The
-mission does list "a rope buffer, with a written justification of why not `String`" as a
-success criterion, so the honest options are:
-(a) find a workload where `String` genuinely hurts (undo snapshots, many large buffers), or
-(b) write the justification as *why we did **not** use one*, which is a stronger portfolio
-answer than an unjustified rewrite. **Raise this with Deryk before writing lesson 11.**
+Measured before writing lesson 11, with `egui::Context::run_ui` driving real frames
+(`/tmp/ropebench`, rebuild it if needed). **The textbook argument for a rope is false here,
+and a different one is true.**
+
+The textbook argument is "`String::insert` is O(n)". It is, and it does not matter:
+12 µs mid-file on 2.3 MB, 0.07% of a frame.
+
+What *does* cost is **`TextBuffer::byte_index_from_char_index`**, which egui calls **3×
+per keystroke** and implements as a `char_indices()` walk from the start of the buffer
+(`egui-0.36.1/src/text_selection/text_cursor_state.rs:276`; egui's own `impl TextBuffer
+for String` uses it at lines 254, 269, 270). At 2.3 MB that is ~1 ms a call.
+
+Typing, 50,000 lines / 2.3 MB, median of 40 frames:
+
+| Buffer | Frame | char→byte | insert | delete |
+| --- | --- | --- | --- | --- |
+| `String` (egui's own impl) | **12.21 ms** | 3.05 ms | 1.05 | 2.01 |
+| `Rope` (ropey 1.6.1) | **7.74 ms** | 0.00 ms | 0.14 | 0.19 |
+| `String` + ASCII fast path | **7.33 ms** | 0.00 ms | 0.02 | 0.00 |
+
+Size sweep (typing, ms/frame): 1k lines 0.22/0.16/0.16 · 5k 1.25/0.96/0.91 ·
+10k 2.45/2.00/1.86 · 25k 6.17/3.87/3.81 · 50k 12.34/7.82/7.58 (String/Rope/ASCII).
+
+**The ASCII fast path — char index == byte index when the text `is_ascii()` — beats the
+rope and is three lines.** It also collapses the moment the file contains one non-ASCII
+character:
+
+| 2.3 MB file with one `é` in a comment | Frame |
+| --- | --- |
+| `String` | 10.70 ms |
+| `Rope` | **7.57 ms** |
+| `String` + ASCII fast path | 10.39 ms — back to the naive walk |
+
+So the rope's real claim is **it does not care what is in the file**. That is the written
+justification the mission asks for, and it is measured rather than asserted.
+
+Two costs to state honestly in the lesson:
+- `TextBuffer::as_str` is a *required* method returning a borrowed contiguous `&str`. A
+  rope has no such slice to lend, so we keep a flattened `String` beside it and rebuild it
+  on every edit — 77 µs on 2.3 MB, and **double the memory**.
+- `Rope::from_str` costs 647 µs on 2.3 MB, against ~0 for a `String`. Slower to open.
+
+Bonus, on our own code: `line_col` was a `chars().take()` walk measured at 875 µs in
+lesson 6 (1000 µs here). `Rope::char_to_line` + `line_to_char` is **0.23 µs** — 4,000×.
+`Rope::clone` is 0.02 µs against 41.72 µs for `String`, which is the undo-snapshot
+argument if we ever want it.
 
 ### Open question: the highlight cache
 

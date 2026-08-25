@@ -188,6 +188,45 @@ leave it dangling.
 
 ## Plan revisions
 
+- **2026-08-22 (b): the tutorial continues as parts, and the driver changed.** A grilling
+  session settled the shape of everything after lesson 12. The decisions, and why:
+  - **Learning is the driver; portfolio is a byproduct; being a daily driver is an explicit
+    non-goal.** Deryk's own framing — "work my way from easiest to more complex features as
+    a learning experience". The non-goal is written into `MISSION.md` because it is the
+    only thing that stops an unbounded feature backlog.
+  - **One tutorial, flat lesson numbering, parts grouped by `ROADMAP.md`.** Not a directory
+    per feature: every part edits the same `editor/` crate, which lives *inside* the
+    tutorial directory, and a reader genuinely cannot do the git part without having built
+    the editor. Linear material should have a linear structure.
+    (Note for later: `build.py` requires a document's parent directory to be `lessons/` or
+    `reference/` — `README.md`'s "at any depth" refers to the tutorial, not to nesting
+    inside `lessons/`. Grouping lessons into sub-directories is a one-line change if flat
+    numbering ever gets unwieldy.)
+  - **Lessons stay just-in-time.** Never write lesson N+1 before Deryk has finished N.
+    Evidence: *every* propagation bug in this tutorial came from writing ahead — lesson 3's
+    edit-count bug silently broke lesson 4's diff; the lesson 6 status-bar fix invalidated
+    the stages of lessons 7–10; lesson 11 stage 2 used a field stage 4 added. A roadmap
+    ahead is fine. Lessons ahead are not.
+  - **Lessons 1–12 are not frozen.** The six `build.py` audits made finding these defects
+    mechanical, so fixing on contact stays cheap.
+  - **Stay on `TextEdit`; do not own the text rendering.** `TextEditOutput` exposes the
+    galley and its `galley_pos`, and a galley carries `rows: Vec<PlacedRow>` each with its
+    own `pos` — so **line numbers and git gutter marks look reachable without owning
+    rendering**, by painting beside rows egui already positions. This contradicts an
+    earlier claim in these notes that line numbers force the fork. **Verify by building it
+    before writing part 9.** The honest trigger to revisit the fork is multiple cursors,
+    which is now out of scope.
+  - **ACP is deferred behind `cargo check`.** ACP is an external, evolving spec, and this
+    tutorial's method is checking premises against a compiler or benchmark — which cannot
+    be done against a spec. Part 13 teaches the same async/subprocess/streaming Rust against
+    `cargo check`, fully verifiable locally; ACP becomes a small delta.
+  - **The highlight-cache regression becomes the graduation exercise**, unscheduled. It
+    cannot be planned as a lesson because nobody knows the answer.
+  - **Publishing after part 6.** Feedback mechanism deliberately deferred to that point.
+  - Branch model unchanged: `main` stays the bare scaffold, work stays on
+    `work/rust-text-editor-gui`.
+
+
 - **2026-08-16 (c):** lesson 6 was planned as "feel `String` insertion hurt → introduce
   `ropey`". **Measured, and the premise was false.** On a 2 MB / 50k-line file:
   `String::insert` mid-file = 11 µs (0.2% of frame); `line_col` = 875 µs (12%); egui's

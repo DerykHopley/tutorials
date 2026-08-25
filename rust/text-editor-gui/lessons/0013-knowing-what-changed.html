@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 13 — Knowing What Changed</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 13 <span class="sep">/</span> Part 1: Don't lose my work <span class="sep">/</span> ~30 minutes</p>
+  <h1>Knowing What Changed</h1>
+  <p class="subtitle">Four stages — and the first one is your editor quietly eating an afternoon's work.</p>
+</header>
+
+<p>Twelve lessons in, the editor opens files, highlights them, holds several at once and
+keeps its text in a rope you can justify. It also loses your work without a word, and has
+done since lesson 3.</p>
+
+<p>This is the first lesson of <a href="../ROADMAP.md">part 1</a>, and the part exists
+because that's not a missing feature — it's a bug, in the one program where it's least
+forgivable.</p>
+
+<div class="thesis">
+  An editor may do almost anything badly and still be useful.<br>
+  Losing what you typed is the exception.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 12's editor. Check against
+<a href="0012-making-it-a-work-sample.html#where-you-ended-up">lesson 12's checkpoint</a>.</p>
+
+<div class="callout note">
+  <span class="label">If your indentation doesn't match the listings, don't fight it</span>
+  Twelve lessons of typing means small structural differences are normal — a block nested
+  one level deeper or shallower than mine. The code in these listings is what matters, not
+  the leading spaces: paste it where it belongs and run <code>cargo fmt</code>, which
+  re-indents to whatever nesting your file actually has.
+</div>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-bug">
+<h3>Watch it lose your work</h3>
+
+<p class="goal">Reproduce the bug deliberately, so you know exactly what you're fixing.</p>
+
+<p>No code this stage. Do this:</p>
+
+<p class="run">cd editor<br>
+printf 'fn main() {}\n' &gt; scratch.md<br>
+cargo run -- scratch.md<br>
+→ type a few lines into the window<br>
+→ close the window with the titlebar button — <em>not</em> Ctrl+S first<br>
+cat scratch.md<br>
+→ <em>fn main() {}</em></p>
+
+<p>Everything you typed is gone. No prompt, no warning, no "you have unsaved changes",
+no trace of it on disk. The window closed and took the work with it.</p>
+
+<h4 id="why-nothing-happened">Why nothing happened</h4>
+
+<p>Look at what <code>Buffer</code> actually knows about itself:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Buffer struct, as it stands</span></p>
+<pre><code><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {
+    path: <span class="t">String</span>,
+    text: <span class="t">Text</span>,
+    status: <span class="t">String</span>,
+}</code></pre>
+
+<p>A path, some text, and a status message. Nothing anywhere records whether that text has
+ever differed from the file it came from. <code>save()</code> writes it out when you press
+Ctrl+S, and that's the entire relationship this program has with the disk.</p>
+
+<p>So the editor cannot warn you, because it does not know. It isn't that the warning was
+skipped — there is no fact in the program to warn about. <strong>That's what this lesson
+adds: one honest bit of information</strong>, and the two places you'll see it.</p>
+
+<div class="callout key">
+  <span class="label">This is the shape of most real bugs</span>
+  Not a wrong calculation — a missing fact. The program behaves correctly given what it
+  knows, and what it knows is incomplete. Fixing it means adding state, not fixing logic,
+  which is why "where does this fact live and who updates it" is the whole design question.
+</div>
+</section>
+
+<section class="stage" id="stage-flag">
+<h3>A flag for "something changed"</h3>
+
+<p class="goal">The buffer knows it has edits that aren't on disk.</p>
+
+<p>egui already knows when you've typed into a <code>TextEdit</code> — it just hasn't been
+telling anyone. <strong>Five edits.</strong></p>
+
+<p>First — the fact itself:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Buffer struct</span></p>
+<pre><code><span class="dim">    status: <span class="t">String</span>,</span>
+<span class="add">    <span class="c">/// Does this buffer hold edits that aren&#x27;t on disk?</span>
+    dirty: <span class="k">bool</span>,</span>
+<span class="dim">}</span></code></pre>
+
+<p>Second — a file just read from disk matches the disk:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::open</span></p>
+<pre><code><span class="dim">            text: <span class="t">Text</span>::<span class="f">new</span>(&amp;text),
+            status,</span>
+<span class="add">            dirty: <span class="k">false</span>,</span>
+<span class="dim">        }</span></code></pre>
+
+<p>Third — and writing it out makes them match again:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::save</span></p>
+<pre><code><span class="dim">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, <span class="k">self</span>.text.<span class="f">as_str</span>())?;</span>
+<span class="add">        <span class="k">self</span>.dirty = <span class="k">false</span>;</span>
+<span class="dim">        <span class="k">self</span>.status = <span class="f">format!</span>(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);</span></code></pre>
+
+<p>Fourth — the part that sets it. <code>TextEdit</code> returns a response, and a
+response knows whether the widget changed the data behind it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, just after the text box</span></p>
+<pre><code><span class="dim">                <span class="k">let</span> output = egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> buffer.text)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>)
+                    .<span class="f">layouter</span>(&amp;<span class="k">mut</span> layouter)
+                    .<span class="f">show</span>(ui);</span>
+<span class="add">
+                <span class="k">if</span> output.response.<span class="f">changed</span>() {
+                    buffer.dirty = <span class="k">true</span>;
+                }</span></code></pre>
+
+<h4 id="changed">Where <code>changed()</code> comes from</h4>
+
+<p>Every egui widget returns a <code>Response</code> — you've used one before, in
+<a href="0009-more-than-one-file.html#stage-3">lesson 9</a>, where
+<code>.clicked()</code> on a tab told you it had been pressed. <code>changed()</code> is
+its sibling: it means "this widget edited the data it was given during this frame".</p>
+
+<p>It isn't guesswork on egui's part. Inside <code>TextEdit</code> there is literally
+this, at <code>src/widgets/text_edit/builder.rs:810</code>:</p>
+
+<p class="filename ref">egui-0.36.1/src/widgets/text_edit/builder.rs<span class="where">line 810</span></p>
+<pre><code>        <span class="k">if</span> text_changed {
+            response.<span class="f">mark_changed</span>();
+        }</code></pre>
+
+<p class="sidenote"><code>output.response</code> is an <code>AtomLayoutResponse</code>
+rather than a plain <code>Response</code>, but it implements <code>Deref</code> to one —
+so <code>.changed()</code> reaches straight through and you never notice. That's the
+newtype pattern from <a href="0011-earning-the-rope.html#newtype">lesson 11</a>, used by
+egui for the same reason you used it.</p>
+
+<p>Fifth — the test helper builds a <code>Buffer</code> too, and
+<code>cargo test</code> won't compile until it does:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, fn buffer_with</span></p>
+<pre><code><span class="dim">            text: <span class="t">Text</span>::<span class="f">new</span>(text),
+            status: <span class="t">String</span>::<span class="f">new</span>(),</span>
+<span class="add">            dirty: <span class="k">false</span>,</span>
+<span class="dim">        }</span></code></pre>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test &amp;&amp; cargo run -- scratch.md<br>
+→ silent, ten tests green, and the editor behaves exactly as before<br>
+<span class="note">The fact exists now. Nothing shows it yet, which is the next stage.</span></p>
+</section>
+
+<section class="stage" id="stage-show">
+<h3>Put it where you'll see it</h3>
+
+<p class="goal">A dot on the tab, and words in the status bar.</p>
+
+<p>A fact nobody can see is not a fix. <strong>Three edits.</strong></p>
+
+<p>First — the tab grows a marker:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the tab loop</span></p>
+<pre><code><span class="dim">                for index in <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {
+                    <span class="k">let</span> selected = index == <span class="k">self</span>.active;</span>
+<span class="add">                    <span class="k">let</span> buffer = &amp;<span class="k">self</span>.buffers[index];
+                    <span class="k">let</span> label = <span class="k">if</span> buffer.dirty {
+                        <span class="f">format!</span>(<span class="s">&quot;• {}&quot;</span>, buffer.<span class="f">name</span>())
+                    } <span class="k">else</span> {
+                        buffer.<span class="f">name</span>().<span class="f">to_owned</span>()
+                    };</span>
+<span class="del">                    <span class="k">if</span> ui
+                        .<span class="f">selectable_label</span>(selected, <span class="k">self</span>.buffers[index].<span class="f">name</span>())
+                        .<span class="f">clicked</span>()
+                    {</span>
+<span class="add">                    <span class="k">if</span> ui.<span class="f">selectable_label</span>(selected, label).<span class="f">clicked</span>() {</span>
+<span class="dim">                        <span class="k">self</span>.active = index;
+                    }
+                }</span></code></pre>
+
+<h4 id="allocation">The allocation lesson 9 warned about</h4>
+
+<p><a href="0009-more-than-one-file.html#stage-1">Lesson 9</a> made a point of
+<code>name()</code> returning <code>&amp;str</code> rather than <code>String</code> —
+"no allocation per tab per frame". This stage allocates a <code>String</code> per tab per
+frame anyway. That is not an oversight, and it's worth being clear about why.</p>
+
+<p>The lesson-9 point was about a hot path. This isn't one: a handful of tabs, thirty-odd
+bytes each, on frames that only happen when something moves. Measured against a frame that
+costs milliseconds, it is not detectable. <strong>Correctness that costs nothing you can
+measure wins.</strong></p>
+
+<p>The habit worth taking from lesson 9 isn't "never allocate" — it's "know when you're
+allocating, and know what it costs". Here you know both, and the answer is: fine.</p>
+
+<p>Second — the status bar says it in words, for the buffer you're actually looking at:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, in the bottom panel</span></p>
+<pre><code><span class="dim">                <span class="s">&quot;highlighting on&quot;</span>
+            };</span>
+<span class="add">
+            <span class="k">let</span> saved = <span class="k">if</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active].dirty {
+                <span class="s">&quot;unsaved changes&quot;</span>
+            } <span class="k">else</span> {
+                <span class="s">&quot;saved&quot;</span>
+            };</span></code></pre>
+
+<p>Third — and it goes in the readout:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status label</span></p>
+<pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format!</span>(</span>
+<span class="del">                <span class="s">&quot;{}  ·  {} bytes  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,</span>
+<span class="add">                <span class="s">&quot;{}  ·  {} bytes  ·  {saved}  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,</span>
+<span class="dim">                <span class="k">self</span>.position,</span></code></pre>
+
+<p class="sidenote">Both branches are <code>&amp;'static str</code> again — the same trick
+as <code>highlighting</code> in <a href="0008-knowing-when-to-stop.html#stage-3">lesson
+8</a>. Two fixed messages baked into the binary, borrowed, never allocated.</p>
+
+<p class="run">cargo run -- scratch.md<br>
+→ type a character: the tab reads <em>• scratch.md</em> and the bar says <em>unsaved changes</em><br>
+→ press Ctrl+S: the dot disappears and it says <em>saved</em></p>
+
+<div class="callout warn">
+  <span class="label">Now try this, and watch it get it wrong</span>
+  Type a single character. Then press <strong>Backspace</strong>, putting the file back
+  exactly as it was.
+  <br><br>
+  The dot stays. The bar still says <em>unsaved changes</em>. There is nothing to save —
+  the text on screen is identical to the text on disk — and the editor is telling you
+  otherwise.
+</div>
+</section>
+
+<section class="stage" id="stage-truth">
+<h3>The flag lies, and the truth is nearly free</h3>
+
+<p class="goal">The dot means what it says: this differs from the file.</p>
+
+<p>The flag records <em>something happened</em>, not <em>it differs</em>. Those are
+different questions, and you've just watched the difference matter. Editing back to where
+you started is not exotic — it's a typo, a Ctrl+Z, an experiment you thought better of.</p>
+
+<p>The exact question is "does the text differ from what's on disk?", which needs a copy
+of what's on disk to compare against. On a 2.3 MB file that sounds expensive. Measure it
+before believing that:</p>
+
+<table id="dirty-cost">
+  <tr><th>On a 2.3 MB file</th><th>Cost</th></tr>
+  <tr><td><code>Rope::clone</code> — take a snapshot</td><td><strong>0.006 µs</strong></td></tr>
+  <tr><td>Compare, when the text <em>differs</em></td><td><strong>0.06 µs</strong></td></tr>
+  <tr><td>Compare, when the text is identical</td><td>64 µs</td></tr>
+</table>
+
+<p>The snapshot is free, because <a href="0011-earning-the-rope.html">lesson 11</a>'s rope
+shares its chunks between clones until one side is written to — cloning it copies a
+handful of pointers, not two megabytes. Comparing is free too <em>when they differ</em>,
+because the comparison stops at the first difference. Only the identical case costs
+anything, and 64 µs is 0.4% of a frame.</p>
+
+<p>Better still: you only need to ask when <code>changed()</code> fires, which is once per
+keystroke rather than once per frame. <strong>Five edits.</strong></p>
+
+<p>First — <code>Text</code> owns the rope, so <code>Text</code> holds the snapshot:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Text struct</span></p>
+<pre><code><span class="dim">    rope: <span class="t">Rope</span>,</span>
+<span class="add">    <span class="c">/// The text as it was last read from or written to disk. A rope clone shares</span>
+    <span class="c">/// its chunks until one side is written to, so keeping this costs 0.006 µs</span>
+    <span class="c">/// on a 2.3 MB file — near enough nothing.</span>
+    saved: <span class="t">Rope</span>,</span>
+<span class="dim">    <span class="c">/// egui&#x27;s `TextBuffer::as_str` must return a *borrowed contiguous* `&amp;str`,</span>
+    <span class="c">/// and a rope has no such slice to lend. So we keep a flattened copy here</span>
+    flat: <span class="t">String</span>,</span></code></pre>
+
+<p>Second — a file just read from disk is its own saved version:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Text::new</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">Self</span> {
+            rope: <span class="t">Rope</span>::<span class="f">from_str</span>(text),</span>
+<span class="add">            saved: <span class="t">Rope</span>::<span class="f">from_str</span>(text),</span>
+<span class="dim">            flat: text.<span class="f">to_owned</span>(),
+        }
+    }</span></code></pre>
+
+<p>Third — two methods, one to ask and one to tell:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Text, above fn sync</span></p>
+<pre><code><span class="add">    <span class="c">/// Does the buffer differ from what&#x27;s on disk?</span>
+    <span class="c">///</span>
+    <span class="c">/// Only worth asking when something has changed: comparing two identical</span>
+    <span class="c">/// 2.3 MB ropes costs 64 µs, while comparing two that differ costs 0.06 µs.</span>
+    <span class="k">fn</span> <span class="f">is_modified</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {
+        <span class="k">self</span>.rope != <span class="k">self</span>.saved
+    }
+
+    <span class="c">/// Remember the current text as the version on disk.</span>
+    <span class="k">fn</span> <span class="f">mark_saved</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) {
+        <span class="k">self</span>.saved = <span class="k">self</span>.rope.<span class="f">clone</span>();
+    }</span></code></pre>
+
+<p>Fourth — the flag stops guessing and starts checking:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, just after the text box</span></p>
+<pre><code><span class="dim">                <span class="k">if</span> output.response.<span class="f">changed</span>() {</span>
+<span class="del">                    buffer.dirty = <span class="k">true</span>;</span>
+<span class="add">                    buffer.dirty = buffer.text.<span class="f">is_modified</span>();</span>
+<span class="dim">                }</span></code></pre>
+
+<p>Fifth — saving moves the snapshot forward:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::save</span></p>
+<pre><code><span class="dim">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, <span class="k">self</span>.text.<span class="f">as_str</span>())?;</span>
+<span class="add">        <span class="k">self</span>.text.<span class="f">mark_saved</span>();</span>
+<span class="dim">        <span class="k">self</span>.dirty = <span class="k">false</span>;</span></code></pre>
+
+<div class="callout note">
+  <span class="label">Two mechanisms, each covering the other's weakness</span>
+  <code>changed()</code> is cheap but imprecise — it knows something happened, not what.
+  The comparison is precise but you wouldn't want it every frame. Using the cheap one to
+  decide when to run the precise one gives you both: exact answers, at a cost you can't
+  measure. Keeping <code>dirty</code> as a stored answer rather than asking every time is
+  the same idea as <code>frame_ms</code> from lesson 6 — compute on the event, read on the
+  frame.
+</div>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test &amp;&amp; cargo run -- scratch.md<br>
+→ type a character: <em>• scratch.md</em>, <em>unsaved changes</em><br>
+→ press Backspace: the dot goes, and it says <em>saved</em> again<br>
+→ type, then press Ctrl+Z: the dot goes too</p>
+
+<p>That last one is worth pausing on. Undo is egui's, not yours — you never wrote it, and
+<a href="0010-tests-that-find-something.html">lesson 10</a> chose not to build one because
+<code>TextEdit</code> already had it. It still clears the dot, because undo edits the
+buffer like anything else, which fires <code>changed()</code>, which re-runs the
+comparison. <strong>A correct answer to the right question keeps working in cases you
+never considered.</strong> A flag set to <code>true</code> would not have.</p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>444 lines, ten tests green. Two regions changed: <code>Text</code> gained a snapshot
+and two methods, and <code>Buffer</code> gained a bit.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Text struct and the new methods</span></p>
+<pre><code><span class="c">/// The text of one buffer, backed by a rope.</span>
+<span class="c">///</span>
+<span class="c">/// A rope stores text as a tree of small chunks, so an edit touches one chunk</span>
+<span class="c">/// and an index lookup walks the tree instead of the text. See</span>
+<span class="c">/// `docs/why-a-rope.md` for the measurements that chose it.</span>
+<span class="k">struct</span> <span class="t">Text</span> {
+    rope: <span class="t">Rope</span>,
+    <span class="c">/// The text as it was last read from or written to disk. A rope clone shares</span>
+    <span class="c">/// its chunks until one side is written to, so keeping this costs 0.006 µs</span>
+    <span class="c">/// on a 2.3 MB file — near enough nothing.</span>
+    saved: <span class="t">Rope</span>,
+    <span class="c">/// egui&#x27;s `TextBuffer::as_str` must return a *borrowed contiguous* `&amp;str`,</span>
+    <span class="c">/// and a rope has no such slice to lend. So we keep a flattened copy here</span>
+    <span class="c">/// and rebuild it on every edit: 0.08 ms on a 2.3 MB file, against the</span>
+    <span class="c">/// 3.0 ms the rope saves. It also doubles the memory, which is the honest</span>
+    <span class="c">/// cost of staying inside egui&#x27;s `TextEdit`.</span>
+    flat: <span class="t">String</span>,
+}
+
+<span class="k">impl</span> <span class="t">Text</span> {
+    <span class="k">fn</span> <span class="f">new</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">Self</span> {
+            rope: <span class="t">Rope</span>::<span class="f">from_str</span>(text),
+            saved: <span class="t">Rope</span>::<span class="f">from_str</span>(text),
+            flat: text.<span class="f">to_owned</span>(),
+        }
+    }
+
+    <span class="k">fn</span> <span class="f">as_str</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        &amp;<span class="k">self</span>.flat
+    }
+
+    <span class="k">fn</span> <span class="f">len</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.flat.<span class="f">len</span>()
+    }
+
+    <span class="c">/// Turn a character offset into a 1-based line and column.</span>
+    <span class="c">///</span>
+    <span class="c">/// The rope indexes its own lines, so this is a walk down a tree rather</span>
+    <span class="c">/// than a walk through the text: 0.23 µs where lesson 6 measured 875 µs.</span>
+    <span class="k">fn</span> <span class="f">line_col</span>(&amp;<span class="k">self</span>, char_index: <span class="k">usize</span>) -&gt; (<span class="k">usize</span>, <span class="k">usize</span>) {
+        <span class="k">let</span> char_index = char_index.<span class="f">min</span>(<span class="k">self</span>.rope.<span class="f">len_chars</span>());
+        <span class="k">let</span> line = <span class="k">self</span>.rope.<span class="f">char_to_line</span>(char_index);
+        (line + <span class="s">1</span>, char_index - <span class="k">self</span>.rope.<span class="f">line_to_char</span>(line) + <span class="s">1</span>)
+    }
+
+    <span class="c">/// Does the buffer differ from what&#x27;s on disk?</span>
+    <span class="c">///</span>
+    <span class="c">/// Only worth asking when something has changed: comparing two identical</span>
+    <span class="c">/// 2.3 MB ropes costs 64 µs, while comparing two that differ costs 0.06 µs.</span>
+    <span class="k">fn</span> <span class="f">is_modified</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">bool</span> {
+        <span class="k">self</span>.rope != <span class="k">self</span>.saved
+    }
+
+    <span class="c">/// Remember the current text as the version on disk.</span>
+    <span class="k">fn</span> <span class="f">mark_saved</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) {
+        <span class="k">self</span>.saved = <span class="k">self</span>.rope.<span class="f">clone</span>();
+    }</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these two: the rest of impl Text, unchanged</span>
+  <code>as_str</code>, <code>len</code>, <code>line_col</code>, <code>sync</code> and the
+  whole <code>impl egui::TextBuffer for Text</code> are exactly as
+  <a href="0011-earning-the-rope.html#where-you-ended-up">lesson 11</a> left them.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">the Buffer struct</span></p>
+<pre><code><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {
+    path: <span class="t">String</span>,
+    text: <span class="t">Text</span>,
+    status: <span class="t">String</span>,
+    <span class="c">/// Does this buffer hold edits that aren&#x27;t on disk?</span>
+    dirty: <span class="k">bool</span>,
+}</code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">Why couldn't the editor warn you about unsaved changes before this lesson?</p>
+  <ul class="options">
+    <li data-correct>Nothing in the program recorded that fact</li>
+    <li>The close button bypasses the update loop</li>
+    <li>egui gives no notification when a window closes</li>
+    <li>The rope discards its history when the app exits</li>
+  </ul>
+  <p class="why"><code>Buffer</code> held a path, some text and a status message. There
+  was no fact about whether the text differed from disk, so there was nothing to warn
+  about — the bug was missing state, not missing logic.
+  <a class="review" href="#why-nothing-happened">↑ Review: why nothing happened (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">What does <code>Response::changed()</code> actually report?</p>
+  <ul class="options">
+    <li data-correct>This widget edited its data during this frame</li>
+    <li>The widget's value differs from its initial value</li>
+    <li>The user interacted with the widget somehow</li>
+    <li>The widget needs to be repainted next frame</li>
+  </ul>
+  <p class="why"><code>TextEdit</code> calls <code>response.mark_changed()</code> when the
+  text was edited this frame. It says something happened — not that the result differs
+  from anything, which is exactly why the stage-2 flag got it wrong.
+  <a class="review" href="#changed">↑ Review: where changed() comes from (stage 2)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why is keeping a snapshot of the saved text affordable?</p>
+  <ul class="options">
+    <li data-correct>Rope clones share their chunks until one is written to</li>
+    <li>Only the first chunk of the rope is copied</li>
+    <li>The snapshot stores a hash rather than the text</li>
+    <li>It is taken once at startup and never refreshed</li>
+  </ul>
+  <p class="why">Cloning a rope copies a handful of pointers — 0.006 µs on a 2.3 MB file —
+  because the two ropes share structure until one of them is edited. The snapshot is
+  refreshed on every save, and it's still free.
+  <a class="review" href="#stage-truth">↑ Review: the measurements (stage 4)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does the dot clear when you press Ctrl+Z, which you never wrote?</p>
+  <ul class="options">
+    <li data-correct>Undo edits the buffer, which fires <code>changed()</code></li>
+    <li>egui's undoer resets the dirty flag directly</li>
+    <li>The snapshot is restored along with the text</li>
+    <li>Ctrl+Z is handled before the flag is read</li>
+  </ul>
+  <p class="why">Undo is an edit like any other, so it marks the response changed, so the
+  comparison re-runs and finds the text matches disk. Asking the right question makes
+  cases you never considered work by themselves.
+  <a class="review" href="#stage-truth">↑ Review: the flag lies (stage 4)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 14</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://docs.rs/egui/latest/egui/struct.Response.html"><code>egui::Response</code>
+— API documentation</a>. You've now used three of its methods across three lessons:
+<code>clicked()</code> in lesson 9, <code>has_focus()</code> in passing, and
+<code>changed()</code> here. The list is short and most of an egui app's interactivity is
+somewhere in it.</p>
+
+<p>Worth knowing it exists: <code>Response::on_hover_text</code>, which is how the dot
+could explain itself on hover — a one-line improvement you could make without a lesson.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> The thing I'd push back on if I
+  were reviewing this: <code>dirty</code> is a cached answer, and cached answers go stale
+  when someone forgets to update them. There's an argument that <code>is_modified()</code>
+  should just be called directly wherever the answer is needed, and the field deleted. I
+  think the cache is right at 64 µs a call with several buffers open — but it's a real
+  trade and I'd rather you disagreed with me than took it.
+</div>
+
+<nav class="footer-nav">
+  <a href="0012-making-it-a-work-sample.html">← Lesson 12: Making It a Work Sample</a>
+  <a href="../ROADMAP.md">Roadmap</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <span>Next: closing a buffer, and being asked first</span>
+</nav>
+
+</body>
+</html>

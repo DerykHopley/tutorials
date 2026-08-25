@@ -8,7 +8,7 @@ subject.
 
 | Topic | Tutorial | Mission | Status |
 | --- | --- | --- | --- |
-| Rust | [text-editor-gui](./rust/text-editor-gui/) | [MISSION](./rust/text-editor-gui/MISSION.md) — a portfolio-grade code editor, from zero Rust | Lessons 1–12 (complete) |
+| Rust | [text-editor-gui](./rust/text-editor-gui/) | [MISSION](./rust/text-editor-gui/MISSION.md) — learning Rust by building a code editor, from zero | Lessons 1–12 done; [roadmap](./rust/text-editor-gui/ROADMAP.md) |
 
 ## Layout
 

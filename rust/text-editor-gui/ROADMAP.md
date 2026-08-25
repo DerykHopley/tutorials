@@ -17,12 +17,22 @@ working code.
 | --- | --- | --- |
 | **A working editor** | [1–12](lessons/) | Opens files, edits and saves them without corrupting UTF-8, highlights Rust, tabs across buffers, degrades honestly above 512 KB, keeps its text in a rope with a measured justification, and tests the parts worth testing |
 
+## In progress
+
+**Part 1 — Don't lose my work.** The editor loses unsaved edits silently when the window
+closes, and has since lesson 3.
+
+| Lesson | Title | What it delivered |
+| --- | --- | --- |
+| [13](lessons/0013-knowing-what-changed.html) | Knowing What Changed | The buffer knows whether it differs from disk, and says so on the tab and in the status bar |
+| 14 | — | Closing a buffer, and being asked first |
+
 ## Next
 
 | # | Part | Lessons | What you'll learn |
 | --- | --- | --- | --- |
-| 1 | **Don't lose my work** | 3–4 | Change detection, close and quit callbacks, modal state in immediate mode |
-| 2 | **Files from inside the editor** | 4–5 | Buffer removal and index invalidation — lesson 9's hazard, finally triggered — plus round-tripping line endings you didn't write |
+| 1 | **Don't lose my work** | 3–4 | Change detection, close and quit callbacks, modal state in immediate mode, and buffer removal — lesson 9's index-invalidation hazard, finally triggered |
+| 2 | **Files from inside the editor** | 4–5 | Opening and creating files without the command line; round-tripping line endings you didn't write |
 | 3 | **Many files, many modules** | 3 | `mod`, `pub`, `use crate::`, visibility, multi-file layout |
 | 4 | **Search** | 3–4 | Iterator chains, byte and char indices, highlighting a match |
 | 5 | **A second language** | 3 | Table-driven vs enum vs trait, `Path::extension` |

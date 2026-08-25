@@ -186,6 +186,33 @@ Lesson 6's closing section currently promises lesson 7 will be "drawing only wha
 see". **If we take the stay-on-`TextEdit` path, that promise must be rewritten** — do not
 leave it dangling.
 
+## Verified end-state sources
+
+Each lesson's end state is reconstructed from the published checkpoints, compiled, and
+used to generate that lesson's listings. **Those reconstructions live in `/tmp` and have
+been lost twice.** Rebuilding one is error-prone in a specific way: the obvious shortcut is
+to start from Deryk's working copy, which compiles and passes — but it has drifted from the
+published checkpoints in ways that are invisible until they reach a listing.
+
+Real drift found while rebuilding for lesson 13, all of it silent:
+
+- Doc comments shortened or turned from `///` into `//` — the lesson 13 checkpoint would
+  have published Deryk's wording as if it were the tutorial's.
+- Two test names carrying typos (`scan_colours_keyword_only`,
+  `scan_resassembles_the_original_text`). Harmless in their file; wrong in a listing.
+- The status-bar format string using single spaces around `·` instead of double.
+- **A structural difference**: the tab loop sits at the top level of `fn ui` rather than
+  inside `CentralPanel`, so every listing touching it was one indent level off.
+
+The fix each time is to splice the canonical region out of the *published checkpoint* and
+verify with a set-difference of checkpoint lines against the base. That check is cheap and
+catches all four classes above. **Do it before generating any listing from a rebuilt base.**
+
+Worth doing properly at some point: a `sources.py` that rebuilds every end state from the
+checkpoints and compiles it, so this is one command rather than an archaeology session.
+Checking the sources in directly would be simpler still, but `main` is meant to hold no
+finished lesson code — that needs Deryk's decision before it happens.
+
 ## Plan revisions
 
 - **2026-08-22 (b): the tutorial continues as parts, and the driver changed.** A grilling

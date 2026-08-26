@@ -16,23 +16,18 @@ working code.
 | Part | Lessons | What it delivered |
 | --- | --- | --- |
 | **A working editor** | [1–12](lessons/) | Opens files, edits and saves them without corrupting UTF-8, highlights Rust, tabs across buffers, degrades honestly above 512 KB, keeps its text in a rope with a measured justification, and tests the parts worth testing |
-
-## In progress
-
-**Part 1 — Don't lose my work.** The editor loses unsaved edits silently when the window
-closes, and has since lesson 3.
+| **1 — Don't lose my work** | [13–15](lessons/0013-knowing-what-changed.html) | The editor cannot silently discard your edits by any route |
 
 | Lesson | Title | What it delivered |
 | --- | --- | --- |
 | [13](lessons/0013-knowing-what-changed.html) | Knowing What Changed | The buffer knows whether it differs from disk, and says so on the tab and in the status bar |
 | [14](lessons/0014-the-index-that-outlived-its-buffer.html) | The Index That Outlived Its Buffer | Closing a buffer, and the stale-index bug lesson 9 predicted |
-| 15 | — | Being asked before your work is thrown away |
+| [15](lessons/0015-being-asked-first.html) | Being Asked First | A confirmation before closing a modified buffer or the window, and your first hand-written enum |
 
 ## Next
 
 | # | Part | Lessons | What you'll learn |
 | --- | --- | --- | --- |
-| 1 | **Don't lose my work** | 3–4 | Change detection, close and quit callbacks, modal state in immediate mode, and buffer removal — lesson 9's index-invalidation hazard, finally triggered |
 | 2 | **Files from inside the editor** | 4–5 | Opening and creating files without the command line; round-tripping line endings you didn't write |
 | 3 | **Many files, many modules** | 3 | `mod`, `pub`, `use crate::`, visibility, multi-file layout |
 | 4 | **Search** | 3–4 | Iterator chains, byte and char indices, highlighting a match |

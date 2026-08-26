@@ -1001,11 +1001,19 @@ happen, finish the walk, and do it afterwards — when nothing is iterating any 
 
 <p>First — somewhere to note it, just above the tab row:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, above ui.horizontal</span></p>
-<pre><code><span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
-<span class="add">            <span class="k">let</span> <span class="k">mut</span> closing = <span class="t">None</span>;
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, directly above the tab row</span></p>
+<pre><code><span class="add">            <span class="k">let</span> <span class="k">mut</span> closing = <span class="t">None</span>;
 </span>
-<span class="dim">            ui.<span class="f">horizontal</span>(|ui| {</span></code></pre>
+<span class="dim">            ui.<span class="f">horizontal</span>(|ui| {
+                <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {</span></code></pre>
+
+<div class="callout note">
+  <span class="label">It must be in the same scope as the tab row</span>
+  <code>closing</code> is written inside the loop and read after it, so it has to be
+  declared in the block that contains <code>ui.horizontal</code> — wherever that is in
+  your file. Put it one scope too deep and you get
+  <code>cannot find value `closing` in this scope</code>, twice.
+</div>
 
 <p>Second — the button records the request instead of acting on it:</p>
 
@@ -1017,7 +1025,7 @@ happen, finish the walk, and do it afterwards — when nothing is iterating any 
 
 <p>Third — and it's carried out after the loop has finished:</p>
 
-<p class="filename">editor/src/main.rs<span class="where">in fn ui, just after ui.horizontal</span></p>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, just after the tab row closes</span></p>
 <pre><code><span class="dim">            });
 </span>
 <span class="add">            <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(index) = closing {
@@ -1026,7 +1034,10 @@ happen, finish the walk, and do it afterwards — when nothing is iterating any 
 </span>
 <span class="dim">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];</span></code></pre>
 
-<p>Fourth — and the method it calls, at the top of <code>impl Editor</code>:</p>
+<p>Fourth — and the method it calls. It goes in <strong><code>impl Editor</code></strong>,
+above <code>fn open</code> — note that <code>impl Buffer</code> has an <code>fn open</code>
+too, and putting <code>close</code> above the wrong one gives you a method that can't see
+<code>self.buffers</code> or <code>self.active</code> at all:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in impl Editor, above fn open</span></p>
 <pre><code><span class="add">    <span class="c">/// Close a buffer, keeping `active` pointing at the file it was on.</span>

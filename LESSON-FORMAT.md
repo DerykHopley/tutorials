@@ -97,7 +97,7 @@ and reusable.
 | `<p class="run">` | The "run it" block — command plus what they should see |
 | `<p class="filename">` + `<pre>` | A file tab welded to the top of the code block. Must be immediately adjacent |
 | `<span class="add">` / `<span class="dim">` | New lines / dimmed context inside a `<pre>` |
-| `<pre class="error">` | Compiler output. Auto-labelled and red-bordered so it never reads as code to type |
+| `<pre class="error">` | Output from a tool that you did not type. Auto-labelled and red-bordered so it never reads as code. Defaults to "compiler output"; add `data-label="runtime panic"` or `data-label="cargo test"` when it is something else — same treatment, accurate word |
 | `<details class="recall">` | Free-recall prompt — answer before revealing |
 | `<div class="quiz">` | Multiple choice with shuffled options and instant feedback (`quiz.js`) |
 | `<div class="callout key/warn">` | Emphasis / a caveat |

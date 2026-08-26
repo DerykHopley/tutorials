@@ -208,6 +208,10 @@ The fix each time is to splice the canonical region out of the *published checkp
 verify with a set-difference of checkpoint lines against the base. That check is cheap and
 catches all four classes above. **Do it before generating any listing from a rebuilt base.**
 
+**They now live in `~/.cache/text-editor-sources/`, not `/tmp`** — `/tmp` was cleaned
+three times, and each rebuild is where the drift above creeps in. That directory is outside
+the repo, so it breaks no rule about `main`; it just stops the archaeology repeating.
+
 Worth doing properly at some point: a `sources.py` that rebuilds every end state from the
 checkpoints and compiles it, so this is one command rather than an archaeology session.
 Checking the sources in directly would be simpler still, but `main` is meant to hold no

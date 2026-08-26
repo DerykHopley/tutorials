@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 14 — The Index That Outlived Its Buffer</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 14 <span class="sep">/</span> Part 1: Don't lose my work <span class="sep">/</span> ~35 minutes</p>
+  <h1>The Index That Outlived Its Buffer</h1>
+  <p class="subtitle">Four stages — and the first one compiles perfectly and then crashes.</p>
+</header>
+
+<p>You can open several files. You cannot close any of them. That's the gap this lesson
+fills, and closing a buffer turns out to be the most interesting small feature in the
+editor — because it's where a warning from
+<a href="0009-more-than-one-file.html#why-index">lesson 9</a> finally comes true.</p>
+
+<p>Lesson 9 stored the current file as <code>active: usize</code> rather than a reference,
+and said this about it: <em>"nothing stops you using a stale one"</em>. Nothing has, so
+far, because nothing has ever removed a buffer. This lesson removes one.</p>
+
+<div class="thesis">
+  The borrow checker guarantees your references are valid.<br>
+  It has never had an opinion about whether your <em>indices</em> are.
+</div>
+
+<h2>Where you're starting</h2>
+
+<p>Lesson 13's editor, with the dirty dot. Check against
+<a href="0013-knowing-what-changed.html#where-you-ended-up">lesson 13's checkpoint</a>.</p>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-crash">
+<h3>A button that closes a tab</h3>
+
+<p class="goal">An × on every tab. It works once, then the editor dies.</p>
+
+<p>The obvious implementation, written the obvious way. <strong>One edit</strong> — inside
+the tab loop, just after the label:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the tab loop</span></p>
+<pre><code><span class="dim">                    <span class="k">if</span> ui.<span class="f">selectable_label</span>(selected, label).<span class="f">clicked</span>() {
+                        <span class="k">self</span>.active = index;
+                    }</span>
+<span class="add">                    <span class="k">if</span> ui.<span class="f">small_button</span>(<span class="s">&quot;×&quot;</span>).<span class="f">clicked</span>() {
+                        <span class="k">self</span>.buffers.<span class="f">remove</span>(index);
+                    }</span>
+<span class="dim">                }</span></code></pre>
+
+<p class="run">printf 'fn a() {}\n' &gt; a.rs; printf 'fn b() {}\n' &gt; b.rs; printf 'fn c() {}\n' &gt; c.rs<br>
+cargo run -- a.rs b.rs c.rs<br>
+→ three tabs, each with an ×<br>
+→ click the × on the <em>first</em> tab</p>
+
+<pre class="error" data-label="runtime panic">thread 'main' panicked at src/main.rs:297:34:
+index out of bounds: the len is 2 but the index is 2</pre>
+
+<h4 id="why-it-compiled">Why the compiler let you do that</h4>
+
+<p>Read the loop again with that error in mind:</p>
+
+<pre><code><span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {   <span class="c">// evaluated once: 0..3</span>
+    <span class="k">let</span> buffer = &amp;<span class="k">self</span>.buffers[index];   <span class="c">// panics when index is 2 and len is 2</span>
+    <span class="c">// …</span>
+    <span class="k">self</span>.buffers.<span class="f">remove</span>(index);           <span class="c">// the Vec is now one shorter</span>
+}</code></pre>
+
+<p><code>0..self.buffers.len()</code> is evaluated <strong>once</strong>, before the first
+iteration. It becomes the range <code>0..3</code> and stays that way. Remove an element on
+the first pass and the loop still faithfully visits indices 1 and 2, of a vector that now
+ends at 1.</p>
+
+<div class="callout key">
+  <span class="label">This is exactly what lesson 9 warned about</span>
+  Lesson 9 chose <code>active: usize</code> over <code>&amp;mut Buffer</code> because a
+  struct can't own a <code>Vec</code> and hold a reference into it — safe Rust rejects
+  that outright, with <code>E0106</code> and then <code>E0505</code>. The cost of the
+  index, stated at the time: <em>"nothing stops you using a stale one"</em>.
+  <br><br>
+  Here's the bill. A reference into a <code>Vec</code> would have made this a compile
+  error — the borrow checker will not let you call <code>remove</code> while a reference
+  into it is alive. An index is just a number, and numbers don't know what they point at.
+</div>
+
+<p>Rust moved the failure from compile time to run time, and made it <em>loud</em> rather
+than silent: a bounds check, a panic, a line number. In C this would have read whatever
+memory happened to be there. That's the trade the index bought, and it's a good one — but
+it is a trade, not a free pass.</p>
+</section>
+
+<section class="stage" id="stage-defer">
+<h3>Decide in the loop, act after it</h3>
+
+<p class="goal">Closing a tab works, and the editor stays up.</p>
+
+<p>You can't safely change the vector while walking it, so don't. Note what you want to
+happen, finish the walk, and do it afterwards — when nothing is iterating any more.
+<strong>Four edits.</strong></p>
+
+<p>First — somewhere to note it, just above the tab row:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, above ui.horizontal</span></p>
+<pre><code><span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="add">            <span class="k">let</span> <span class="k">mut</span> closing = <span class="t">None</span>;
+</span>
+<span class="dim">            ui.<span class="f">horizontal</span>(|ui| {</span></code></pre>
+
+<p>Second — the button records the request instead of acting on it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the tab loop</span></p>
+<pre><code><span class="dim">                    <span class="k">if</span> ui.<span class="f">small_button</span>(<span class="s">&quot;×&quot;</span>).<span class="f">clicked</span>() {</span>
+<span class="del">                        <span class="k">self</span>.buffers.<span class="f">remove</span>(index);</span>
+<span class="add">                        closing = <span class="t">Some</span>(index);</span>
+<span class="dim">                    }</span></code></pre>
+
+<p>Third — and it's carried out after the loop has finished:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, just after ui.horizontal</span></p>
+<pre><code><span class="dim">            });
+</span>
+<span class="add">            <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(index) = closing {
+                <span class="k">self</span>.<span class="f">close</span>(index);
+            }
+</span>
+<span class="dim">            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];</span></code></pre>
+
+<p>Fourth — and the method it calls, at the top of <code>impl Editor</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, above fn open</span></p>
+<pre><code><span class="add">    <span class="c">/// Close a buffer, keeping `active` pointing at the file it was on.</span>
+    <span class="k">fn</span> <span class="f">close</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, index: <span class="k">usize</span>) {
+        <span class="k">if</span> <span class="k">self</span>.buffers.<span class="f">len</span>() == <span class="s">1</span> {
+            <span class="k">return</span>;
+        }
+
+        <span class="k">self</span>.buffers.<span class="f">remove</span>(index);
+
+        <span class="k">if</span> index &lt; <span class="k">self</span>.active {
+            <span class="k">self</span>.active -= <span class="s">1</span>;
+        }
+    }</span></code></pre>
+
+<h4 id="the-pattern">Collect, then act</h4>
+
+<p><code>Option&lt;usize&gt;</code> is doing real work here. It holds two facts at once —
+<em>whether</em> anything was clicked and <em>which</em> tab — in a way that makes it
+impossible to read one without the other. That's the same
+<a href="0004-where-is-the-cursor.html#option">Option</a> from lesson 4, used for a
+different kind of absence.</p>
+
+<p>The pattern generalises well beyond egui: <strong>when a loop discovers it wants to
+change the thing it's looping over, record the intent and apply it afterwards.</strong>
+You'll reach for it again in the file tree, where clicking a folder changes the tree you're
+in the middle of drawing.</p>
+
+<p class="sidenote">The two guards in <code>close</code> are worth reading. Refusing to
+close the last buffer isn't politeness — <code>self.buffers[self.active]</code> runs on
+every frame, and an empty <code>Vec</code> makes that a panic. Until there's a way to
+create a new empty buffer, which is <a href="../ROADMAP.md">part 2</a>, one file must
+always be open.</p>
+
+<p class="run">cargo run -- a.rs b.rs c.rs<br>
+→ close the first tab: the editor survives, two tabs remain<br>
+→ close tabs until one is left: the last × does nothing</p>
+
+<div class="callout warn">
+  <span class="label">Now close the tab you're actually editing</span>
+  Click the <em>last</em> tab to make it active, then close it with its own ×.
+  <br><br>
+  The editor panics again — another <code>index out of bounds</code>, this time from
+  <code>let buffer = &amp;mut self.buffers[self.active];</code>. <code>close</code>
+  shortened the vector, and <code>self.active</code> is still pointing at where the last
+  buffer used to be.
+</div>
+</section>
+
+<section class="stage" id="stage-tests">
+<h3>Prove the arithmetic</h3>
+
+<p class="goal">Four tests. One of them is red.</p>
+
+<p><code>close</code> does index arithmetic, and index arithmetic is the kind of thing
+that's right for the case you thought about and wrong for the case you didn't. It's also
+<em>pure</em> — no egui, no window, no frame — which since
+<a href="0010-tests-that-find-something.html#stage-3">lesson 10</a> you know means
+testable. <strong>Two edits</strong> — and the second only makes sense once you've run
+the first. Here's the first, at the bottom of <code>mod tests</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, at the end</span></p>
+<pre><code><span class="add">    <span class="k">fn</span> <span class="f">editor_with</span>(names: &amp;[&amp;<span class="k">str</span>]) -&gt; <span class="t">Editor</span> {
+        <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = names.<span class="f">iter</span>().<span class="f">map</span>(|n| (*n).<span class="f">to_owned</span>()).<span class="f">collect</span>();
+        <span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">closing_a_tab_before_the_active_one_keeps_the_same_file</span>() {
+        <span class="k">let</span> <span class="k">mut</span> editor = <span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>, <span class="s">&quot;b.rs&quot;</span>, <span class="s">&quot;c.rs&quot;</span>]);
+        editor.active = <span class="s">2</span>;
+        editor.<span class="f">close</span>(<span class="s">0</span>);
+        <span class="f">assert_eq</span>!(editor.buffers[editor.active].<span class="f">name</span>(), <span class="s">&quot;c.rs&quot;</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">closing_the_active_tab_selects_the_one_that_took_its_place</span>() {
+        <span class="k">let</span> <span class="k">mut</span> editor = <span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>, <span class="s">&quot;b.rs&quot;</span>, <span class="s">&quot;c.rs&quot;</span>]);
+        editor.active = <span class="s">1</span>;
+        editor.<span class="f">close</span>(<span class="s">1</span>);
+        <span class="f">assert_eq</span>!(editor.buffers[editor.active].<span class="f">name</span>(), <span class="s">&quot;c.rs&quot;</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">closing_the_active_last_tab_leaves_the_index_in_range</span>() {
+        <span class="k">let</span> <span class="k">mut</span> editor = <span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>, <span class="s">&quot;b.rs&quot;</span>, <span class="s">&quot;c.rs&quot;</span>]);
+        editor.active = <span class="s">2</span>;
+        editor.<span class="f">close</span>(<span class="s">2</span>);
+        <span class="f">assert</span>!(editor.active &lt; editor.buffers.<span class="f">len</span>());
+        <span class="f">assert_eq</span>!(editor.buffers[editor.active].<span class="f">name</span>(), <span class="s">&quot;b.rs&quot;</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">the_only_tab_cannot_be_closed</span>() {
+        <span class="k">let</span> <span class="k">mut</span> editor = <span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>]);
+        editor.<span class="f">close</span>(<span class="s">0</span>);
+        <span class="f">assert_eq</span>!(editor.buffers.<span class="f">len</span>(), <span class="s">1</span>);
+    }
+}</span></code></pre>
+
+<p class="sidenote"><code>Editor::open</code> on files that don't exist gives you three
+perfectly good empty buffers — that's <a href="0005-open-any-file.html">lesson 5</a>'s
+decision that a missing file is a new file, not an error, quietly making these tests
+possible without touching the disk.</p>
+
+<p class="run">cargo test</p>
+
+<pre class="error" data-label="cargo test">test tests::closing_a_tab_before_the_active_one_keeps_the_same_file ... ok
+test tests::closing_the_active_tab_selects_the_one_that_took_its_place ... ok
+test tests::the_only_tab_cannot_be_closed ... ok
+test tests::closing_the_active_last_tab_leaves_the_index_in_range ... FAILED
+
+---- tests::closing_the_active_last_tab_leaves_the_index_in_range stdout ----
+assertion failed: editor.active &lt; editor.buffers.len()
+
+test result: FAILED. 13 passed; 1 failed</pre>
+
+<h4 id="the-case-you-didnt-think-of">The case the arithmetic missed</h4>
+
+<p><code>close</code> handles one case: a tab <em>before</em> the active one goes away, so
+everything after it shifts down by one and <code>active</code> shifts with it. That's the
+case you picture when you write it, and it's correct.</p>
+
+<p>It says nothing about closing the tab at the <em>end</em> while you're on it. Nothing
+shifts — <code>index &lt; self.active</code> is false when they're equal — so
+<code>active</code> stays at 2, and the vector now ends at 1. The index didn't move; the
+vector moved out from under it.</p>
+
+<p>The second edit — clamp the index to what's actually there:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Editor::close, at the end</span></p>
+<pre><code><span class="dim">        <span class="k">if</span> index &lt; <span class="k">self</span>.active {
+            <span class="k">self</span>.active -= <span class="s">1</span>;
+        }
+</span>
+<span class="add">        <span class="k">self</span>.active = <span class="k">self</span>.active.<span class="f">min</span>(<span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>);</span>
+<span class="dim">    }</span></code></pre>
+
+<p><code>min</code> is doing the work of an <code>if</code> without the branch:
+<code>active</code> becomes whichever is smaller, itself or the last valid index. In every
+case the first rule already handled, it changes nothing. In the case it didn't, it pulls
+the index back onto the end of the vector.</p>
+
+<div class="callout note">
+  <span class="label">Why <code>len() - 1</code> is safe here, and only here</span>
+  Subtracting from a <code>usize</code> that's already zero doesn't give you −1 — it
+  panics in a debug build and wraps to a colossal number in release, which is worse. It's
+  safe on this line only because of the guard four lines above: the function returned early
+  if there was one buffer, so by the time you reach this line there are at least two, and
+  <code>len() - 1</code> is at least 1. Delete that guard and this line becomes a bug.
+</div>
+
+<p class="run">cargo test<br>
+→ <em>test result: ok. 14 passed; 0 failed</em></p>
+
+<p class="run">cargo run -- a.rs b.rs c.rs<br>
+→ select the last tab, close it: you land on the one before it<br>
+→ close tabs in any order you like; the editor stays up</p>
+
+<div class="callout key">
+  <span class="label">Four tests, one bug, ninety seconds</span>
+  You would have found this eventually — by closing the last tab and watching the editor
+  vanish. The test found it before you ran the program once, and it will keep finding it
+  if anyone ever rewrites that arithmetic. This is the second time in this tutorial that
+  writing tests for a "trivial" function has turned one up; the first was
+  <a href="0010-tests-that-find-something.html#stage-2"><code>name()</code> in lesson
+  10</a>.
+</div>
+</section>
+
+<section class="stage" id="stage-keyboard">
+<h3>Close it from the keyboard</h3>
+
+<p class="goal"><kbd>Ctrl+W</kbd> closes the file you're looking at.</p>
+
+<p>Nobody reaches for the mouse to close a tab. The work is already done — there's a
+method that closes a buffer by index, and <code>self.active</code> is an index.
+<strong>One edit</strong>, just above the block that applies <code>closing</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, after the tab row</span></p>
+<pre><code><span class="dim">            });
+</span>
+<span class="add">            <span class="k">let</span> close_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">W</span>));
+            <span class="k">if</span> close_requested {
+                closing = <span class="t">Some</span>(<span class="k">self</span>.active);
+            }
+</span>
+<span class="dim">            <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(index) = closing {
+                <span class="k">self</span>.<span class="f">close</span>(index);
+            }</span></code></pre>
+
+<p>That's the same shape as Ctrl+S from <a href="0003-saving-your-work.html">lesson 3</a>,
+and it feeds the same <code>closing</code> variable the button does. Two ways to ask for
+the same thing, one place that carries it out — which is why the mouse path and the
+keyboard path can't drift apart.</p>
+
+<p class="sidenote"><code>modifiers.command</code> rather than <code>ctrl</code> is
+deliberate, and it's been that way since lesson 3: egui maps it to Ctrl on Linux and
+Windows and to ⌘ on macOS, so the binding is right on all three without a
+<code>cfg</code>.</p>
+
+<p class="run">cargo run -- a.rs b.rs c.rs<br>
+→ press Ctrl+W: the current tab closes and the next one takes over<br>
+→ keep pressing: the last one stays put</p>
+
+<div class="callout warn">
+  <span class="label">It still throws away your work, and now it's easier to do</span>
+  Type into a buffer so the tab shows its <strong>•</strong>, then press Ctrl+W. It closes,
+  and the edits are gone — no prompt, exactly as in
+  <a href="0013-knowing-what-changed.html#stage-bug">lesson 13's stage 1</a>. The editor
+  now <em>knows</em> the buffer was modified; it just isn't asking.
+  <br><br>
+  That's lesson 15, and it's the last one of this part.
+</div>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>508 lines, fourteen tests green. Two regions changed: <code>Editor</code> gained a
+method, and the tab row learned to ask for things.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the top of impl Editor</span></p>
+<pre><code><span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="c">/// Close a buffer, keeping `active` pointing at the file it was on.</span>
+    <span class="k">fn</span> <span class="f">close</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, index: <span class="k">usize</span>) {
+        <span class="k">if</span> <span class="k">self</span>.buffers.<span class="f">len</span>() == <span class="s">1</span> {
+            <span class="k">return</span>;
+        }
+
+        <span class="k">self</span>.buffers.<span class="f">remove</span>(index);
+
+        <span class="k">if</span> index &lt; <span class="k">self</span>.active {
+            <span class="k">self</span>.active -= <span class="s">1</span>;
+        }
+
+        <span class="k">self</span>.active = <span class="k">self</span>.active.<span class="f">min</span>(<span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>);
+    }</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these two: everything else, unchanged</span>
+  <code>Editor::open</code>, the whole of <code>Text</code> and <code>Buffer</code>, the
+  scanner, the status panel and <code>main</code> are exactly as
+  <a href="0013-knowing-what-changed.html#where-you-ended-up">lesson 13</a> left them.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the central panel down to the text box</span></p>
+<pre><code>            <span class="k">let</span> <span class="k">mut</span> closing = <span class="t">None</span>;
+
+            ui.<span class="f">horizontal</span>(|ui| {
+                <span class="k">for</span> index <span class="k">in</span> <span class="s">0</span>..<span class="k">self</span>.buffers.<span class="f">len</span>() {
+                    <span class="k">let</span> selected = index == <span class="k">self</span>.active;
+                    <span class="k">let</span> buffer = &amp;<span class="k">self</span>.buffers[index];
+                    <span class="k">let</span> label = <span class="k">if</span> buffer.dirty {
+                        <span class="f">format</span>!(<span class="s">&quot;• {}&quot;</span>, buffer.<span class="f">name</span>())
+                    } <span class="k">else</span> {
+                        buffer.<span class="f">name</span>().<span class="f">to_owned</span>()
+                    };
+                    <span class="k">if</span> ui.<span class="f">selectable_label</span>(selected, label).<span class="f">clicked</span>() {
+                        <span class="k">self</span>.active = index;
+                    }
+                    <span class="k">if</span> ui.<span class="f">small_button</span>(<span class="s">&quot;×&quot;</span>).<span class="f">clicked</span>() {
+                        closing = <span class="f">Some</span>(index);
+                    }
+                }
+            });
+
+            <span class="k">let</span> close_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">W</span>));
+            <span class="k">if</span> close_requested {
+                closing = <span class="f">Some</span>(<span class="k">self</span>.active);
+            }
+
+            <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(index) = closing {
+                <span class="k">self</span>.<span class="f">close</span>(index);
+            }
+
+            <span class="k">let</span> buffer = &amp;<span class="k">mut</span> <span class="k">self</span>.buffers[<span class="k">self</span>.active];</code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">Why did removing a buffer inside the tab loop compile?</p>
+  <ul class="options">
+    <li data-correct>An index is a number; nothing ties it to the vector's length</li>
+    <li><code>Vec::remove</code> takes <code>&amp;self</code>, not <code>&amp;mut self</code></li>
+    <li>The loop re-evaluates its range on every iteration</li>
+    <li>egui closures suppress borrow checking inside them</li>
+  </ul>
+  <p class="why">The borrow checker tracks references, and there was no live reference
+  into the vector at that point. <code>0..len()</code> was evaluated once, so the loop kept
+  visiting indices that no longer existed — a logic error, caught at run time by a bounds
+  check rather than at compile time.
+  <a class="review" href="#why-it-compiled">↑ Review: why the compiler let you (stage 1)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">What does <code>Option&lt;usize&gt;</code> buy over a <code>usize</code> and a <code>bool</code>?</p>
+  <ul class="options">
+    <li data-correct>You cannot read the index without handling "nothing"</li>
+    <li>It uses less memory than the two separate values</li>
+    <li>It allows the index to be modified inside the loop</li>
+    <li>Pattern matching on it is faster than an <code>if</code></li>
+  </ul>
+  <p class="why">The two facts — whether anything was requested and which tab — are welded
+  together, so there's no way to use a stale index by forgetting to check the flag. Same
+  <code>Option</code> as lesson 4's cursor, a different kind of absence.
+  <a class="review" href="#the-pattern">↑ Review: collect, then act (stage 2)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Which case did <code>if index &lt; self.active</code> alone fail to handle?</p>
+  <ul class="options">
+    <li data-correct>Closing the last tab while it is the active one</li>
+    <li>Closing a tab after the active one</li>
+    <li>Closing the first tab of three</li>
+    <li>Closing a tab whose buffer has unsaved edits</li>
+  </ul>
+  <p class="why">When <code>index == self.active</code> nothing shifts, so
+  <code>active</code> stayed where it was — pointing one past the end of a vector that had
+  just shrunk. The clamp pulls it back onto the last valid index.
+  <a class="review" href="#the-case-you-didnt-think-of">↑ Review: the case the arithmetic missed (stage 3)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why is <code>self.buffers.len() - 1</code> safe on that line?</p>
+  <ul class="options">
+    <li data-correct>An earlier guard returned when there was only one buffer</li>
+    <li><code>usize</code> subtraction saturates at zero in Rust</li>
+    <li><code>min</code> evaluates its argument only when needed</li>
+    <li>The vector is never empty because <code>main</code> pushes one</li>
+  </ul>
+  <p class="why">Underflowing a <code>usize</code> panics in debug and wraps to an enormous
+  number in release. The line is only reachable when at least two buffers remain, because
+  the function returned early otherwise — remove that guard and this becomes a bug.
+  <a class="review" href="#the-case-you-didnt-think-of">↑ Review: why len() − 1 is safe (stage 3)</a>
+  </p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 15</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://doc.rust-lang.org/std/vec/struct.Vec.html#method.retain"><code>Vec::retain</code></a>
+and its neighbours in the <code>Vec</code> docs. <code>close</code> uses
+<code>remove</code>, which is right for one known index — but the family around it
+(<code>retain</code>, <code>swap_remove</code>, <code>drain</code>) is worth ten minutes,
+because each one exists to avoid exactly the bug stage 1 hit.</p>
+
+<p><code>swap_remove</code> is the interesting one: it's O(1) instead of O(n) because it
+moves the last element into the hole rather than shifting everything down. It would be
+wrong here — it would shuffle your tabs — and knowing <em>why</em> it's wrong is worth
+more than knowing it exists.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> The design decision I'd most like
+  to be argued with about: refusing to close the last buffer. Most editors leave an empty
+  untitled buffer behind instead, which is friendlier, and it's only "not yet" here because
+  nothing can create a buffer that isn't a file on disk. If you think that's the wrong
+  order to build these in, say so — part 2 is not written yet, and it's easier to move now
+  than later.
+</div>
+
+<nav class="footer-nav">
+  <a href="0013-knowing-what-changed.html">← Lesson 13: Knowing What Changed</a>
+  <a href="../ROADMAP.md">Roadmap</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <span>Next: being asked before your work is thrown away</span>
+</nav>
+
+</body>
+</html>

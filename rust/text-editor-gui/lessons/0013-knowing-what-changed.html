@@ -238,6 +238,11 @@ pre.error {
   border-color: var(--err-border);
   border-left: 3px solid var(--err-accent);
 }
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
 pre.error::before {
   content: "compiler output";
   display: block;
@@ -1417,7 +1422,7 @@ could explain itself on hover — a one-line improvement you could make without 
   <a href="0012-making-it-a-work-sample.html">← Lesson 12: Making It a Work Sample</a>
   <a href="../ROADMAP.md">Roadmap</a>
   <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
-  <span>Next: closing a buffer, and being asked first</span>
+  <a href="0014-the-index-that-outlived-its-buffer.html">Lesson 14: The Index That Outlived Its Buffer →</a>
 </nav>
 
 </body>

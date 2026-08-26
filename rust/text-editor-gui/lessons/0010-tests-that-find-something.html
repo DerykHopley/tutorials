@@ -238,6 +238,11 @@ pre.error {
   border-color: var(--err-border);
   border-left: 3px solid var(--err-accent);
 }
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
 pre.error::before {
   content: "compiler output";
   display: block;
@@ -1033,7 +1038,7 @@ the test module:</p>
 
 <p class="run">cargo test</p>
 
-<pre class="error"><code>test tests::name_of_a_bare_filename ... ok
+<pre class="error" data-label="cargo test"><code>test tests::name_of_a_bare_filename ... ok
 test tests::name_of_a_nested_path ... ok
 test tests::name_of_a_trailing_slash ... FAILED
 

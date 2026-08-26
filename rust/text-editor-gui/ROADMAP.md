@@ -25,7 +25,8 @@ closes, and has since lesson 3.
 | Lesson | Title | What it delivered |
 | --- | --- | --- |
 | [13](lessons/0013-knowing-what-changed.html) | Knowing What Changed | The buffer knows whether it differs from disk, and says so on the tab and in the status bar |
-| 14 | — | Closing a buffer, and being asked first |
+| [14](lessons/0014-the-index-that-outlived-its-buffer.html) | The Index That Outlived Its Buffer | Closing a buffer, and the stale-index bug lesson 9 predicted |
+| 15 | — | Being asked before your work is thrown away |
 
 ## Next
 

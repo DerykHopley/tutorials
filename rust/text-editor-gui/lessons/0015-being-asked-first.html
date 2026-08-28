@@ -1052,7 +1052,7 @@ isn't about a buffer.</p>
 
 <p>You need a type that says "one of these two things", and Rust's word for that is
 <code>enum</code>. You've used two of them constantly — <code>Option</code> and
-<code>Result</code> — without writing one. <strong>Eight edits</strong>, and the file won't
+<code>Result</code> — without writing one. <strong>Nine edits</strong>, and the file won't
 compile until they're all in.</p>
 
 <p>First — the type, just above <code>struct Buffer</code>:</p>
@@ -1084,15 +1084,32 @@ still be alive when the closure below tried to set it — <code>E0502</code> aga
 <code>Copy</code> enum this small is two machine words; copying it is cheaper than
 reasoning about who borrowed it.</p>
 
-<p>Second — the field changes type:</p>
+<p>Second — the field changes type, and a second one joins it:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
 <pre><code><span class="del">    <span class="c">/// A buffer whose closing is held up until the question on screen is answered.</span>
     confirm: <span class="t">Option</span>&lt;<span class="k">usize</span>&gt;,</span>
 <span class="add">    <span class="c">/// An action held up until the question on screen is answered.</span>
-    confirm: <span class="t">Option</span>&lt;<span class="t">Pending</span>&gt;,</span></code></pre>
+    confirm: <span class="t">Option</span>&lt;<span class="t">Pending</span>&gt;,
+    <span class="c">/// Set once the user has answered &quot;quit anyway&quot;, so the close we send</span>
+    <span class="c">/// ourselves isn&#x27;t mistaken for a fresh request and cancelled again.</span>
+    quitting: <span class="k">bool</span>,</span></code></pre>
 
-<p>Third — and so does what gets parked in it:</p>
+<div class="callout">
+  <span class="label">Deferred to the ninth edit</span>
+  <code>quitting</code> will look like it does nothing until you reach the last edit of
+  this stage, and the reason it exists is <a href="#echo">two sections below</a>.
+  Type it now so the struct is right; it earns its keep in a few paragraphs.
+</div>
+
+<p>Third — neither field means anything at start-up:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
+<pre><code><span class="dim">            confirm: <span class="t">None</span>,</span>
+<span class="add">            quitting: <span class="k">false</span>,</span>
+<span class="dim">            position: <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),</span></code></pre>
+
+<p>Fourth — and so does what gets parked in it:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, where closing is applied</span></p>
 <pre><code><span class="dim">                <span class="k">if</span> <span class="k">self</span>.buffers[index].dirty {</span>
@@ -1100,7 +1117,7 @@ reasoning about who borrowed it.</p>
 <span class="add">                    <span class="k">self</span>.confirm = <span class="t">Some</span>(<span class="t">Pending</span>::<span class="t">Close</span>(index));</span>
 <span class="dim">                } <span class="k">else</span> {</span></code></pre>
 
-<p>Fourth — quitting needs to know whether anything is at stake, which is a count:</p>
+<p>Fifth — quitting needs to know whether anything is at stake, which is a count:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in impl Editor, above fn close</span></p>
 <pre><code><span class="add">    <span class="c">/// How many buffers hold edits that aren&#x27;t on disk?</span>
@@ -1108,7 +1125,7 @@ reasoning about who borrowed it.</p>
         <span class="k">self</span>.buffers.<span class="f">iter</span>().<span class="f">filter</span>(|buffer| buffer.dirty).<span class="f">count</span>()
     }</span></code></pre>
 
-<p>Fifth — the question now has two forms:</p>
+<p>Sixth — the question now has two forms:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ask, the top</span></p>
 <pre><code><span class="dim">    <span class="c">/// Draw the question, and act on the answer.</span></span>
@@ -1125,7 +1142,7 @@ a third variant to <code>Pending</code> later — say <code>CloseAll</code> — 
 <code>match</code> on it becomes an error until you've said what the new case does. That is
 the property that makes enums worth reaching for.</p>
 
-<p>Sixth — <em>Discard</em> stops knowing what it's discarding, and defers to a method
+<p>Seventh — <em>Discard</em> stops knowing what it's discarding, and defers to a method
 that does:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ask, the Discard button</span></p>
@@ -1135,7 +1152,7 @@ that does:</p>
 <span class="add">                    <span class="k">self</span>.<span class="f">carry_out</span>(pending, ui);</span>
 <span class="dim">                }</span></code></pre>
 
-<p>Seventh — that method, just after <code>fn ask</code>:</p>
+<p>Eighth — that method, just after <code>fn ask</code>:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in impl Editor, after fn ask</span></p>
 <pre><code><span class="add">    <span class="c">/// Do the thing that was waiting on an answer.</span>
@@ -1143,17 +1160,20 @@ that does:</p>
         <span class="k">self</span>.confirm = <span class="t">None</span>;
         <span class="k">match</span> pending {
             <span class="t">Pending</span>::<span class="f">Close</span>(index) =&gt; <span class="k">self</span>.<span class="f">close</span>(index),
-            <span class="t">Pending</span>::<span class="t">Quit</span> =&gt; ui.<span class="f">ctx</span>().<span class="f">send_viewport_cmd</span>(egui::<span class="t">ViewportCommand</span>::<span class="t">Close</span>),
+            <span class="t">Pending</span>::<span class="t">Quit</span> =&gt; {
+                <span class="k">self</span>.quitting = <span class="k">true</span>;
+                ui.<span class="f">ctx</span>().<span class="f">send_viewport_cmd</span>(egui::<span class="t">ViewportCommand</span>::<span class="t">Close</span>);
+            }
         }
     }</span></code></pre>
 
-<p>Eighth — and the quit itself, replacing the block you added in stage 1:</p>
+<p>Ninth — and the quit itself, replacing the block you added in stage 1:</p>
 
 <p class="filename">editor/src/main.rs<span class="where">in fn ui, just above the frame timer</span></p>
 <pre><code><span class="del">        <span class="k">if</span> <span class="k">let</span> <span class="t">Some</span>(index) = <span class="k">self</span>.confirm {
             <span class="k">self</span>.<span class="f">ask</span>(ui, index);
         }</span>
-<span class="add">        <span class="k">if</span> ui.<span class="f">input</span>(|i| i.<span class="f">viewport</span>().<span class="f">close_requested</span>()) &amp;&amp; <span class="k">self</span>.<span class="f">unsaved</span>() &gt; <span class="s">0</span> {
+<span class="add">        <span class="k">if</span> ui.<span class="f">input</span>(|i| i.<span class="f">viewport</span>().<span class="f">close_requested</span>()) &amp;&amp; <span class="k">self</span>.<span class="f">unsaved</span>() &gt; <span class="s">0</span> &amp;&amp; !<span class="k">self</span>.quitting {
             ui.<span class="f">ctx</span>()
                 .<span class="f">send_viewport_cmd</span>(egui::<span class="t">ViewportCommand</span>::<span class="t">CancelClose</span>);
             <span class="k">self</span>.confirm = <span class="f">Some</span>(<span class="t">Pending</span>::<span class="t">Quit</span>);
@@ -1172,8 +1192,40 @@ application down at the end of this frame unless you say otherwise.</p>
 <p><code>ViewportCommand::CancelClose</code> is saying otherwise. It's not "please don't
 close"; it's "revoke the close that's already in flight". Send it, park a
 <code>Pending::Quit</code>, and the window stays up with a question on it. When the answer
-comes, <code>carry_out</code> sends <code>ViewportCommand::Close</code> — which this time
-nothing revokes.</p>
+comes, <code>carry_out</code> sends <code>ViewportCommand::Close</code>.</p>
+
+<h4 id="echo">Why <code>quitting</code> exists</h4>
+
+<p>Now the field from the second edit. This is not something you type — it is how
+egui-winit 0.36.1 carries out the close you just sent, in
+<code>src/lib.rs</code>, <code>process_viewport_command</code>:</p>
+
+<pre><code><span class="k">match</span> command {
+    <span class="t">ViewportCommand</span>::<span class="t">Close</span> =&gt; {
+        info.events.<span class="f">push</span>(egui::<span class="t">ViewportEvent</span>::<span class="t">Close</span>);
+    }</code></pre>
+
+<p>It pushes the <em>same event</em> that <code>close_requested()</code> reads. Your close
+comes straight back at you on the next frame, indistinguishable from the one the window
+manager sent. And <em>Discard</em> discarded nothing — it only stopped asking — so
+<code>self.unsaved()</code> is still above zero. Without the flag, the check fires again,
+cancels your own close, and puts the question back up. Forever:</p>
+
+<pre class="error" data-label="what the loop looks like"><code>close requested   -&gt; confirm=Some(Quit)  cmds=["CancelClose"]
+Discard clicked   -&gt; confirm=None        cmds=["Close"]
+next frame        -&gt; confirm=Some(Quit)  cmds=["CancelClose"]
+next frame        -&gt; confirm=Some(Quit)  cmds=["CancelClose"]
+next frame        -&gt; confirm=Some(Quit)  cmds=["CancelClose"]</code></pre>
+
+<p>On screen that reads as <em>Discard</em> doing nothing at all: the dialog blinks and is
+back. <code>quitting</code> is the one bit that tells the two closes apart — a request
+from outside, which deserves a question, versus the one you sent yourself, which is the
+answer.</p>
+
+<p class="sidenote">Note that <em>Save</em>, in stage 3, would have hidden this: it writes
+the files, so <code>unsaved()</code> drops to zero and the check can't fire a second time.
+A bug that only one of three buttons can reach is exactly the kind a run-through finds and
+a glance at the code does not.</p>
 
 <p class="run">cargo run -- a.rs b.rs<br>
 → type into a tab, then click the window's close button<br>
@@ -1181,13 +1233,18 @@ nothing revokes.</p>
 → <em>Cancel</em> keeps working; <em>Discard</em> quits<br>
 → with nothing modified, the close button just closes</p>
 
-<div class="callout note">
-  <span class="label">I checked this one without a window</span>
+<div class="callout warn">
+  <span class="label">How this stage was checked, and how it was wrong</span>
   <code>close_requested()</code> is <code>self.events.contains(&amp;ViewportEvent::Close)</code>
-  and that <code>events</code> vector is public, so the whole quit path can be driven
-  headlessly by pushing the event in. All four cases above were run that way before this
-  lesson was written — including that a click on <em>Discard</em> really does take the
-  buffer count from 2 to 1.
+  and that <code>events</code> vector is public, so the quit path can be driven headlessly:
+  push the event in, run a frame, read the viewport commands back out. That is how the
+  cases above were checked — but the first version of this stage shipped without
+  <code>quitting</code>, because the headless harness does not do what egui-winit does.
+  <code>Context::run_ui</code> hands you the commands your app sent; it never feeds a
+  <code>Close</code> command back in as a <code>Close</code> event. So the loop above was
+  impossible in the test and inevitable in the real window. Deryk found it by clicking the
+  button. The lesson now checks the echo explicitly, by pushing the
+  event back in the way winit would.
 </div>
 </section>
 
@@ -1283,8 +1340,67 @@ cat a.rs b.rs<br>
 
 <h2 id="where-you-ended-up">Where you ended up</h2>
 
-<p>613 lines, seventeen tests green. One new type, and one new <code>impl Editor</code>
-block holding the question and its consequences.</p>
+<p>620 lines, seventeen tests green. This lesson touched five places in the file; all five
+are below, in file order. Everything between them is exactly as lesson 14 left it.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">above the Buffer struct</span></p>
+<pre><code>#[<span class="f">derive</span>(<span class="t">Clone</span>, <span class="t">Copy</span>)]
+<span class="k">enum</span> <span class="t">Pending</span> {
+    <span class="f">Close</span>(<span class="k">usize</span>),
+    <span class="t">Quit</span>,
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these two: about 50 lines, untouched</span>
+  <code>struct Buffer</code> and its <code>impl</code> — <code>open</code>,
+  <code>save</code>, <code>line_col</code>, <code>name</code> — are exactly as lesson 14
+  left them. The <code>dirty</code> field on <code>Buffer</code> came from lesson 13.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct and the impl above fn ask</span></p>
+<pre><code><span class="k">struct</span> <span class="t">Editor</span> {
+    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
+    active: <span class="k">usize</span>,
+    <span class="c">/// An action held up until the question on screen is answered.</span>
+    confirm: <span class="t">Option</span>&lt;<span class="t">Pending</span>&gt;,
+    <span class="c">/// Set once the user has answered &quot;quit anyway&quot;, so the close we send</span>
+    <span class="c">/// ourselves isn&#x27;t mistaken for a fresh request and cancelled again.</span>
+    quitting: <span class="k">bool</span>,
+    position: <span class="t">String</span>,
+    frame_ms: f32,
+    line_col_us: f32,
+}
+
+<span class="k">impl</span> <span class="t">Editor</span> {
+    <span class="c">/// How many buffers hold edits that aren&#x27;t on disk?</span>
+    <span class="k">fn</span> <span class="f">unsaved</span>(&amp;<span class="k">self</span>) -&gt; <span class="k">usize</span> {
+        <span class="k">self</span>.buffers.<span class="f">iter</span>().<span class="f">filter</span>(|buffer| buffer.dirty).<span class="f">count</span>()
+    }
+    <span class="c">/// Close a buffer, keeping `active` pointing at the file it was on.</span>
+    <span class="k">fn</span> <span class="f">close</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, index: <span class="k">usize</span>) {
+        <span class="k">if</span> <span class="k">self</span>.buffers.<span class="f">len</span>() == <span class="s">1</span> {
+            <span class="k">return</span>;
+        }
+        <span class="k">self</span>.buffers.<span class="f">remove</span>(index);
+        <span class="k">if</span> index &lt; <span class="k">self</span>.active {
+            <span class="k">self</span>.active -= <span class="s">1</span>;
+        }
+        <span class="k">self</span>.active = <span class="k">self</span>.active.<span class="f">min</span>(<span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>);
+    }
+
+    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">String</span>]) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> buffers = paths.<span class="f">iter</span>().<span class="f">map</span>(|p| <span class="t">Buffer</span>::<span class="f">open</span>(p)).<span class="f">collect</span>();
+        <span class="k">Self</span> {
+            buffers,
+            active: <span class="s">0</span>,
+            confirm: <span class="t">None</span>,
+            quitting: <span class="k">false</span>,
+            position: <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),
+            frame_ms: <span class="s">0</span>.<span class="s">0</span>,
+            line_col_us: <span class="s">0</span>.<span class="s">0</span>,
+        }
+    }
+}</code></pre>
 
 <p class="filename">editor/src/main.rs<span class="where">the confirmation, above impl eframe::App</span></p>
 <pre><code><span class="k">impl</span> <span class="t">Editor</span> {
@@ -1299,7 +1415,6 @@ block holding the question and its consequences.</p>
             ui.<span class="f">heading</span>(<span class="s">&quot;Unsaved changes&quot;</span>);
             ui.<span class="f">label</span>(question);
             ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
-
             ui.<span class="f">horizontal</span>(|ui| {
                 <span class="k">if</span> ui.<span class="f">button</span>(<span class="s">&quot;Save&quot;</span>).<span class="f">clicked</span>() {
                     <span class="k">self</span>.<span class="f">save_for</span>(pending);
@@ -1311,7 +1426,7 @@ block holding the question and its consequences.</p>
                 <span class="k">if</span> ui.<span class="f">button</span>(<span class="s">&quot;Cancel&quot;</span>).<span class="f">clicked</span>() {
                     <span class="k">self</span>.confirm = <span class="t">None</span>;
                 }
-            });
+            })
         });
     }
 
@@ -1336,18 +1451,61 @@ block holding the question and its consequences.</p>
         <span class="k">self</span>.confirm = <span class="t">None</span>;
         <span class="k">match</span> pending {
             <span class="t">Pending</span>::<span class="f">Close</span>(index) =&gt; <span class="k">self</span>.<span class="f">close</span>(index),
-            <span class="t">Pending</span>::<span class="t">Quit</span> =&gt; ui.<span class="f">ctx</span>().<span class="f">send_viewport_cmd</span>(egui::<span class="t">ViewportCommand</span>::<span class="t">Close</span>),
+            <span class="t">Pending</span>::<span class="t">Quit</span> =&gt; {
+                <span class="k">self</span>.quitting = <span class="k">true</span>;
+                ui.<span class="f">ctx</span>().<span class="f">send_viewport_cmd</span>(egui::<span class="t">ViewportCommand</span>::<span class="t">Close</span>);
+            }
         }
     }
 }</code></pre>
 
-<div class="callout note">
-  <span class="label">The rest is as lesson 14 left it</span>
-  <code>Pending</code> sits above <code>struct Buffer</code>; <code>Editor</code> gained a
-  <code>confirm</code> field and an <code>unsaved</code> method; <code>fn ui</code> gained
-  the quit check and the call to <code>ask</code>. Everything else — <code>Text</code>,
-  <code>Buffer</code>, the scanner, the panels — is unchanged.
-</div>
+<p class="filename">editor/src/main.rs<span class="where">in fn ui — two regions, with the rest elided</span></p>
+<pre><code><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
+<span class="gap">the status panel and the tab row, unchanged from lesson 14 — about 45 lines</span>
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(index) = closing {
+            <span class="k">if</span> <span class="k">self</span>.buffers[index].dirty {
+                <span class="k">self</span>.confirm = <span class="f">Some</span>(<span class="t">Pending</span>::<span class="f">Close</span>(index));
+            } <span class="k">else</span> {
+                <span class="k">self</span>.<span class="f">close</span>(index);
+            }
+        }
+<span class="gap">the central panel: the save shortcut, the heading, the scroll area and the TextEdit — about 35 lines</span>
+        <span class="k">if</span> ui.<span class="f">input</span>(|i| i.<span class="f">viewport</span>().<span class="f">close_requested</span>()) &amp;&amp; <span class="k">self</span>.<span class="f">unsaved</span>() &gt; <span class="s">0</span> &amp;&amp; !<span class="k">self</span>.quitting {
+            ui.<span class="f">ctx</span>()
+                .<span class="f">send_viewport_cmd</span>(egui::<span class="t">ViewportCommand</span>::<span class="t">CancelClose</span>);
+            <span class="k">self</span>.confirm = <span class="f">Some</span>(<span class="t">Pending</span>::<span class="t">Quit</span>);
+        }
+
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(pending) = <span class="k">self</span>.confirm {
+            <span class="k">self</span>.<span class="f">ask</span>(ui, pending);
+        }
+        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;
+    }
+}</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, at the end</span></p>
+<pre><code>    #[test]
+    <span class="k">fn</span> <span class="f">a_fresh_editor_has_nothing_unsaved</span>() {
+        <span class="f">assert_eq</span>!(<span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>, <span class="s">&quot;b.rs&quot;</span>]).<span class="f">unsaved</span>(), <span class="s">0</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">unsaved_counts_every_modified_buffer</span>() {
+        <span class="k">let</span> <span class="k">mut</span> editor = <span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>, <span class="s">&quot;b.rs&quot;</span>, <span class="s">&quot;c.rs&quot;</span>]);
+        editor.buffers[<span class="s">0</span>].dirty = <span class="k">true</span>;
+        editor.buffers[<span class="s">2</span>].dirty = <span class="k">true</span>;
+        <span class="f">assert_eq</span>!(editor.<span class="f">unsaved</span>(), <span class="s">2</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">closing_a_buffer_forgets_its_unsaved_edits</span>() {
+        <span class="k">let</span> <span class="k">mut</span> editor = <span class="f">editor_with</span>(&amp;[<span class="s">&quot;a.rs&quot;</span>, <span class="s">&quot;b.rs&quot;</span>]);
+        editor.buffers[<span class="s">0</span>].dirty = <span class="k">true</span>;
+        editor.<span class="f">close</span>(<span class="s">0</span>);
+        <span class="f">assert_eq</span>!(editor.<span class="f">unsaved</span>(), <span class="s">0</span>);
+    }
+}</code></pre>
 
 <h2 id="check-yourself">Check yourself</h2>
 
@@ -1378,6 +1536,22 @@ block holding the question and its consequences.</p>
   and egui will shut down at the end of the frame. <code>CancelClose</code> takes it back;
   without it, your question would appear for one frame and then vanish with the window.
   <a class="review" href="#cancelclose">↑ Review: cancelling a close (stage 2)</a>
+  </p>
+</div>
+
+<div class="quiz">
+  <p class="q">Drop the <code>quitting</code> flag and click <em>Discard</em> on the quit question. What happens?</p>
+  <ul class="options">
+    <li data-correct>The question comes straight back, every frame</li>
+    <li>The window closes but the files stay modified</li>
+    <li>Nothing at all, until you click a second time</li>
+    <li>The editor quits, skipping the remaining buffers</li>
+  </ul>
+  <p class="why">egui-winit carries out <code>ViewportCommand::Close</code> by pushing the
+  very event <code>close_requested()</code> reads. Your own close arrives next frame
+  looking like a fresh one, <code>unsaved()</code> is still above zero, and the check
+  cancels it and asks again.
+  <a class="review" href="#echo">↑ Review: why quitting exists (stage 2)</a>
   </p>
 </div>
 
@@ -1446,7 +1620,7 @@ for, because you've been using both since lesson 2 without ever seeing them defi
   <a href="0014-the-index-that-outlived-its-buffer.html">← Lesson 14: The Index That Outlived Its Buffer</a>
   <a href="../ROADMAP.md">Roadmap</a>
   <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
-  <span>Next: part 2 — files from inside the editor</span>
+  <span>Next: part 2 — opening a file without the command line</span>
 </nav>
 
 </body>

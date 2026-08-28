@@ -108,8 +108,24 @@ def build(doc: pathlib.Path) -> bool:
     return True
 
 
-WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7}
-COUNT = re.compile(r"\b(one|two|three|four|five|six|seven)\s+edits?\b", re.I)
+# Counts run to twelve because they have to: the table stopped at seven, so
+# lesson 15's "Eight edits" was never audited at all, and the stage shipped
+# with a tenth code block nobody had tallied.
+WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
+    "eleven": 11,
+    "twelve": 12,
+}
+COUNT = re.compile(rf"\b({'|'.join(WORDS)})\s+edits?\b", re.I)
 STAGE = re.compile(r'<section class="stage"[^>]*>(.*?)</section>', re.S)
 HEADING = re.compile(r"<h3[^>]*>(.*?)</h3>", re.S)
 

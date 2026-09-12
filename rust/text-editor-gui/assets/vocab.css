@@ -1,0 +1,117 @@
+/* ============================================================
+   Vocabulary components — for a build-first lesson aimed at a
+   beginner meeting twenty new words at once.
+
+   Deryk's standing rule (workspace NOTES.md): gloss the jargon on first
+   use, but do not avoid it. Say the plain thing, then name the term of
+   art. These components exist so that rule has somewhere to live:
+   an inline first-use marker, a per-stage list of the words that stage
+   introduced, and an index that gathers them all at the end.
+   ============================================================ */
+
+/* --- the honesty badge at the top of a stage --- */
+
+.level {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.9rem;
+}
+.level::before {
+  content: attr(data-level);
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  margin-right: 0.7em;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--accent);
+}
+.level .what {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--serif);
+  font-size: 0.88rem;
+}
+
+/* --- inline first use of a term --- */
+
+dfn {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 1px dotted var(--accent);
+}
+a.dfn {
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+
+/* --- the words a stage introduced, collected at its end --- */
+
+.words {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.9rem 1.1rem 0.2rem;
+  margin: 0 0 1.3rem;
+}
+.words > .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.6rem;
+}
+.words dl {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 11rem) 1fr;
+  gap: 0.35rem 1.1rem;
+  margin: 0;
+}
+.words dt {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--accent);
+  padding-top: 0.18em;
+  scroll-margin-top: 3rem;
+}
+.words dd {
+  margin: 0 0 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+.words dd code, .words dt code { font-size: 0.86em; }
+
+@media (max-width: 700px) {
+  .words dl { grid-template-columns: 1fr; gap: 0.1rem; }
+  .words dt { padding-top: 0.5rem; }
+}
+
+/* --- the index that gathers every word in the lesson --- */
+
+.glossary-index {
+  columns: 2;
+  column-gap: 2rem;
+  list-style: none;
+  padding-left: 0;
+  font-size: 0.95rem;
+}
+.glossary-index li {
+  break-inside: avoid;
+  margin-bottom: 0.25rem;
+}
+.glossary-index a { text-decoration: none; }
+.glossary-index a:hover { text-decoration: underline; }
+.glossary-index .stage-ref { color: var(--ink-faint); font-size: 0.82em; }
+
+@media (max-width: 700px) { .glossary-index { columns: 1; } }
+
+@media print {
+  .words { break-inside: avoid; }
+  .level::before { color: var(--ink); }
+}

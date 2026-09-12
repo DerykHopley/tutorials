@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1 — Your Editor's First Window (build-first)</title>
+<!-- @assets:style.css,quiz.css,spoiler.css,vocab.css,quiz.js,spoiler.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<style>
+/* ---- generated from rust/text-editor-gui/assets/spoiler.css — do not edit here ---- */
+/* ============================================================
+   Spoiler + hint — components for the "build-first" lesson variant.
+
+   In a build-first lesson the reader is given the brief and writes the code
+   themselves; the answer is folded away until they ask for it. That only
+   works if the fold is obviously a fold — a <details> with the browser's
+   default triangle reads as an aside, and gets opened by reflex. So these
+   are deliberately loud, labelled with what opening them costs.
+
+   Tutorial-local for now (nearest-first wins over the root assets/). Promote
+   to the workspace assets/ if a second topic wants the same shape.
+   ============================================================ */
+
+details.hint,
+details.spoiler {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  margin: 0 0 1.3rem;
+  background: var(--paper);
+}
+
+details.spoiler { border-left: 3px solid var(--accent); }
+details.hint    { border-left: 3px solid var(--rule); }
+
+details.hint > summary,
+details.spoiler > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.6rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* the default disclosure triangle, in both engines */
+details > summary::-webkit-details-marker { display: none; }
+details.hint > summary::marker,
+details.spoiler > summary::marker { content: ""; }
+
+details.hint > summary::before,
+details.spoiler > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1.1em;
+  color: var(--accent);
+}
+details[open].hint > summary::before,
+details[open].spoiler > summary::before { content: "▾"; }
+
+details.spoiler > summary { color: var(--accent); }
+details.hint > summary:hover,
+details.spoiler > summary:hover { background: var(--accent-soft); }
+
+/* What it costs to open — sits after the label, in the reader's own voice. */
+details.hint > summary .cost,
+details.spoiler > summary .cost {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--serif);
+  font-size: 0.86rem;
+  color: var(--ink-faint);
+  margin-left: 0.6em;
+}
+
+details.hint > summary + *,
+details.spoiler > summary + * { margin-top: 0.2rem; }
+
+.spoiler-body {
+  padding: 0.2rem 1rem 0.4rem;
+  border-top: 1px solid var(--rule);
+}
+.spoiler-body > :last-child { margin-bottom: 0.8rem; }
+
+/* The brief: what to build, before any code exists to look at. Numbered,
+   because a reader tallies edits as they go — same contract as a stage that
+   announces a count. */
+.brief {
+  counter-reset: brief;
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 1.3rem;
+}
+.brief > li {
+  counter-increment: brief;
+  position: relative;
+  padding-left: 2.2rem;
+  margin-bottom: 0.7rem;
+}
+.brief > li::before {
+  content: counter(brief);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  width: 1.5rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+/* On paper a fold is useless — nobody can click it. Print everything open. */
+@media print {
+  details.hint,
+  details.spoiler { break-inside: avoid; }
+  details.hint > summary,
+  details.spoiler > summary { color: var(--ink-faint); }
+  details::details-content { content-visibility: visible !important; }
+}
+</style>
+<style>
+/* ---- generated from rust/text-editor-gui/assets/vocab.css — do not edit here ---- */
+/* ============================================================
+   Vocabulary components — for a build-first lesson aimed at a
+   beginner meeting twenty new words at once.
+
+   Deryk's standing rule (workspace NOTES.md): gloss the jargon on first
+   use, but do not avoid it. Say the plain thing, then name the term of
+   art. These components exist so that rule has somewhere to live:
+   an inline first-use marker, a per-stage list of the words that stage
+   introduced, and an index that gathers them all at the end.
+   ============================================================ */
+
+/* --- the honesty badge at the top of a stage --- */
+
+.level {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.9rem;
+}
+.level::before {
+  content: attr(data-level);
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  margin-right: 0.7em;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--accent);
+}
+.level .what {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--serif);
+  font-size: 0.88rem;
+}
+
+/* --- inline first use of a term --- */
+
+dfn {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 1px dotted var(--accent);
+}
+a.dfn {
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+
+/* --- the words a stage introduced, collected at its end --- */
+
+.words {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  padding: 0.9rem 1.1rem 0.2rem;
+  margin: 0 0 1.3rem;
+}
+.words > .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.6rem;
+}
+.words dl {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 11rem) 1fr;
+  gap: 0.35rem 1.1rem;
+  margin: 0;
+}
+.words dt {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--accent);
+  padding-top: 0.18em;
+  scroll-margin-top: 3rem;
+}
+.words dd {
+  margin: 0 0 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+.words dd code, .words dt code { font-size: 0.86em; }
+
+@media (max-width: 700px) {
+  .words dl { grid-template-columns: 1fr; gap: 0.1rem; }
+  .words dt { padding-top: 0.5rem; }
+}
+
+/* --- the index that gathers every word in the lesson --- */
+
+.glossary-index {
+  columns: 2;
+  column-gap: 2rem;
+  list-style: none;
+  padding-left: 0;
+  font-size: 0.95rem;
+}
+.glossary-index li {
+  break-inside: avoid;
+  margin-bottom: 0.25rem;
+}
+.glossary-index a { text-decoration: none; }
+.glossary-index a:hover { text-decoration: underline; }
+.glossary-index .stage-ref { color: var(--ink-faint); font-size: 0.82em; }
+
+@media (max-width: 700px) { .glossary-index { columns: 1; } }
+
+@media print {
+  .words { break-inside: avoid; }
+  .level::before { color: var(--ink); }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<script>
+/* ---- generated from rust/text-editor-gui/assets/spoiler.js — do not edit here ---- */
+/* A link into a folded answer has to unfold it, or it silently does nothing.
+   Newer browsers auto-expand <details> for a fragment target; older ones do
+   not, and this document is meant to work from a file:// URL on any of them.
+   Also: printing, where a closed fold would just vanish from the page. */
+(function () {
+  function reveal(hash) {
+    if (!hash || hash.length < 2) return;
+    var target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    for (var node = target; node; node = node.parentElement) {
+      if (node.tagName === "DETAILS") node.open = true;
+    }
+    target.scrollIntoView();
+  }
+
+  window.addEventListener("hashchange", function () { reveal(location.hash); });
+  document.addEventListener("DOMContentLoaded", function () { reveal(location.hash); });
+  window.addEventListener("beforeprint", function () {
+    var all = document.querySelectorAll("details");
+    for (var i = 0; i < all.length; i++) all[i].open = true;
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 01 <span class="sep">/</span> Text Editor GUI in Rust <span class="sep">/</span> build-first <span class="sep">/</span> ~60 minutes</p>
+  <h1>Your Editor's First Window</h1>
+  <p class="subtitle">Six stages, from an empty file to a window you can type code into — with the code folded away until you ask.</p>
+</header>
+
+<div class="thesis">
+  Your editor is a struct.<br>
+  The GUI holds no state of its own — it draws that struct, and hands you a mutable
+  borrow so you can change it.
+</div>
+
+<h2 id="how-this-works">How this variant works</h2>
+
+<p>This is <a href="0001-your-first-window.html">lesson 1</a> turned inside out. The
+ordinary lesson shows you a change and then explains it. Here each stage gives you the
+brief first — what to build, where it goes, what it must do, and the words for the parts —
+and then gets out of the way, with the code folded up until you ask for it.</p>
+
+<div class="callout warn">
+  <span class="label">The honest problem with doing this in lesson 1</span>
+  You cannot invent <code>impl eframe::App for Editor</code> on day one. Nobody can. A
+  build-first lesson that pretends otherwise just wastes your afternoon. So every stage
+  below is labelled with how much of it you could realistically derive, and the two stages
+  that are pure transcription say so and give you a different job instead: name the parts,
+  rather than guess them.
+</div>
+
+<p>The three labels:</p>
+
+<div class="words">
+  <span class="label">What the badge at the top of each stage means</span>
+  <dl>
+    <dt>transcription</dt>
+    <dd>Nobody derives this. Read the brief, look at the words, then open the fold and
+    <em>type</em> it. Your job is to be able to point at each part and name it.</dd>
+    <dt>guided</dt>
+    <dd>You have seen every piece you need, but not in this arrangement. Attempt it. The
+    hint names the idea you're missing; the fold has the answer.</dd>
+    <dt>yours</dt>
+    <dd>You have everything. Write it before you open anything. If you're stuck for ten
+    minutes, take the hint — being stuck past that point stops teaching you.</dd>
+  </dl>
+</div>
+
+<p>Each stage runs: <strong>goal → what to build → what you'll need → how you'll know →
+folded hint → folded code → the words you just met.</strong> That last panel is the part
+to come back to. Lesson 1 throws about fifty new words at you and there is no way around
+that; what there is a way around is pretending you already know them.</p>
+
+<div class="callout key">
+  <span class="label">Type it, don't paste it</span>
+  Your mission is to explain every line of this repo in an interview. Typing forces you to
+  look at each token; pasting lets your eyes slide over it. Forty lines, about four
+  minutes, the highest-leverage four minutes here. In this variant there is nothing to
+  paste until you have already written your own anyway.
+</div>
+
+<h2>Before you start</h2>
+
+<p><code>rustc 1.97.1</code> via <a href="https://rustup.rs">rustup</a>, in
+<code>~/.cargo</code>. If a terminal says "command not found: cargo", run
+<code>source ~/.cargo/env</code>.</p>
+
+<p>The project is <code>editor/</code>, created with <code>cargo new editor --bin</code>
+and <code>cargo add eframe</code> — that put <code>eframe = "0.36.1"</code> in
+<code>Cargo.toml</code> and pulled 414 <dfn>crates</dfn>: windowing, GPU access, font
+shaping, clipboard. That's the work you are <em>not</em> doing.</p>
+
+<section class="stage" id="stage-1">
+<h3>Prove the toolchain works</h3>
+
+<p class="level" data-level="guided"><span class="what">The code is already written. Your
+job is to predict what it does before you run it.</span></p>
+
+<p class="goal">Text appears in your terminal.</p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li>Open <code>editor/src/main.rs</code>. <code>cargo new</code> already put three lines
+  in it. Read them.</li>
+  <li>Before running anything, say out loud — or write down — what each of the three lines
+  does, and which of the two words on the middle line is not a normal function call. One of
+  them has a mark on it that tells you it is something else.</li>
+  <li>Then run it, from inside the <code>editor</code> directory.</li>
+</ol>
+
+<h4>What you'll need</h4>
+
+<p><code>cargo run</code> does three things in a row: fetches and <dfn>compiles</dfn> your
+code and everything it depends on, links the result into a <dfn>binary</dfn> (a runnable
+file), and runs that binary. When people say "the toolchain works", this is the thing they
+just proved.</p>
+
+<h4>How you'll know</h4>
+
+<p class="run">cd editor &amp;&amp; cargo run<br>
+→ <span class="note">Hello, world!</span></p>
+
+<details class="hint">
+<summary>Hint <span class="cost">— what the punctuation is telling you</span></summary>
+<div class="spoiler-body">
+<p>Two of the three lines are structure: something is being declared, and it has a body
+between braces. The name being declared is special — every Rust program starts there, and
+the compiler goes looking for that exact name.</p>
+<p>On the middle line, look at the character immediately before the opening bracket. A
+normal function call does not have one. That mark means the thing in front of it is
+rewritten into other code before your program is compiled, which is how it can accept any
+number of arguments of any type — something a plain Rust function cannot do.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— it is already in your file; this is what it means</span></summary>
+<div class="spoiler-body">
+
+<p class="filename">editor/src/main.rs<span class="where">the whole file</span></p>
+<pre><code><span class="k">fn</span> <span class="f">main</span>() {
+    <span class="f">println!</span>(<span class="s">"Hello, world!"</span>);
+}</code></pre>
+
+<p><code>fn</code> declares a function; <code>main</code> is where every Rust program
+starts. <code>println!</code> ends in <code>!</code> because it's a <strong>macro</strong>
+— rewritten into other code at compile time, which is how it takes any number of arguments
+of any type. The <code>!</code> is always the tell.</p>
+
+</div>
+</details>
+
+<div class="words">
+  <span class="label">Words you just met</span>
+  <dl>
+    <dt id="term-crate">crate</dt>
+    <dd>A Rust package — one library or one program. Your editor is a crate; so are the 414
+    things it depends on.</dd>
+    <dt id="term-cargo">cargo</dt>
+    <dd>Rust's build tool and package manager. It fetches crates, compiles them, runs
+    tests, and runs your program.</dd>
+    <dt id="term-compile">compile</dt>
+    <dd>Turn source text into machine code. Rust does this ahead of time, before the
+    program runs — which is why the compiler can catch so much.</dd>
+    <dt id="term-binary">binary</dt>
+    <dd>The runnable file that comes out of compiling. <code>--bin</code> in
+    <code>cargo new</code> said "this crate is a program, not a library".</dd>
+    <dt id="term-function">function</dt>
+    <dd>A named block of code you can call. Declared with <code>fn</code>.</dd>
+    <dt id="term-main">main</dt>
+    <dd>The function every Rust program starts at. Rename it and the program will not
+    link.</dd>
+    <dt id="term-macro">macro</dt>
+    <dd>Code that writes code, expanded at compile time. Always called with a
+    <code>!</code>, which is how you spot one at a glance.</dd>
+    <dt id="term-argument">argument</dt>
+    <dd>A value you pass into a call — <code>"Hello, world!"</code> here. The slot it lands
+    in is a <a class="dfn" href="#term-parameter">parameter</a>.</dd>
+    <dt id="term-token">token</dt>
+    <dd>The smallest piece of source the compiler reads as one unit: a name, a number, a
+    bracket, an <code>&amp;</code>. Half of this lesson is about single tokens.</dd>
+  </dl>
+</div>
+</section>
+
+<section class="stage" id="stage-2">
+<h3>An empty window</h3>
+
+<p class="level" data-level="transcription"><span class="what">Four unfamiliar constructs
+at once, none derivable. Type it, then label it.</span></p>
+
+<p class="goal">A blank 800×600 window opens on your desktop.</p>
+
+<h4>What to build</h4>
+
+<p>You are replacing the whole file with the smallest <code>eframe</code> application
+there is. It has four parts, and it is worth knowing what they are called <em>before</em>
+you look at them:</p>
+
+<ol class="brief">
+  <li>A <dfn>use declaration</dfn> — one line that brings a name from another crate into
+  scope so you can say <code>egui</code> instead of <code>eframe::egui</code>
+  everywhere.</li>
+  <li>A <dfn>struct</dfn> called <code>Editor</code> — a <dfn>type</dfn> you define. This
+  one holds no data at all yet, which is honest: your editor knows nothing. This is your
+  application. Not a window, not a widget — a plain data type you hang everything else
+  off.</li>
+  <li>An <dfn>implementation</dfn> of the <dfn>trait</dfn> <code>eframe::App</code> for
+  that struct. A trait is a contract: a list of functions a type must provide in order to
+  be usable somewhere. <code>eframe::App</code> is the contract for "something eframe can
+  run", and it requires exactly one function, <code>ui</code>, which eframe calls to draw
+  a frame. Leave its body empty — nothing drawn, blank window.</li>
+  <li>A <code>main</code> that describes the window it wants and hands your type to
+  eframe to run.</li>
+</ol>
+
+<h4>What you'll need</h4>
+
+<div class="callout">
+  <span class="label">Deferred on purpose — we return in lesson 3</span>
+  Everything inside <code>main</code>: <code>NativeOptions</code>,
+  <code>..Default::default()</code>, <code>Box::new</code>, and the <code>|_cc| …</code>
+  closure. Four language features, none useful to you today, all interesting once you have
+  ownership. Type it, run it, move on. You are not failing to understand it; you have not
+  been taught it.
+</div>
+
+<p>The one part worth staring at is the signature of <code>ui</code>. A
+<dfn>signature</dfn> is a function's name, its <dfn>parameters</dfn> and their types, and
+what it hands back. The trait fixes this one exactly — get it wrong and the compiler
+rejects the whole implementation, because you cannot half-implement a trait. It begins
+with <code>&amp;mut self</code>, and <a href="#stage-5">stage 5</a> is entirely about that
+one token.</p>
+
+<p class="sidenote">Two of the parameter names start with an underscore. That tells the
+compiler "I know I'm not using this, don't warn me." Drop the underscore on an unused
+variable and you get a warning — a small sample of how much Rust nags you, and how much of
+that nagging turns out to be useful.</p>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo run<br>
+→ a blank window titled "editor"<br>
+<span class="note">First build takes ~30 seconds — it's compiling all 414 crates. Later builds are 1–2 seconds.</span></p>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— open this one; there is nothing to derive</span></summary>
+<div class="spoiler-body">
+
+<p>Replace the whole file. This is the smallest possible <code>eframe</code>
+application:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">replacing the whole file</span></p>
+<pre><code><span class="k">use</span> eframe::egui;
+
+<span class="k">struct</span> <span class="t">Editor</span>;
+
+<span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, _ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {}
+}
+
+<span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {
+    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {
+        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),
+        ..<span class="t">Default</span>::<span class="f">default</span>()
+    };
+
+    eframe::<span class="f">run_native</span>(<span class="s">"editor"</span>, options, <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>))))
+}</code></pre>
+
+<p><strong><code>struct Editor;</code></strong> — a type holding no data at all. This is
+your application: not a window, not a widget, a plain data type you hang everything else
+off. Empty is honest — your editor knows nothing yet.</p>
+
+<p><strong><code>impl eframe::App for Editor</code></strong> — a <em>trait
+implementation</em>. A <strong>trait</strong> is a contract: functions a type must provide
+to be usable somewhere. <code>eframe::App</code> is the contract for "something eframe can
+run", and it requires one function, <code>ui</code>. Get the signature wrong and the
+compiler rejects it — you cannot half-implement a trait.</p>
+
+<p><strong><code>fn ui(&amp;mut self, …)</code></strong> — what eframe calls to draw a
+frame. Empty body, nothing drawn, blank window. Note <code>&amp;mut self</code>; stage 5
+is entirely about that one token.</p>
+
+</div>
+</details>
+
+<h4 id="label-it">Your turn: label it</h4>
+
+<p>Transcription teaches nothing on its own, so do this before moving on. Looking only at
+what you typed, answer out loud:</p>
+
+<ol class="brief">
+  <li>Which line is the trait implementation, and which two names does it join?</li>
+  <li>How many parameters does <code>ui</code> take, and which one is
+  <em>not</em> written with a type of its own?</li>
+  <li>Which brackets in this file are a function body, and which are a struct's
+  contents?</li>
+  <li><code>eframe::run_native</code> is handed three things. What is the first one, and
+  where does it show up when you run the program?</li>
+</ol>
+
+<details class="hint">
+<summary>The answers <span class="cost">— check yourself, don't read first</span></summary>
+<div class="spoiler-body">
+<ol class="brief">
+  <li><code>impl eframe::App for Editor</code> — it joins the trait
+  <code>eframe::App</code> to the type <code>Editor</code>. Read <code>impl X for Y</code>
+  as "Y keeps X's promises".</li>
+  <li>Three: <code>&amp;mut self</code>, <code>_ui</code>, <code>_frame</code>.
+  <code>self</code> is the one with no written type — it always means "the value this
+  method was called on", so its type is already known.</li>
+  <li><code>{}</code> after the <code>ui</code> signature is an empty function body; the
+  braces after <code>impl … for Editor</code> hold the implementation. <code>struct
+  Editor;</code> has no braces at all — that is what a struct with no fields looks
+  like.</li>
+  <li><code>"editor"</code>, the window title. It is the text in the title bar of the
+  window that just opened.</li>
+</ol>
+</div>
+</details>
+
+<div class="words">
+  <span class="label">Words you just met</span>
+  <dl>
+    <dt id="term-use">use declaration</dt>
+    <dd>A line that brings a name into <a class="dfn" href="#term-scope">scope</a>, so you
+    can write the short form. Not an <code>#include</code> — nothing is copied.</dd>
+    <dt id="term-path">path (<code>::</code>)</dt>
+    <dd>How Rust spells "inside": <code>eframe::egui</code> is the <code>egui</code> name
+    inside the <code>eframe</code> crate.</dd>
+    <dt id="term-struct">struct</dt>
+    <dd>A type you define by listing what it contains. A struct with nothing in it is
+    written <code>struct Editor;</code> and is called a <em>unit struct</em>.</dd>
+    <dt id="term-type">type</dt>
+    <dd>What a value <em>is</em> — <code>String</code>, <code>Editor</code>,
+    <code>f32</code>. Rust checks every one of them before your program runs.</dd>
+    <dt id="term-trait">trait</dt>
+    <dd>A contract: the functions a type must provide to be usable somewhere. Other
+    languages call the same idea an interface or a protocol.</dd>
+    <dt id="term-impl">implement (<code>impl</code>)</dt>
+    <dd>To provide those functions. <code>impl Trait for Type</code> is the whole
+    grammar.</dd>
+    <dt id="term-method">method</dt>
+    <dd>A function that belongs to a type and takes <code>self</code> — you call it as
+    <code>value.name()</code>.</dd>
+    <dt id="term-signature">signature</dt>
+    <dd>A function's name, parameters, their types, and its return type. A trait fixes the
+    signature; you fill in the body.</dd>
+    <dt id="term-parameter">parameter</dt>
+    <dd>A named slot in a function's signature. The value passed into it at a call site is
+    the <a class="dfn" href="#term-argument">argument</a>.</dd>
+    <dt id="term-self">self</dt>
+    <dd>The value a method was called on. <code>&amp;mut self</code> means "I may change
+    it"; stage 5 is about why that matters.</dd>
+    <dt id="term-reference">reference (<code>&amp;</code>)</dt>
+    <dd>A borrowed view of a value — access without ownership. The single most important
+    symbol in Rust.</dd>
+    <dt id="term-scope">scope</dt>
+    <dd>The region of code where a name means something. Names go out of scope at the
+    closing brace, and that is also when values get cleaned up.</dd>
+    <dt id="term-return-type">return type</dt>
+    <dd>What a function hands back, written after <code>-&gt;</code>. Here
+    <code>main</code> returns <code>eframe::Result</code> — it can fail.</dd>
+    <dt id="term-widget">widget</dt>
+    <dd>One interactive thing on screen: a label, a button, a text box. In egui they do not
+    survive between frames — see <a href="#stage-6">stage 6</a>.</dd>
+  </dl>
+</div>
+</section>
+
+<section class="stage" id="stage-3">
+<h3>Draw something</h3>
+
+<p class="level" data-level="guided"><span class="what">The pieces are named for you; the
+arrangement is yours. Expect one compiler error.</span></p>
+
+<p class="goal">The word "editor" appears in the window.</p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li>Fill in the empty body of <code>ui</code>. Inside it, make a
+  <dfn>panel</dfn> — a region of the window — and inside <em>that</em>, draw a
+  heading reading <code>editor</code>.</li>
+</ol>
+
+<h4>What you'll need</h4>
+
+<p>Three names, which you could not have guessed and are not expected to:</p>
+
+<ul class="brief">
+  <li><code>egui::CentralPanel::default()</code> makes the panel. <code>CentralPanel</code>
+  takes whatever space other panels leave; later you'll add a top panel for tabs and a
+  bottom one for a status bar, and this one shrinks around them automatically.</li>
+  <li><code>.show(ui, |ui| { … })</code> puts things in it. The second argument is a
+  <dfn>closure</dfn> — an anonymous function written between the pipes. Read the whole
+  call as "inside this panel, do the following".</li>
+  <li><code>ui.heading("editor")</code> draws large text. Calls on the inner
+  <code>ui</code> lay out top to bottom in the order you write them. There is no layout
+  file and no positioning: the order of your statements <em>is</em> the layout.</li>
+</ul>
+
+<div class="callout warn">
+  <span class="label">You are meant to hit an error here — read it, don't skip it</span>
+  <code>error[E0425]: cannot find value `ui` in this scope</code>. Rust then spells out the
+  fix: <em>"the leading underscore in <code>_ui</code> marks it as unused, consider
+  renaming it to <code>ui</code>."</em> The underscore said "unused, don't warn me" — and
+  now you <em>are</em> using it. Fix it yourself before reading further; this is the
+  cheapest possible version of an error you will meet a hundred more times.
+</div>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo run<br>
+→ the window now says <strong>editor</strong> in large text</p>
+
+<details class="hint">
+<summary>Hint <span class="cost">— how the three names fit together</span></summary>
+<div class="spoiler-body">
+<p>They nest. The panel is built and immediately shown, in one chained expression; the
+closure you hand to <code>.show</code> is where the heading call goes. So the body of
+<code>ui</code> is one statement, and it ends in a semicolon.</p>
+<p>Note that the closure's own parameter is also called <code>ui</code>. That is not a
+mistake — it is a fresh <code>ui</code> for the inside of the panel, and it
+<dfn>shadows</dfn> the outer one for the length of the closure. Inside the braces,
+<code>ui</code> means the panel's.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— open once yours draws, or once you're stuck</span></summary>
+<div class="spoiler-body">
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl eframe::App for Editor</span></p>
+<pre><code><span class="dim"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
+<span class="del">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, _ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {}</span>
+<span class="add">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {
+        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
+            ui.<span class="f">heading</span>(<span class="s">"editor"</span>);
+        });
+    }</span>
+<span class="dim">}</span></code></pre>
+
+<p>The red line and the green line differ by one character — the underscore on
+<code>_ui</code>. That is the whole of <code>E0425</code>.</p>
+
+</div>
+</details>
+
+<div class="words">
+  <span class="label">Words you just met</span>
+  <dl>
+    <dt id="term-panel">panel</dt>
+    <dd>A region of the window. Panels claim space in the order they are added;
+    <code>CentralPanel</code> takes what is left.</dd>
+    <dt id="term-closure">closure</dt>
+    <dd>An anonymous function written inline, its parameters between
+    <code>|pipes|</code>. It can use names from around it, which is what makes it more than
+    a function.</dd>
+    <dt id="term-shadowing">shadowing</dt>
+    <dd>Declaring a name that hides an outer one of the same name, for the length of a
+    scope. Deliberate and common in Rust; not an error.</dd>
+    <dt id="term-chaining">method chaining</dt>
+    <dd>Calling a method on the result of the last one:
+    <code>default().show(…)</code>. You will see long chains of these in egui.</dd>
+    <dt id="term-expression">expression</dt>
+    <dd>Anything that produces a value. Almost everything in Rust is one, which is why a
+    whole panel can be built inside a single statement.</dd>
+    <dt id="term-e0425">E0425</dt>
+    <dd>The compiler's numbered name for "cannot find this value". Every Rust error has a
+    code, and <code>rustc --explain E0425</code> prints an essay about it.</dd>
+  </dl>
+</div>
+</section>
+
+<section class="stage" id="stage-4">
+<h3>Give it something to remember</h3>
+
+<p class="level" data-level="guided"><span class="what">Three edits. One new trait, one new
+type distinction, and a second error you should hit on purpose.</span></p>
+
+<p class="goal">A line of text you chose appears below the heading.</p>
+
+<h4>What to build</h4>
+
+<p>Three separate edits, in three parts of the file. Do them in order and don't run
+anything until all three are in — the file won't compile in between.</p>
+
+<ol class="brief">
+  <li>An editor needs a buffer, so give <code>Editor</code> a <dfn>field</dfn> called
+  <code>text</code>, of type <code>String</code>. <strong>Replace</strong>
+  <code>struct Editor;</code> from stage 2 — don't add alongside it, or you define the same
+  name twice. Then, just under it, implement the standard library's <code>Default</code>
+  trait for <code>Editor</code>, so there is a sensible starting value: a function
+  <code>default()</code> returning <code>Self</code> with <code>text</code> set to a line
+  of your choosing.</li>
+  <li>Draw that text. One line in <code>fn ui</code>, under the heading, using
+  <code>ui.label(…)</code>. Pass it a <em>reference</em> to your field, not the field
+  itself.</li>
+  <li>Elsewhere in the file: <code>main</code> no longer compiles. Fix it. Do this one by
+  reading the error rather than by being told.</li>
+</ol>
+
+<h4>What you'll need</h4>
+
+<p><strong><code>String</code> vs <code>&amp;str</code>.</strong> Rust has two string types
+and the difference matters constantly. A piece of text in quotes in your source — a
+<dfn>string literal</dfn> — is a <code>&amp;str</code>: a <em>borrowed</em> view of text
+baked into the binary, fixed size, can't grow. A <code>String</code> is <em>owned</em>,
+lives on the <dfn>heap</dfn>, and can grow. A text buffer must grow, so the field is a
+<code>String</code>, and <code>.to_owned()</code> on a literal copies it into one.</p>
+
+<p class="sidenote"><code>.to_string()</code>, <code>.to_owned()</code>, and
+<code>String::from()</code> are equivalent here. <code>.to_owned()</code> is the most
+precise about intent: <em>I am taking ownership of a copy.</em></p>
+
+<p><code>Self</code>, with a capital S, is the type you are implementing on — so inside
+<code>impl Default for Editor</code>, <code>Self { … }</code> constructs an
+<code>Editor</code>. That is why <code>main</code> will be able to say
+<code>Editor::default()</code>.</p>
+
+<p>And the <code>&amp;</code> in edit 2 means <em>borrow</em>: let the label read your text
+without taking it away. Write <code>self.text</code> without the <code>&amp;</code> and
+you'd hand the <code>String</code> over permanently; the compiler stops you. Ownership is
+coming into focus.</p>
+
+<div class="callout warn">
+  <span class="label">Edit 3 is a real error, and finding it is the exercise</span>
+  Once <code>Editor</code> has a field, the bare name <code>Editor</code> is a
+  <em>type</em>, not a value — so whatever <code>main</code> was handing to eframe is no
+  longer a thing that exists. Run <code>cargo check</code>, read
+  <code>error[E0423]</code>, and fix it from what it tells you. Then run
+  <code>cargo fmt</code>.
+</div>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo run<br>
+→ "Hello, editor." under the heading. <strong>You can't type in it.</strong> It's a label.</p>
+
+<details class="hint">
+<summary>Hint <span class="cost">— the shape of the Default impl, and what E0423 wants</span></summary>
+<div class="spoiler-body">
+<p>The <code>Default</code> implementation has the same grammar as the
+<code>eframe::App</code> one you typed in stage 2: <code>impl Trait for Type</code>, with
+the required function inside. This trait requires one function, called
+<code>default</code>, which takes nothing and returns <code>Self</code>.</p>
+<p>The body is a struct literal: the type's name (or <code>Self</code>), braces, and each
+field set to a value — <code>text: "…".to_owned(),</code>. Note the trailing comma; Rust
+wants one on every field.</p>
+<p>For <code>E0423</code>: you now have a way to make an <code>Editor</code> value that you
+did not have before. Use it where the bare type name currently sits.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— three edits, in order</span></summary>
+<div class="spoiler-body">
+
+<p>First edit. An editor needs a buffer, so give <code>Editor</code> a field.
+<strong>Replace</strong> <code>struct Editor;</code> from stage 2 — don't add alongside it,
+or you define the same name twice:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">top of the file</span></p>
+<pre><code><span class="dim"><span class="k">use</span> eframe::egui;</span>
+
+<span class="del"><span class="k">struct</span> <span class="t">Editor</span>;</span>
+<span class="add"><span class="k">struct</span> <span class="t">Editor</span> {
+    text: <span class="t">String</span>,
+}
+
+<span class="k">impl</span> <span class="t">Default</span> <span class="k">for</span> <span class="t">Editor</span> {
+    <span class="k">fn</span> <span class="f">default</span>() -&gt; <span class="t">Self</span> {
+        <span class="t">Self</span> {
+            text: <span class="s">"Hello, editor.\n"</span>.<span class="f">to_owned</span>(),
+        }
+    }
+}</span></code></pre>
+
+<p>Second edit — draw that text. One line, under the heading:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, under the heading</span></p>
+<pre><code><span class="dim">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {
+            ui.<span class="f">heading</span>(<span class="s">"editor"</span>);</span>
+<span class="add">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.text);</span>
+<span class="dim">        });</span></code></pre>
+
+<p>Third edit, elsewhere in the file. In <code>main</code>, <code>Box::new(Editor)</code>
+no longer works: <code>Editor</code> has a field now, so the bare name is a <em>type</em>,
+not a value. Miss this one and you get
+<code>error[E0423]: expected value, found struct `Editor`</code>.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">at the bottom of main</span></p>
+<pre><code><span class="del">    eframe::<span class="f">run_native</span>(<span class="s">"editor"</span>, options, <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>))))</span>
+<span class="add">    eframe::<span class="f">run_native</span>(
+        <span class="s">"editor"</span>,
+        options,
+        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">default</span>()))),
+    )</span></code></pre>
+
+<p class="sidenote">It grew from one line to five only because <code>::default()</code>
+pushed it past <code>rustfmt</code>'s line width, so <code>cargo fmt</code> breaks the
+arguments out. Same call, wrapped.</p>
+
+</div>
+</details>
+
+<div class="words">
+  <span class="label">Words you just met</span>
+  <dl>
+    <dt id="term-field">field</dt>
+    <dd>A named piece of data inside a struct, reached with a dot:
+    <code>self.text</code>.</dd>
+    <dt id="term-owned">owned</dt>
+    <dd>This value is yours; you decide when it dies. A <code>String</code> is owned.</dd>
+    <dt id="term-borrowed">borrowed</dt>
+    <dd>You have access to something somebody else owns, for a while. Written with
+    <code>&amp;</code>.</dd>
+    <dt id="term-heap">heap</dt>
+    <dd>Memory that can grow and shrink while the program runs, and whose size need not be
+    known at compile time. A <code>String</code>'s text lives there.</dd>
+    <dt id="term-stack">stack</dt>
+    <dd>Memory that comes and goes with function calls, fixed-size and very fast. The
+    <code>String</code> value itself — a pointer, a length, a capacity — lives there.</dd>
+    <dt id="term-literal">string literal</dt>
+    <dd>Text in quotes in your source. Its type is <code>&amp;str</code>, and it is baked
+    into the binary, so it cannot grow.</dd>
+    <dt id="term-str">&amp;str vs String</dt>
+    <dd>Borrowed fixed text vs owned growable text. Nearly every Rust beginner's first
+    hour of confusion lives in this row.</dd>
+    <dt id="term-Self">Self</dt>
+    <dd>Capital S: the type an <code>impl</code> block is about. Lowercase
+    <code>self</code>: the value a method was called on. Different things.</dd>
+    <dt id="term-associated">associated function</dt>
+    <dd>A function on a type that does <em>not</em> take <code>self</code>, called as
+    <code>Type::name()</code>. <code>Editor::default()</code> is one. Other languages call
+    this a static method.</dd>
+    <dt id="term-default">Default</dt>
+    <dd>A trait from the standard library meaning "there is a sensible starting value for
+    this type". Implementing it is how <code>Editor::default()</code> came to exist.</dd>
+    <dt id="term-struct-literal">struct literal</dt>
+    <dd>How you build a struct value: <code>Self { text: … }</code>. Every field must be
+    given a value — Rust has no partially-built structs.</dd>
+    <dt id="term-e0423">E0423</dt>
+    <dd>"Expected value, found struct." You used a type's name where a value was needed —
+    the error you were sent to find in edit 3.</dd>
+  </dl>
+</div>
+</section>
+
+<section class="stage" id="stage-5">
+<h3>Make it editable — the stage that fails first</h3>
+
+<p class="level" data-level="yours"><span class="what">Write the wrong version on purpose,
+then let the compiler teach you the rule.</span></p>
+
+<p class="goal">Understand <code>&amp;mut</code> by getting it wrong, on purpose.</p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li>A label can't be edited, so swap it for a text box:
+  <code>ui.add(egui::TextEdit::multiline(…))</code>, replacing the
+  <code>ui.label(…)</code> line. Pass it exactly what you passed the label —
+  <code>&amp;self.text</code>. Try the obvious thing; keep the <code>&amp;</code> you
+  already know.</li>
+  <li>Run <code>cargo check</code>. It will not compile. Read the error, answer the
+  question below it, <em>then</em> make the one-token fix.</li>
+  <li>Once it compiles, make it look like a code editor: monospaced font, full width. Two
+  more calls chained onto the <code>TextEdit</code> before it goes into
+  <code>ui.add</code> — <code>.font(egui::TextStyle::Monospace)</code> and
+  <code>.desired_width(f32::INFINITY)</code>.</li>
+</ol>
+
+<p class="run">cargo check<br>
+<span class="note">— faster than <code>cargo run</code>, and it won't produce a binary. Use it whenever you're arguing with the compiler.</span></p>
+
+<h4>What the compiler will say</h4>
+
+<p>Roughly this, and the shape matters more than the wording:</p>
+
+<pre class="error"><code><span class="c">error[E0308]</span>: mismatched types
+   <span class="c">--&gt;</span> src/main.rs:19:46
+    |
+ 19 |             ui.add(egui::TextEdit::multiline(&amp;self.text));
+    |                    ------------------------- ^^^^^^^^^^ <span class="c">types differ in mutability</span>
+    |                    |
+    |                    arguments to this function are incorrect
+    |
+    = <span class="c">note: expected mutable reference</span> `&amp;mut dyn TextBuffer`
+                       <span class="c">found reference</span> `&amp;String`</code></pre>
+
+<details class="recall">
+  <summary>Before reading on: <em>types differ in mutability</em>. What is the text box asking for that a label didn't need, and why?</summary>
+  <p>A label only ever <em>reads</em> your text. A text box has to <em>write</em> into it
+  — when you press a key, that character has to end up in your <code>String</code>. So it
+  needs a stronger kind of access than <code>&amp;</code> can give.</p>
+</details>
+
+<p>This is the heart of Rust. Every value has one owner, and access is granted through
+<strong>borrows</strong>, of which there are exactly two kinds:</p>
+
+<table id="borrows">
+  <tr><th>Borrow</th><th>Written</th><th>How many at once</th><th>What you may do</th></tr>
+  <tr>
+    <td>Shared</td>
+    <td><code>&amp;</code></td>
+    <td>Any number</td>
+    <td>Read only. Never modify.</td>
+  </tr>
+  <tr>
+    <td>Exclusive</td>
+    <td><code>&amp;mut</code></td>
+    <td>Exactly one, ever</td>
+    <td>Modify freely. Nobody else can even look while you hold it.</td>
+  </tr>
+</table>
+
+<p>The rule underneath: <strong>many readers, or one writer — never both at once.</strong>
+That one rule is what lets Rust eliminate data races at compile time, and it's the rule
+you'll spend the next month arguing with. Now make the fix yourself — it is one token, in
+one place.</p>
+
+<p>And when it compiles, work out why <code>&amp;mut self</code> from stage 2 had to be
+there. You can only hand out <code>&amp;mut self.text</code> if you hold exclusive access
+to <code>self</code> — a shared borrow can't be upgraded into an exclusive one. That token
+is a permission slip, and without it typing would be impossible.</p>
+
+<p class="sidenote">Worth doing: change <code>&amp;mut self</code> to <code>&amp;self</code>
+in the <code>ui</code> signature and run <code>cargo check</code> again. Two errors, not
+one — the borrow error, and a complaint that your <code>ui</code> no longer matches the
+signature <code>eframe::App</code> requires. Two lessons in one mistake. Put it back
+after.</p>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo run<br>
+→ <strong>Type in it.</strong> This is a text editor now, for a generous definition of "editor".</p>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— the broken line, the fix, and the expansion</span></summary>
+<div class="spoiler-body">
+
+<p>The version that fails, for comparison with yours:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, replacing the label</span></p>
+<pre><code><span class="dim">            ui.<span class="f">heading</span>(<span class="s">"editor"</span>);</span>
+<span class="del">            ui.<span class="f">label</span>(&amp;<span class="k">self</span>.text);</span>
+<span class="add">            ui.<span class="f">add</span>(egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">self</span>.text));</span></code></pre>
+
+<p>The fix — one token:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">same line, in fn ui</span></p>
+<pre><code><span class="add">            ui.<span class="f">add</span>(egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text));</span></code></pre>
+
+<p>Read it as: <em>here is my buffer — you may write directly into it.</em> A keypress
+pushes that character into <em>your</em> <code>String</code>. No copy, no synchronisation
+step, no reading the value back out afterwards.</p>
+
+<p>And the expansion, monospaced and full width:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, expanding the TextEdit</span></p>
+<pre><code><span class="add">            ui.<span class="f">add</span>(
+                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)
+                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)
+                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),
+            );</span></code></pre>
+
+</div>
+</details>
+
+<div class="words">
+  <span class="label">Words you just met</span>
+  <dl>
+    <dt id="term-ownership">ownership</dt>
+    <dd>Every value has exactly one owner, and is cleaned up when the owner goes out of
+    scope. No garbage collector, no manual free.</dd>
+    <dt id="term-shared-borrow">shared borrow (<code>&amp;</code>)</dt>
+    <dd>Read-only access. Any number at once.</dd>
+    <dt id="term-exclusive-borrow">exclusive borrow (<code>&amp;mut</code>)</dt>
+    <dd>Read-and-write access. Exactly one at a time, and nobody else may even read
+    meanwhile.</dd>
+    <dt id="term-mutable">mutable (<code>mut</code>)</dt>
+    <dd>Changeable. Everything in Rust is immutable until you say otherwise — the opposite
+    default from most languages.</dd>
+    <dt id="term-data-race">data race</dt>
+    <dd>Two things touching the same data at once, one of them writing. The borrow rule
+    makes this a compile error rather than a bug you hunt at 2am.</dd>
+    <dt id="term-builder">builder pattern</dt>
+    <dd>Each call returns the thing back so you can chain another:
+    <code>multiline(…).font(…).desired_width(…)</code>. egui is built on this.</dd>
+    <dt id="term-f32">f32</dt>
+    <dd>A 32-bit floating point number. <code>f32::INFINITY</code> here means "as wide as
+    there is room for".</dd>
+    <dt id="term-e0308">E0308</dt>
+    <dd>"Mismatched types" — the most common Rust error there is. The
+    <code>note:</code> lines under it tell you what was expected and what arrived.</dd>
+  </dl>
+</div>
+</section>
+
+<section class="stage" id="stage-6">
+<h3>Prove there's only one source of truth</h3>
+
+<p class="level" data-level="yours"><span class="what">One line. Then the idea the whole
+lesson exists for.</span></p>
+
+<p class="goal">A live byte count that you never wired up to anything.</p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li>One more line, below the text box: a label showing how many bytes are in your
+  buffer. You will need <code>format!</code> — a macro that builds a
+  <code>String</code> from a template, where <code>{}</code> marks a slot — and
+  <code>.len()</code>, which on a <code>String</code> counts bytes.</li>
+</ol>
+
+<p>Deliberately do <em>not</em> wire it up to anything. No callback, no event, no update
+step. Write only the label, run it, and type into the box.</p>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo run<br>
+→ a byte counter that moves as you type</p>
+
+<details class="hint">
+<summary>Hint <span class="cost">— the shape of the format! call</span></summary>
+<div class="spoiler-body">
+<p><code>ui.label(…)</code> again, but instead of a reference to a field you hand it the
+<code>String</code> that <code>format!</code> just built — that one is owned and brand new,
+so it needs no <code>&amp;</code>.</p>
+<p>The template is a string literal with a <code>{}</code> where the number goes, followed
+by a comma and the value to put there.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— one line</span></summary>
+<div class="spoiler-body">
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, below the TextEdit</span></p>
+<pre><code><span class="dim">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),
+            );</span>
+<span class="add">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span></code></pre>
+
+</div>
+</details>
+
+<div class="callout key" id="one-source-of-truth">
+  <span class="label">This is the whole lesson</span>
+  Nothing connects that label to that text box. No event, no listener, no data binding, no
+  <code>onChange</code>. The label is simply recomputed from <code>self.text</code> on the
+  next frame — and a frame happens because you pressed a key.
+</div>
+
+<p>This is <strong>immediate mode</strong>, and it's why we chose <code>egui</code>. In a
+<em>retained mode</em> toolkit (GTK, Qt, the DOM) you create a text box object, register a
+callback, and keep your data in sync with the widget's copy. Two sources of truth, with
+most GUI bugs living in the gap. The egui README puts it directly:</p>
+
+<blockquote>
+<p>"In a retained GUI you create a button, add it to some UI and install some on-click
+handler (callback)&hellip; By contrast, in immediate mode you show the button and interact
+with it immediately, and you do so every frame."</p>
+<p>"You don't have to worry about app state and GUI state being out-of-sync&hellip;
+because the GUI isn't storing any state — it is showing the latest state immediately."</p>
+<p style="text-align:right">— <a href="https://github.com/emilk/egui#immediate-mode">emilk/egui README</a></p>
+</blockquote>
+
+<p class="sidenote" id="repaints">"Every frame" is the model you code against, not what actually happens.
+egui "only repaints when there is interaction (e.g. mouse movement) or an animation, so if
+your app is idle, no CPU is wasted"
+(<a href="https://github.com/emilk/egui#faq">README FAQ</a>).</p>
+
+<div class="callout warn">
+  <span class="label">The bill comes due later</span>
+  Immediate mode redoes the full layout every frame, so per the same README, "the layout
+  code needs to be quick&hellip; having a very large UI in a scroll area (with very long
+  scrollback) can be slow." A promise that we fight this crate around lesson 6, when a
+  50,000-line file meets a naive redraw.
+</div>
+
+<div class="words">
+  <span class="label">Words you just met</span>
+  <dl>
+    <dt id="term-format">format!</dt>
+    <dd>A macro that builds a <code>String</code> from a template. <code>{}</code> is a
+    slot; the values come after the comma.</dd>
+    <dt id="term-frame">frame</dt>
+    <dd>One pass of drawing the whole UI. Your <code>ui</code> function <em>is</em> a
+    frame.</dd>
+    <dt id="term-repaint">repaint</dt>
+    <dd>Running another frame. egui does one when something happens — a keypress, a mouse
+    move — not sixty times a second regardless.</dd>
+    <dt id="term-immediate">immediate mode</dt>
+    <dd>You describe the whole UI every frame from your own data. Widgets keep no state, so
+    nothing can drift out of sync.</dd>
+    <dt id="term-retained">retained mode</dt>
+    <dd>The older model: you create widget objects that live on, and keep their contents in
+    sync with your data by hand. GTK, Qt and the DOM all work this way.</dd>
+    <dt id="term-callback">callback</dt>
+    <dd>A function you hand to a toolkit to be called later, when something happens. The
+    thing immediate mode lets you stop writing.</dd>
+    <dt id="term-source-of-truth">source of truth</dt>
+    <dd>The one place a fact actually lives. Here it is <code>self.text</code>, and
+    nowhere else.</dd>
+    <dt id="term-bytes">bytes vs characters</dt>
+    <dd><code>.len()</code> counts bytes, not letters — <code>é</code> is two. Lesson 4
+    makes you care about the difference.</dd>
+  </dl>
+</div>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>Forty lines. Diff yours against it, and run <code>cargo fmt</code> — the community
+standard, no configuration, no debate.</p>
+
+<details class="spoiler">
+<summary>The finished file <span class="cost">— to diff against, once yours runs</span></summary>
+<div class="spoiler-body">
+
+<p class="filename">editor/src/main.rs</p>
+<pre class="numbered"><code><span class="l"><span class="k">use</span> eframe::egui;</span>
+<span class="l"></span>
+<span class="l"><span class="k">struct</span> <span class="t">Editor</span> {</span>
+<span class="l">    text: <span class="t">String</span>,</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> <span class="t">Default</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="k">fn</span> <span class="f">default</span>() -&gt; <span class="t">Self</span> {</span>
+<span class="l">        <span class="t">Self</span> {</span>
+<span class="l">            text: <span class="s">"Hello, editor.\n"</span>.<span class="f">to_owned</span>(),</span>
+<span class="l">        }</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">impl</span> eframe::<span class="t">App</span> <span class="k">for</span> <span class="t">Editor</span> {</span>
+<span class="l">    <span class="k">fn</span> <span class="f">ui</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;<span class="k">mut</span> egui::<span class="t">Ui</span>, _frame: &amp;<span class="k">mut</span> eframe::<span class="t">Frame</span>) {</span>
+<span class="l">        egui::<span class="t">CentralPanel</span>::<span class="f">default</span>().<span class="f">show</span>(ui, |ui| {</span>
+<span class="l">            ui.<span class="f">heading</span>(<span class="s">"editor"</span>);</span>
+<span class="l">            ui.<span class="f">add</span>(</span>
+<span class="l">                egui::<span class="t">TextEdit</span>::<span class="f">multiline</span>(&amp;<span class="k">mut</span> <span class="k">self</span>.text)</span>
+<span class="l">                    .<span class="f">font</span>(egui::<span class="t">TextStyle</span>::<span class="t">Monospace</span>)</span>
+<span class="l">                    .<span class="f">desired_width</span>(f32::<span class="t">INFINITY</span>),</span>
+<span class="l">            );</span>
+<span class="l">            ui.<span class="f">label</span>(<span class="f">format!</span>(<span class="s">"{} bytes"</span>, <span class="k">self</span>.text.<span class="f">len</span>()));</span>
+<span class="l">        });</span>
+<span class="l">    }</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
+<span class="l">    <span class="k">let</span> options = eframe::<span class="t">NativeOptions</span> {</span>
+<span class="l">        viewport: egui::<span class="t">ViewportBuilder</span>::<span class="f">default</span>().<span class="f">with_inner_size</span>([<span class="s">800.0</span>, <span class="s">600.0</span>]),</span>
+<span class="l">        ..<span class="t">Default</span>::<span class="f">default</span>()</span>
+<span class="l">    };</span>
+<span class="l"></span>
+<span class="l">    eframe::<span class="f">run_native</span>(</span>
+<span class="l">        <span class="s">"editor"</span>,</span>
+<span class="l">        options,</span>
+<span class="l">        <span class="t">Box</span>::<span class="f">new</span>(|_cc| <span class="t">Ok</span>(<span class="t">Box</span>::<span class="f">new</span>(<span class="t">Editor</span>::<span class="f">default</span>()))),</span>
+<span class="l">    )</span>
+<span class="l">}</span></code></pre>
+
+</div>
+</details>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<p>Don't skip these. Recall builds far more durable memory than re-reading — and you need
+this in six months, in an interview. Each explanation links back to where the idea was
+taught; Back returns you here.</p>
+
+<div class="quiz">
+  <p class="q">You type "fn" into the window. Between that frame and the next, where does that text physically live?</p>
+  <ul class="options">
+    <li data-correct>In the <code>Editor</code> struct's field</li>
+    <li>In the <code>TextEdit</code> widget's object</li>
+    <li>In the <code>egui::Ui</code> layout tree</li>
+    <li>In the <code>eframe</code> window's handle</li>
+  </ul>
+  <p class="why">Immediate-mode widgets are transient — that <code>TextEdit</code> is
+  constructed and thrown away every single frame. Your struct is the only thing that
+  survives between frames, which is exactly why nothing can fall out of sync.
+  <a class="review" href="#one-source-of-truth">↑ Review: one source of truth (stage 6)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Stage 4's <code>ui.label(&amp;self.text)</code> compiled fine. Why did the same <code>&amp;</code> fail for <code>TextEdit</code>?</p>
+  <ul class="options">
+    <li data-correct>A text box writes; a label only reads</li>
+    <li>Labels copy the string; text boxes borrow it</li>
+    <li>Text boxes need owned data, not borrowed</li>
+    <li>Labels take a str, text boxes a String</li>
+  </ul>
+  <p class="why">Exactly what <code>E0308: types differ in mutability</code> was telling
+  you. A shared borrow grants read access; typing is a write, so <code>TextEdit</code>
+  demands an exclusive <code>&amp;mut</code> borrow instead.
+  <a class="review" href="#borrows">↑ Review: the two kinds of borrow (stage 5)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">What does <code>impl eframe::App for Editor</code> actually claim?</p>
+  <ul class="options">
+    <li data-correct><code>Editor</code> provides every function that trait demands</li>
+    <li><code>Editor</code> inherits the behaviour of a parent class</li>
+    <li><code>eframe::App</code> gains a new method called <code>Editor</code></li>
+    <li><code>Editor</code> becomes a copy of the <code>App</code> type</li>
+  </ul>
+  <p class="why">Read <code>impl X for Y</code> as "Y keeps X's promises". It is a
+  contract, not inheritance — there is no parent class anywhere, and the compiler checks
+  every signature in the contract before it accepts the block.
+  <a class="review" href="#term-trait">↑ Review: trait, implement, signature (stage 2)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Your app sits open and untouched for a minute. Roughly how many times does <code>ui</code> run?</p>
+  <ul class="options">
+    <li data-correct>Almost none — input drives repaints</li>
+    <li>About 3,600 — sixty frames per second</li>
+    <li>Exactly one — the initial layout pass</li>
+    <li>Thousands — capped by the display's refresh</li>
+  </ul>
+  <p class="why">"Every frame" is the mental model you code against, but egui only
+  repaints on interaction or animation, so an idle app costs no CPU. You get immediate
+  mode's simplicity without the battery drain you'd expect.
+  <a class="review" href="#repaints">↑ Review: when egui actually repaints (stage 6)</a></p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2 id="glossary">Every word in this lesson</h2>
+
+<p>Fifty-odd terms in one sitting is a lot, and you are not meant to have absorbed them
+all. Come back to this list — each one links to where it was defined, in the stage that
+introduced it.</p>
+
+<ul class="glossary-index">
+  <li><a href="#term-argument">argument</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-associated">associated function</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-binary">binary</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-borrowed">borrowed</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-builder">builder pattern</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-bytes">bytes vs characters</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-callback">callback</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-cargo">cargo</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-closure">closure</a> <span class="stage-ref">3</span></li>
+  <li><a href="#term-compile">compile</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-crate">crate</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-data-race">data race</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-default">Default</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-e0308">E0308</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-e0423">E0423</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-e0425">E0425</a> <span class="stage-ref">3</span></li>
+  <li><a href="#term-exclusive-borrow">exclusive borrow</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-expression">expression</a> <span class="stage-ref">3</span></li>
+  <li><a href="#term-f32">f32</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-field">field</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-format">format!</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-frame">frame</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-function">function</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-heap">heap</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-immediate">immediate mode</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-impl">implement</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-literal">string literal</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-macro">macro</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-main">main</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-method">method</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-chaining">method chaining</a> <span class="stage-ref">3</span></li>
+  <li><a href="#term-mutable">mutable</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-owned">owned</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-ownership">ownership</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-panel">panel</a> <span class="stage-ref">3</span></li>
+  <li><a href="#term-parameter">parameter</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-path">path (<code>::</code>)</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-reference">reference</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-repaint">repaint</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-retained">retained mode</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-return-type">return type</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-scope">scope</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-Self">Self vs self</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-self">self</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-shadowing">shadowing</a> <span class="stage-ref">3</span></li>
+  <li><a href="#term-shared-borrow">shared borrow</a> <span class="stage-ref">5</span></li>
+  <li><a href="#term-signature">signature</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-source-of-truth">source of truth</a> <span class="stage-ref">6</span></li>
+  <li><a href="#term-stack">stack</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-str">&amp;str vs String</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-struct">struct</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-struct-literal">struct literal</a> <span class="stage-ref">4</span></li>
+  <li><a href="#term-token">token</a> <span class="stage-ref">1</span></li>
+  <li><a href="#term-trait">trait</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-type">type</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-use">use declaration</a> <span class="stage-ref">2</span></li>
+  <li><a href="#term-widget">widget</a> <span class="stage-ref">2</span></li>
+</ul>
+
+<h2>Read this before lesson 2</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://rust-book.cs.brown.edu/ch04-00-understanding-ownership.html">
+<em>The Rust Programming Language</em>, Chapter 4 — Understanding Ownership</a>
+(Brown University interactive edition). Read 4.1 and 4.2; 4.3 can wait.</p>
+
+<p>Use this edition, not the official one. Same book, plus inline quizzes you retry to
+mastery and diagrams that animate memory as the code runs. Its ownership chapter was
+rewritten around research into what learners actually get wrong. Stage 5 gave you the
+rule; chapter 4 gives you the reasons.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> In this variant especially: tell
+  me which stages you could actually attempt and which ones collapsed into transcription,
+  because that judgement is mine to calibrate and I will get it wrong without you. And if a
+  word in one of the panels above is glossed in terms of another word you don't have yet,
+  say so — that is a bug in the lesson, not in you. Paste me the exact error text when
+  something fails and we'll read it together.
+</div>
+
+<nav class="footer-nav">
+  <a href="0001-your-first-window.html">The walked-through version of this lesson</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <a href="../MISSION.md">Mission</a>
+  <a href="0002-opening-a-real-file.html">Next: Lesson 2 — Opening a Real File →</a>
+</nav>
+
+</body>
+</html>

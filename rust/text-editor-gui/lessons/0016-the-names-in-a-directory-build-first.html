@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 16 — The Names in a Directory (build-first)</title>
+<!-- @assets:style.css,quiz.css,spoiler.css,quiz.js,spoiler.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<style>
+/* ---- generated from rust/text-editor-gui/assets/spoiler.css — do not edit here ---- */
+/* ============================================================
+   Spoiler + hint — components for the "build-first" lesson variant.
+
+   In a build-first lesson the reader is given the brief and writes the code
+   themselves; the answer is folded away until they ask for it. That only
+   works if the fold is obviously a fold — a <details> with the browser's
+   default triangle reads as an aside, and gets opened by reflex. So these
+   are deliberately loud, labelled with what opening them costs.
+
+   Tutorial-local for now (nearest-first wins over the root assets/). Promote
+   to the workspace assets/ if a second topic wants the same shape.
+   ============================================================ */
+
+details.hint,
+details.spoiler {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  margin: 0 0 1.3rem;
+  background: var(--paper);
+}
+
+details.spoiler { border-left: 3px solid var(--accent); }
+details.hint    { border-left: 3px solid var(--rule); }
+
+details.hint > summary,
+details.spoiler > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.6rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* the default disclosure triangle, in both engines */
+details > summary::-webkit-details-marker { display: none; }
+details.hint > summary::marker,
+details.spoiler > summary::marker { content: ""; }
+
+details.hint > summary::before,
+details.spoiler > summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 1.1em;
+  color: var(--accent);
+}
+details[open].hint > summary::before,
+details[open].spoiler > summary::before { content: "▾"; }
+
+details.spoiler > summary { color: var(--accent); }
+details.hint > summary:hover,
+details.spoiler > summary:hover { background: var(--accent-soft); }
+
+/* What it costs to open — sits after the label, in the reader's own voice. */
+details.hint > summary .cost,
+details.spoiler > summary .cost {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--serif);
+  font-size: 0.86rem;
+  color: var(--ink-faint);
+  margin-left: 0.6em;
+}
+
+details.hint > summary + *,
+details.spoiler > summary + * { margin-top: 0.2rem; }
+
+.spoiler-body {
+  padding: 0.2rem 1rem 0.4rem;
+  border-top: 1px solid var(--rule);
+}
+.spoiler-body > :last-child { margin-bottom: 0.8rem; }
+
+/* The brief: what to build, before any code exists to look at. Numbered,
+   because a reader tallies edits as they go — same contract as a stage that
+   announces a count. */
+.brief {
+  counter-reset: brief;
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 1.3rem;
+}
+.brief > li {
+  counter-increment: brief;
+  position: relative;
+  padding-left: 2.2rem;
+  margin-bottom: 0.7rem;
+}
+.brief > li::before {
+  content: counter(brief);
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  width: 1.5rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.5rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+/* On paper a fold is useless — nobody can click it. Print everything open. */
+@media print {
+  details.hint,
+  details.spoiler { break-inside: avoid; }
+  details.hint > summary,
+  details.spoiler > summary { color: var(--ink-faint); }
+  details::details-content { content-visibility: visible !important; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<script>
+/* ---- generated from rust/text-editor-gui/assets/spoiler.js — do not edit here ---- */
+/* A link into a folded answer has to unfold it, or it silently does nothing.
+   Newer browsers auto-expand <details> for a fragment target; older ones do
+   not, and this document is meant to work from a file:// URL on any of them.
+   Also: printing, where a closed fold would just vanish from the page. */
+(function () {
+  function reveal(hash) {
+    if (!hash || hash.length < 2) return;
+    var target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    for (var node = target; node; node = node.parentElement) {
+      if (node.tagName === "DETAILS") node.open = true;
+    }
+    target.scrollIntoView();
+  }
+
+  window.addEventListener("hashchange", function () { reveal(location.hash); });
+  document.addEventListener("DOMContentLoaded", function () { reveal(location.hash); });
+  window.addEventListener("beforeprint", function () {
+    var all = document.querySelectorAll("details");
+    for (var i = 0; i < all.length; i++) all[i].open = true;
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 16 <span class="sep">/</span> Part 2 <span class="sep">/</span> build-first <span class="sep">/</span> ~50 minutes</p>
+  <h1>The Names in a Directory</h1>
+  <p class="subtitle">Three stages. You are given the brief; the code stays folded up until you ask for it.</p>
+</header>
+
+<div class="thesis">
+  Reading a directory can fail twice — once when you open it, and again on every
+  entry.<br>
+  <code>read_dir</code> says so in the types, and <code>?</code> makes saying so cheap.
+</div>
+
+<p>Every file this editor has ever opened arrived as a command-line argument, decided
+before the window existed. <code>Editor::open</code> runs once, from
+<code>env::args</code>, and after that the list of buffers is fixed — there is no code
+path anywhere that adds one. This lesson adds the first.</p>
+
+<p>By the end, <kbd>Ctrl</kbd>+<kbd>O</kbd> lists the directory you started the editor
+from, and clicking a name opens it in a new tab.</p>
+
+<h2 id="how-this-works">How this variant works</h2>
+
+<p>This is <a href="0016-the-names-in-a-directory.html">lesson 16</a> turned inside out.
+The ordinary lesson shows you a change and then explains it. Here every stage gives you
+the brief first — what to build, where it goes, what it must do, and any idea you could
+not reasonably invent — and then gets out of the way. <strong>You write the code.</strong></p>
+
+<p>Each stage is laid out the same way:</p>
+
+<ul class="brief">
+  <li><strong>The goal</strong> — the observable outcome, same as always.</li>
+  <li><strong>What to build</strong> — a numbered brief. One item per edit, so you can
+  tally them the way you would tally code blocks.</li>
+  <li><strong>What you'll need</strong> — only where the stage turns on something new.
+  Named, not written out.</li>
+  <li><strong>How you'll know</strong> — the command to run and what it should say.
+  Get here before you open anything.</li>
+  <li><strong>A hint</strong>, folded — the idea you're missing, still no code.</li>
+  <li><strong>The code</strong>, folded — what I would have written, and why it is
+  shaped that way. Some of the teaching lives in here, so open it once you're done
+  even if you never got stuck.</li>
+</ul>
+
+<div class="callout key">
+  <span class="label">The order that makes this worth doing</span>
+  Attempt → compile → hint → attempt again → reveal. Opening the code before you have
+  written something of your own turns this back into the ordinary lesson, minus the
+  explanations. If you are stuck for more than ten minutes, that is what the hint is
+  for — being stuck past that point stops teaching you anything.
+</div>
+
+<div class="callout warn">
+  <span class="label">Expect compiler errors — two of them are the point</span>
+  Stages 2 and 3 both have a wall in them that this variant deliberately does not warn
+  you about in advance. Hitting <code>error[E0502]</code> yourself and reading what it
+  says is the single most valuable thing on this page. When you get it, read the error
+  before you read the hint.
+</div>
+
+<h2>Before you start</h2>
+
+<p>You should be at the end of <a href="0015-being-asked-first.html">lesson 15</a>:
+<code>cargo test</code> reports seventeen passing, and <code>src/main.rs</code> is 620
+lines. Two of the three stages below end in a running window; the first ends in a test.</p>
+
+<p><code>fs</code> and <code>io</code> are already in scope at the top of the file —
+lessons 2 and 3 put them there. You will not need a new <code>use</code> line anywhere
+in this lesson.</p>
+
+<div class="callout key">
+  <span class="label">Type it, don't paste it</span>
+  Doubly so here — there is nothing to paste until you have already written your own.
+  It is about eighty lines this time.
+</div>
+
+<section class="stage" id="stage-list">
+<h3>Ask the filesystem what is there</h3>
+
+<p class="goal"><code>cargo test</code> reports twenty passing.</p>
+
+<p>Before any of this reaches the screen it is a question about data: given a directory,
+what is in it? That is a function, and a function can be tested — so this stage writes
+one and proves it, with no UI at all. <strong>Two edits.</strong></p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li>A free function <code>list_dir</code>, just above <code>enum Pending</code>. It
+  takes a directory as a <code>&amp;str</code> and hands back the <em>names</em> in it —
+  not the paths, just the names — sorted, as <code>String</code>s. It can fail, and its
+  type has to say so: <code>io::Result&lt;Vec&lt;String&gt;&gt;</code>. Give it a doc
+  comment.</li>
+  <li>Three tests at the end of <code>mod tests</code>. One: listing
+  <code>"."</code> finds <code>Cargo.toml</code>. Two: the names come back sorted — check
+  that by cloning the result, sorting the clone, and asserting the two are equal. Three:
+  listing a directory that does not exist is an <code>Err</code>.</li>
+</ol>
+
+<p><code>cargo test</code> runs with the crate root as the working directory, so
+<code>"."</code> is the directory holding <code>Cargo.toml</code>. That is what makes the
+first test stable rather than a guess about your machine.</p>
+
+<p class="sidenote">The third test is the one that would catch a rewrite that swallowed
+errors. It is easy to write <code>list_dir</code> so that an unreadable directory returns
+an empty <code>Vec</code> and looks, on screen, exactly like an empty directory. The test
+says those must stay distinguishable.</p>
+
+<h4>What you'll need</h4>
+
+<p><a href="https://doc.rust-lang.org/std/fs/fn.read_dir.html"><code>std::fs::read_dir</code></a>
+is the whole of it. Open that page before you write anything and read the signature —
+this lesson is partly an exercise in getting the answer from the docs rather than from
+me.</p>
+
+<div class="callout key">
+  <span class="label">Count the ways this can fail before you write the body</span>
+  There are two, and they are at different depths. One is the call itself. The other is
+  in the type of what you get back when you iterate it — look at that type carefully, and
+  notice that it is not what a beginner would expect. Neither failure can be ignored, and
+  the compiler will not let you pretend otherwise.
+</div>
+
+<h4 id="lossy">The line you will have to justify</h4>
+
+<p>You cannot derive this one, so here it is up front.</p>
+
+<p>A directory entry's <code>file_name()</code> gives an
+<a href="https://doc.rust-lang.org/std/ffi/struct.OsString.html"><code>OsString</code></a>,
+not a <code>String</code>. A filename on Linux is a bag of bytes that is merely
+<em>usually</em> UTF-8, and <code>String</code> promises it always is. Those are different
+claims, so the types are different.</p>
+
+<p>The bridge you want is <code>.to_string_lossy()</code>, which replaces anything that
+isn't valid UTF-8 with <code>U+FFFD</code>, the replacement character — followed by
+<code>.into_owned()</code>, because you need a <code>String</code> you can keep rather
+than a borrow. <code>to_string_lossy</code> cannot fail, which is exactly the problem: a
+name that has been altered no longer names the file.</p>
+
+<div class="callout warn">
+  <span class="label">Deferred on purpose — lesson 17 breaks this</span>
+  Use it anyway, because <code>String</code> is what the rest of the editor already speaks
+  and changing that is a lesson of its own. Lesson 17 creates a file whose name is not
+  valid UTF-8, watches this picker fail to open it, and replaces <code>String</code> with
+  <code>PathBuf</code> throughout. Write the lossy line knowing it is on borrowed time.
+</div>
+
+<h4>How you'll know</h4>
+
+<div class="callout note">
+  <span class="label">Expect one warning at this stage</span>
+  Nothing calls <code>list_dir</code> from the program yet — only the tests do — so
+  <code>cargo run</code> and <code>cargo clippy</code> will tell you:
+  <code>warning: function `list_dir` is never used</code>. That is correct, and it goes
+  away in stage 2 when the shortcut calls it. It is not something you broke.
+</div>
+
+<p class="run">cargo test<br>
+→ <em>test result: ok. 20 passed; 0 failed</em></p>
+
+<details class="hint">
+<summary>Hint <span class="cost">— the shape of the loop, still no code</span></summary>
+<div class="spoiler-body">
+<p>Build the <code>Vec</code> yourself with a <code>for</code> loop rather than reaching
+for an iterator chain — the failures are easier to see that way, and you can come back and
+condense it later.</p>
+<p>Iterating what <code>read_dir</code> returns does not give you a directory entry. It
+gives you a <code>Result</code> containing one, on <em>every</em> iteration. So there is a
+<code>?</code> inside the loop as well as one on the call that opened the directory, and
+the one inside the loop is the surprising one.</p>
+<p>Sorting is one line at the end, and <code>Vec</code> already has the method.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— open once yours passes, or once you're stuck</span></summary>
+<div class="spoiler-body">
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<p>The function, just above <code>enum Pending</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">above the Pending enum</span></p>
+<pre><code><span class="add"><span class="c">/// The names in a directory, sorted. Not the paths — just the names.</span>
+<span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="k">str</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt; {
+    <span class="k">let</span> <span class="k">mut</span> names = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">for</span> entry <span class="k">in</span> fs::<span class="f">read_dir</span>(dir)? {
+        names.<span class="f">push</span>(entry?.<span class="f">file_name</span>().<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>());
+    }
+    names.<span class="f">sort</span>();
+    <span class="f">Ok</span>(names)
+}</span>
+<span class="dim">#[<span class="f">derive</span>(<span class="t">Clone</span>, <span class="t">Copy</span>)]
+<span class="k">enum</span> <span class="t">Pending</span> {</span></code></pre>
+
+<h4 id="two-failures">Two failures, two <code>?</code>s</h4>
+
+<p>Look at where the question marks are. There are two, and they are catching different
+things.</p>
+
+<p><code>fs::read_dir(dir)?</code> is the first. Opening a directory can fail — it might
+not exist, or you might not be allowed to look. That returns
+<code>io::Result&lt;ReadDir&gt;</code>, and <code>?</code> hands the error back to whoever
+called us.</p>
+
+<p><code>entry?</code> is the second, and it is the one worth slowing down for.
+<code>ReadDir</code> is an iterator, and each item is
+<code>io::Result&lt;DirEntry&gt;</code> — not <code>DirEntry</code>. Reading a directory is
+not one operation that succeeds or fails; it is a walk, and the walk can fail partway
+through, on the fourth entry of nine. The type says so. You cannot write this loop without
+deciding what happens when it does.</p>
+
+<p class="sidenote">This is the shape you will meet again and again in
+<code>std</code>: an iterator of <code>Result</code> rather than a
+<code>Result</code> of an iterator. It exists because the failure is per-item, and
+flattening it away would be a lie.</p>
+
+<p>Second edit — three tests, at the end of <code>mod tests</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, at the end</span></p>
+<pre><code><span class="dim">        <span class="f">assert_eq</span>!(editor.<span class="f">unsaved</span>(), <span class="s">0</span>);
+    }</span>
+<span class="add">    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {
+        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(names.<span class="f">contains</span>(&amp;<span class="s">&quot;Cargo.toml&quot;</span>.<span class="f">to_owned</span>()));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_sorts_its_names</span>() {
+        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>).<span class="f">unwrap</span>();
+        <span class="k">let</span> <span class="k">mut</span> sorted = names.<span class="f">clone</span>();
+        sorted.<span class="f">sort</span>();
+        <span class="f">assert_eq</span>!(names, sorted);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_reports_a_directory_that_is_not_there</span>() {
+        <span class="f">assert</span>!(<span class="f">list_dir</span>(<span class="s">&quot;no/such/directory&quot;</span>).<span class="f">is_err</span>());
+    }</span>
+<span class="dim">}</span></code></pre>
+
+<p>If yours differs — an iterator chain instead of a loop, a different doc comment, tests
+named differently — that is fine. What has to match is the signature and the two
+<code>?</code>s, because stage 2 calls this and the next lesson rewrites it.</p>
+
+</div>
+</details>
+</section>
+
+<section class="stage" id="stage-show">
+<h3>Put the names on screen</h3>
+
+<p class="goal"><kbd>Ctrl</kbd>+<kbd>O</kbd> opens a panel listing the directory.</p>
+
+<p>The listing is data the editor holds while a question is on screen — which is exactly
+the shape of <code>confirm</code> from <a href="0015-being-asked-first.html">lesson
+15</a>, and it gets the same treatment. <strong>Five edits.</strong></p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li>A field on <code>struct Editor</code> holding the listing. Look at how
+  <code>confirm</code> is declared before you write it: something that is only sometimes
+  there, set when the question opens and cleared when it closes. Same wrapper, different
+  payload. Doc-comment it.</li>
+  <li>Its starting value in <code>Editor::open</code> — nothing is open at start-up.</li>
+  <li>A <kbd>Ctrl</kbd>+<kbd>O</kbd> shortcut in <code>fn ui</code>, directly above the
+  <kbd>Ctrl</kbd>+<kbd>W</kbd> one. Copy the shape of that line. When it fires, call
+  <code>list_dir(".")</code> and <code>match</code> on what comes back: on
+  <code>Ok</code>, store the names; on <code>Err</code>, put
+  <code>cannot read this directory: {error}</code> into the active buffer's
+  <code>status</code>.</li>
+  <li>A method <code>fn pick(&amp;mut self, ui: &amp;egui::Ui)</code> in
+  <code>impl Editor</code>, just after <code>fn ask</code>. If the field holds a listing,
+  draw an <code>egui::Modal</code> — the same call <code>ask</code> makes, with its own
+  <code>Id</code> — containing the heading <code>Open file</code>, one
+  <code>ui.label</code> per name, and a <em>Cancel</em> button that closes the picker.
+  Nothing is clickable except Cancel yet.</li>
+  <li>A call to it at the end of <code>fn ui</code>, just after the block that calls
+  <code>ask</code>, and before the frame-time line.</li>
+</ol>
+
+<p>The <code>Err</code> arm in edit 3 is why <code>list_dir</code> returns a
+<code>Result</code> rather than an empty <code>Vec</code>. A directory you cannot read and
+a directory with nothing in it are different facts, and only one of them is worth telling
+the user about. It goes in the status bar, where lesson 3 put the last one.</p>
+
+<p class="sidenote">Unlike <code>ask</code>, <code>pick</code> is worth calling
+unconditionally and letting it decide for itself whether there is anything to draw. Both
+are defensible; this one keeps the emptiness check next to the thing that clears it.</p>
+
+<h4>What you'll need</h4>
+
+<p>Nothing new from <code>egui</code> — <code>Modal</code>, <code>heading</code>,
+<code>add_space</code>, <code>label</code> and <code>button</code> are all already in
+<code>fn ask</code> from lesson 15. Read that method first and steal its shape.</p>
+
+<p>Edit 4 is where this stage gets interesting, and I am not going to tell you why in
+advance. Write the obvious version — the one where Cancel sets the field back to
+<code>None</code> right there in the closure — and compile it.</p>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo run -- a.rs<br>
+→ press <kbd>Ctrl</kbd>+<kbd>O</kbd><br>
+→ a panel titled <strong>Open file</strong>, listing <code>Cargo.toml</code>,
+<code>src</code>, <code>target</code> and whatever else is beside them<br>
+→ <em>Cancel</em> closes it. The names do nothing yet — they are labels.</p>
+
+<details class="hint">
+<summary>Hint <span class="cost">— read this after you have hit E0502, not before</span></summary>
+<div class="spoiler-body">
+<p>The compiler is telling you that you cannot mutate a thing you are in the middle of
+reading. The closure reads the picker field, so it borrows <code>self</code> for as long
+as it runs; assigning to that same field inside it is a second, conflicting borrow.</p>
+<p><a href="0015-being-asked-first.html#modal">Lesson 15 dodged this</a> by building its
+question string <em>before</em> the closure started. That dodge does not work here,
+because the thing you want to change is decided <em>during</em> the closure, by a click.</p>
+<p>So use the other one, which you have already written twice:
+<a href="0014-the-index-that-outlived-its-buffer.html#the-pattern">lesson 14's
+<code>closing</code> variable</a>. Record what happened in a plain local on the stack
+while the borrow is alive; act on it after the borrow has ended. Decide while you're
+reading, act once you've stopped.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— five edits, and why edit 4 is shaped that way</span></summary>
+<div class="spoiler-body">
+
+<p>First — somewhere to keep it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="dim">    quitting: <span class="k">bool</span>,</span>
+<span class="add">    <span class="c">/// The directory listing on screen, if the picker is open.</span>
+    picker: <span class="t">Option</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt;,</span>
+<span class="dim">    position: <span class="t">String</span>,</span></code></pre>
+
+<p>Second — nothing is open at start-up:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Editor::open</span></p>
+<pre><code><span class="dim">            quitting: <span class="k">false</span>,</span>
+<span class="add">            picker: <span class="t">None</span>,</span>
+<span class="dim">            position: <span class="s">&quot;no cursor&quot;</span>.<span class="f">to_owned</span>(),</span></code></pre>
+
+<p>Third — the shortcut that fills it, next to the one that closes a tab:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, above the close shortcut</span></p>
+<pre><code><span class="add">        <span class="k">let</span> open_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">O</span>));
+        <span class="k">if</span> open_requested {
+            <span class="k">match</span> <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>) {
+                <span class="f">Ok</span>(names) =&gt; <span class="k">self</span>.picker = <span class="f">Some</span>(names),
+                <span class="f">Err</span>(error) =&gt; {
+                    <span class="k">self</span>.buffers[<span class="k">self</span>.active].status =
+                        <span class="f">format</span>!(<span class="s">&quot;cannot read this directory: {error}&quot;</span>);
+                }
+            }
+        }</span>
+<span class="dim">        <span class="k">let</span> close_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">W</span>));</span></code></pre>
+
+<p>Fourth — drawing it. This goes in <code>impl Editor</code>, just after
+<code>fn ask</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, after fn ask</span></p>
+<pre><code><span class="add">    <span class="c">/// Draw the file picker, and act on what was clicked.</span>
+    <span class="k">fn</span> <span class="f">pick</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;egui::<span class="t">Ui</span>) {
+        <span class="k">let</span> <span class="k">mut</span> cancelled = <span class="k">false</span>;
+
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(names) = &amp;<span class="k">self</span>.picker {
+            egui::<span class="t">Modal</span>::<span class="f">new</span>(egui::<span class="t">Id</span>::<span class="f">new</span>(<span class="s">&quot;picker&quot;</span>)).<span class="f">show</span>(ui.<span class="f">ctx</span>(), |ui| {
+                ui.<span class="f">heading</span>(<span class="s">&quot;Open file&quot;</span>);
+                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">for</span> name <span class="k">in</span> names {
+                    ui.<span class="f">label</span>(name);
+                }
+                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">if</span> ui.<span class="f">button</span>(<span class="s">&quot;Cancel&quot;</span>).<span class="f">clicked</span>() {
+                    cancelled = <span class="k">true</span>;
+                }
+            });
+        }
+
+        <span class="k">if</span> cancelled {
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        }
+    }</span>
+<span class="dim">    <span class="c">/// Write out whatever the pending action is about to throw away.</span></span></code></pre>
+
+<h4 id="collect">Why <code>cancelled</code> is a local, not a field</h4>
+
+<p>The closure reads <code>self.picker</code>, so it holds a borrow of <code>self</code>
+for as long as it runs. Setting <code>self.picker = None</code> inside it would be a second,
+mutable borrow of the same thing — <code>E0502</code>, the error
+<a href="0015-being-asked-first.html#modal">lesson 15 dodged</a> by building its
+<code>question</code> string before the closure started.</p>
+
+<p>Here the dodge is different and more useful: the closure writes to a plain
+<code>bool</code> on the stack, and the decision is acted on <em>after</em> the borrow
+ends. That is
+<a href="0014-the-index-that-outlived-its-buffer.html#the-pattern">lesson 14's
+<code>closing</code> variable</a> again — <strong>decide while you're reading, act once
+you've stopped</strong> — and it is the third time this tutorial has reached for it. It is
+not a workaround for the borrow checker. It is what the borrow checker was pointing at.</p>
+
+<p>Fifth — call it, at the end of <code>fn ui</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, after the call to ask</span></p>
+<pre><code><span class="dim">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(pending) = <span class="k">self</span>.confirm {
+            <span class="k">self</span>.<span class="f">ask</span>(ui, pending);
+        }</span>
+<span class="add">        <span class="k">self</span>.<span class="f">pick</span>(ui);</span>
+<span class="dim">        <span class="k">self</span>.frame_ms = frame_start.<span class="f">elapsed</span>().<span class="f">as_secs_f32</span>() * <span class="s">1000</span>.<span class="s">0</span>;</span></code></pre>
+
+</div>
+</details>
+</section>
+
+<section class="stage" id="stage-open">
+<h3>Click a name to open it</h3>
+
+<p class="goal">Clicking a filename opens it in a new tab.</p>
+
+<p>The listing works; the names are inert. <strong>Four edits</strong>, and three of them
+are inside <code>fn pick</code>.</p>
+
+<h4>What to build</h4>
+
+<ol class="brief">
+  <li><code>fn open_path(&amp;mut self, path: &amp;str)</code> in <code>impl Editor</code>,
+  above <code>fn close</code>. Two lines: push a <code>Buffer::open(path)</code> onto
+  <code>buffers</code>, and make the new one active. Write it as a method even though it
+  has exactly one caller.</li>
+  <li>A second local at the top of <code>fn pick</code>, alongside
+  <code>cancelled</code> — this one records <em>which</em> name was clicked, so it is not a
+  <code>bool</code>.</li>
+  <li>Inside the modal, the names become buttons and record the click.</li>
+  <li>At the bottom of <code>fn pick</code>, act on it: a clicked name opens and closes the
+  picker; Cancel just closes it. One of the two, not both.</li>
+</ol>
+
+<p class="sidenote">Edit 1 is two lines, and it is the seam the rest of part 2 and the file
+tree in part 8 are built on. Every way of opening a file ends there, which is why it is a
+method and not four lines repeated in three places.</p>
+
+<div class="callout note">
+  <span class="label">Easy to miss — edit 3 changes a line you already have</span>
+  It turns the <code>ui.label(name)</code> line into a button. It is not an added line; it
+  replaces one. Leave the label in place as well and you get every filename twice, once
+  dead and once live.
+</div>
+
+<h4>What you'll need</h4>
+
+<p>The same pattern as last stage, carrying a value instead of a flag. And a second wall:
+the obvious way to hand the clicked name to <code>open_path</code> will not compile, for a
+reason that is one step on from the last one. Write the obvious version first and read
+what the compiler says.</p>
+
+<h4>How you'll know</h4>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test<br>
+→ silent, <em>test result: ok. 20 passed; 0 failed</em></p>
+
+<p class="run">cargo run -- a.rs<br>
+→ <kbd>Ctrl</kbd>+<kbd>O</kbd>, then click <code>Cargo.toml</code><br>
+→ it opens in a new tab, and the tab bar has two entries<br>
+→ <kbd>Ctrl</kbd>+<kbd>O</kbd> again, <em>Cancel</em>: nothing is added</p>
+
+<div class="callout">
+  <span class="label">Deferred on purpose — lesson 17</span>
+  The name is used as a path, which works only because the directory being listed is the
+  one the program is running in. Open the picker, click <code>src</code>, and you get a
+  buffer for a directory — a file that will not read and cannot be saved. Lesson 17 adds
+  the type that knows the difference.
+</div>
+
+<details class="hint">
+<summary>Hint <span class="cost">— what the borrow checker is objecting to this time</span></summary>
+<div class="spoiler-body">
+<p>The local from edit 2 is an <code>Option</code>, and the natural thing to put in it is
+the <code>name</code> the loop is handing you. But <code>name</code> is a
+<code>&amp;String</code> borrowed out of the picker field — so keeping it keeps the borrow
+alive, which is the exact thing the pattern exists to end.</p>
+<p>You need a value that outlives the closure, not a reference into what the closure was
+reading. One method call on <code>name</code> gets you one.</p>
+<p>For edit 4: "a name was clicked" and "Cancel was clicked" cannot both be true, and
+running both arms would push a buffer and then throw the picker away twice. An
+<code>if let</code> with an <code>else if</code> says that plainly.</p>
+</div>
+</details>
+
+<details class="spoiler">
+<summary>The code <span class="cost">— four edits, and why one of them clones</span></summary>
+<div class="spoiler-body">
+
+<p>First — the method every route into a file will eventually use. In
+<code>impl Editor</code>, above <code>fn close</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, above fn close</span></p>
+<pre><code><span class="add">    <span class="c">/// Open a file into a new buffer, and switch to it.</span>
+    <span class="k">fn</span> <span class="f">open_path</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, path: &amp;<span class="k">str</span>) {
+        <span class="k">self</span>.buffers.<span class="f">push</span>(<span class="t">Buffer</span>::<span class="f">open</span>(path));
+        <span class="k">self</span>.active = <span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>;
+    }</span>
+<span class="dim">    <span class="c">/// Close a buffer, keeping `active` pointing at the file it was on.</span></span></code></pre>
+
+<p>Second — somewhere to record the click:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, the top</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">pick</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;egui::<span class="t">Ui</span>) {</span>
+<span class="add">        <span class="k">let</span> <span class="k">mut</span> chosen = <span class="t">None</span>;</span>
+<span class="dim">        <span class="k">let</span> <span class="k">mut</span> cancelled = <span class="k">false</span>;</span></code></pre>
+
+<p>Third — the names become buttons, and record what was clicked:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, inside the modal</span></p>
+<pre><code><span class="dim">                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);</span>
+<span class="del">                <span class="k">for</span> name <span class="k">in</span> names {
+                    ui.<span class="f">label</span>(name);
+                }</span>
+<span class="add">                <span class="k">for</span> name <span class="k">in</span> names {
+                    <span class="k">if</span> ui.<span class="f">button</span>(name).<span class="f">clicked</span>() {
+                        chosen = <span class="f">Some</span>(name.<span class="f">clone</span>());
+                    }
+                }</span>
+<span class="dim">                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);</span></code></pre>
+
+<p>Fourth — act on it, at the bottom of the same function:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, the bottom</span></p>
+<pre><code><span class="del">        <span class="k">if</span> cancelled {
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        }</span>
+<span class="add">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(name) = chosen {
+            <span class="k">self</span>.<span class="f">open_path</span>(&amp;name);
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        } <span class="k">else</span> <span class="k">if</span> cancelled {
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        }</span>
+<span class="dim">    }</span></code></pre>
+
+<p><code>name.clone()</code> is doing real work there. <code>name</code> is a
+<code>&amp;String</code> borrowed from <code>self.picker</code>, and the whole point of the
+pattern is that the borrow ends before <code>open_path</code> runs. Keeping the reference
+would keep the borrow alive and put you straight back into <code>E0502</code>. Cloning one
+filename is the price of getting out of the closure with the answer.</p>
+
+</div>
+</details>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>700 lines, twenty tests green. One free function, one field, two methods, and a
+keyboard shortcut.</p>
+
+<details class="spoiler">
+<summary>The finished shape <span class="cost">— to diff against, once yours runs</span></summary>
+<div class="spoiler-body">
+
+<p class="filename">editor/src/main.rs<span class="where">above the Pending enum</span></p>
+<pre><code><span class="c">/// The names in a directory, sorted. Not the paths — just the names.</span>
+<span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="k">str</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt; {
+    <span class="k">let</span> <span class="k">mut</span> names = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">for</span> entry <span class="k">in</span> fs::<span class="f">read_dir</span>(dir)? {
+        names.<span class="f">push</span>(entry?.<span class="f">file_name</span>().<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>());
+    }
+    names.<span class="f">sort</span>();
+    <span class="f">Ok</span>(names)
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: about 55 lines, untouched</span>
+  <code>Pending</code>, <code>struct Buffer</code> and its <code>impl</code> are exactly as
+  lesson 15 left them.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct — one new field</span></p>
+<pre><code><span class="dim">    quitting: <span class="k">bool</span>,</span>
+    <span class="c">/// The directory listing on screen, if the picker is open.</span>
+    picker: <span class="t">Option</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt;,
+<span class="dim">    position: <span class="t">String</span>,</span></code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, above fn close</span></p>
+<pre><code>    <span class="c">/// Open a file into a new buffer, and switch to it.</span>
+    <span class="k">fn</span> <span class="f">open_path</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, path: &amp;<span class="k">str</span>) {
+        <span class="k">self</span>.buffers.<span class="f">push</span>(<span class="t">Buffer</span>::<span class="f">open</span>(path));
+        <span class="k">self</span>.active = <span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>;
+    }</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, after fn ask</span></p>
+<pre><code>    <span class="c">/// Draw the file picker, and act on what was clicked.</span>
+    <span class="k">fn</span> <span class="f">pick</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;egui::<span class="t">Ui</span>) {
+        <span class="k">let</span> <span class="k">mut</span> chosen = <span class="t">None</span>;
+        <span class="k">let</span> <span class="k">mut</span> cancelled = <span class="k">false</span>;
+
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(names) = &amp;<span class="k">self</span>.picker {
+            egui::<span class="t">Modal</span>::<span class="f">new</span>(egui::<span class="t">Id</span>::<span class="f">new</span>(<span class="s">&quot;picker&quot;</span>)).<span class="f">show</span>(ui.<span class="f">ctx</span>(), |ui| {
+                ui.<span class="f">heading</span>(<span class="s">&quot;Open file&quot;</span>);
+                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">for</span> name <span class="k">in</span> names {
+                    <span class="k">if</span> ui.<span class="f">button</span>(name).<span class="f">clicked</span>() {
+                        chosen = <span class="f">Some</span>(name.<span class="f">clone</span>());
+                    }
+                }
+                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">if</span> ui.<span class="f">button</span>(<span class="s">&quot;Cancel&quot;</span>).<span class="f">clicked</span>() {
+                    cancelled = <span class="k">true</span>;
+                }
+            });
+        }
+
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(name) = chosen {
+            <span class="k">self</span>.<span class="f">open_path</span>(&amp;name);
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        } <span class="k">else</span> <span class="k">if</span> cancelled {
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        }
+    }</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui — two regions, the rest elided</span></p>
+<pre><code>        <span class="k">let</span> open_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">O</span>));
+        <span class="k">if</span> open_requested {
+            <span class="k">match</span> <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>) {
+                <span class="f">Ok</span>(names) =&gt; <span class="k">self</span>.picker = <span class="f">Some</span>(names),
+                <span class="f">Err</span>(error) =&gt; {
+                    <span class="k">self</span>.buffers[<span class="k">self</span>.active].status =
+                        <span class="f">format</span>!(<span class="s">&quot;cannot read this directory: {error}&quot;</span>);
+                }
+            }
+        }<span class="gap">the close shortcut, the tab row and the central panel, unchanged — about 55 lines</span>
+        <span class="k">self</span>.<span class="f">pick</span>(ui);</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, at the end</span></p>
+<pre><code>    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {
+        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(names.<span class="f">contains</span>(&amp;<span class="s">&quot;Cargo.toml&quot;</span>.<span class="f">to_owned</span>()));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_sorts_its_names</span>() {
+        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>).<span class="f">unwrap</span>();
+        <span class="k">let</span> <span class="k">mut</span> sorted = names.<span class="f">clone</span>();
+        sorted.<span class="f">sort</span>();
+        <span class="f">assert_eq</span>!(names, sorted);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_reports_a_directory_that_is_not_there</span>() {
+        <span class="f">assert</span>!(<span class="f">list_dir</span>(<span class="s">&quot;no/such/directory&quot;</span>).<span class="f">is_err</span>());
+    }</code></pre>
+
+</div>
+</details>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">Why does iterating a <code>ReadDir</code> hand you a <code>Result</code> for every entry?</p>
+  <ul class="options">
+    <li data-correct>Reading a directory can fail partway through it</li>
+    <li>Some entries are directories rather than plain files</li>
+    <li>A filename might not be valid Unicode on this platform</li>
+    <li>The iterator has to report when it reaches the end</li>
+  </ul>
+  <p class="why">Opening the directory is one fallible step and <em>each</em> entry is
+  another — the walk can stop on the fourth of nine. Flattening that into one
+  <code>Result</code> at the front would claim a guarantee the filesystem never made.
+  <a class="review" href="#two-failures">↑ Review: two failures, two <code>?</code>s (stage 1)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does the clicked name go into a local variable instead of straight to <code>open_path</code>?</p>
+  <ul class="options">
+    <li data-correct>The closure is already borrowing what <code>open_path</code> mutates</li>
+    <li>Opening a file inside a closure would block the frame</li>
+    <li>The modal has to be closed before a buffer can be pushed</li>
+    <li>Closures cannot call methods that take <code>&amp;mut self</code></li>
+  </ul>
+  <p class="why">The closure reads <code>self.picker</code>; <code>open_path</code> needs
+  <code>&amp;mut self</code>. Recording the decision and acting after the borrow ends is
+  the same move as lesson 14's <code>closing</code> — decide while reading, act once you
+  have stopped.
+  <a class="review" href="#collect">↑ Review: why <code>cancelled</code> is a local (stage 2)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">A file in the directory has a name that isn't valid UTF-8. What does this picker do?</p>
+  <ul class="options">
+    <li data-correct>Shows an altered name that no longer opens the file</li>
+    <li>Skips the entry, so the name never appears</li>
+    <li>Returns an error from <code>list_dir</code> for that entry</li>
+    <li>Opens it correctly — the name is only for display</li>
+  </ul>
+  <p class="why"><code>to_string_lossy</code> substitutes <code>U+FFFD</code> for the
+  invalid bytes and cannot fail. The name you see is not the name on disk, and handing it
+  back as a path finds nothing. Lesson 17 makes the file first and the fix second.
+  <a class="review" href="#lossy">↑ Review: the line you will have to justify (stage 1)</a></p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 17</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://doc.rust-lang.org/std/fs/fn.read_dir.html"><code>std::fs::read_dir</code></a>
+— the function's own documentation, not a tutorial about it. Read the signature, then the
+"Errors" section, then the example.</p>
+
+<p>This is the habit the mission asks for, practised on something small: the answer to "can
+this fail, and how" is in the type and the docs, and it took less time to read than to
+guess. <a href="https://doc.rust-lang.org/std/ffi/struct.OsString.html"><code>OsString</code></a>
+is worth two minutes as well, for why it exists at all.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> Two in particular. First: tell me
+  how far you got before opening each fold, because that is the only signal I have for
+  whether this format is worth keeping. Second: if your <code>list_dir</code> came out
+  differently from mine and still passes, bring it — a working alternative is worth more
+  discussion than a matching one. The weak point of the lesson itself is the hardcoded
+  <code>"."</code>: you can list one directory and only one. That is deliberate —
+  navigation needs <code>PathBuf</code>, and <code>PathBuf</code> needs the UTF-8 problem
+  explained first — but if it nags at you, try adding a ".." entry before lesson 17 does.
+  You will meet the exact wall the next lesson is about.
+</div>
+
+<nav class="footer-nav">
+  <a href="0015-being-asked-first.html">← Lesson 15: Being Asked First</a>
+  <a href="0016-the-names-in-a-directory.html">The walked-through version of this lesson</a>
+  <a href="../ROADMAP.md">Roadmap</a>
+  <span>Next: lesson 17 — paths that aren't strings</span>
+</nav>
+
+</body>
+</html>

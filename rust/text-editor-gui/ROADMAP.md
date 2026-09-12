@@ -20,18 +20,21 @@ evaporate are in [docs/adr/](docs/adr/).
 | --- | --- | --- |
 | **A working editor** | [1–12](lessons/) | Opens files, edits and saves them without corrupting UTF-8, highlights Rust, tabs across buffers, degrades honestly above 512 KB, keeps its text in a rope with a measured justification, and tests the parts worth testing |
 | **1 — Don't lose my work** | [13–15](lessons/0013-knowing-what-changed.html) | The editor cannot silently discard your edits by any route |
+| **2 — Files from inside the editor** *(in progress)* | [16–17](lessons/0016-the-names-in-a-directory.html) of 18 | A picker that lists, navigates and opens; filenames stored in the type that can hold them |
 
 | Lesson | Title | What it delivered |
 | --- | --- | --- |
 | [13](lessons/0013-knowing-what-changed.html) | Knowing What Changed | The buffer knows whether it differs from disk, and says so on the tab and in the status bar |
 | [14](lessons/0014-the-index-that-outlived-its-buffer.html) | The Index That Outlived Its Buffer | Closing a buffer, and the stale-index bug lesson 9 predicted |
 | [15](lessons/0015-being-asked-first.html) | Being Asked First | A confirmation before closing a modified buffer or the window, and your first hand-written enum |
+| [16](lessons/0016-the-names-in-a-directory.html) | The Names in a Directory | `fs::read_dir` behind a Ctrl+O picker; an iterator of `Result`s, and a lossy line written on borrowed time |
+| [17](lessons/0017-paths-that-arent-strings.html) | Paths That Aren't Strings | `Path`/`PathBuf`/`OsString` replace `String` everywhere a filename lives; the picker tells directories from files and navigates |
 
 ## Next
 
 | # | Part | Lessons | What you'll learn |
 | --- | --- | --- | --- |
-| 2 | **Files from inside the editor** | 3 | `fs::read_dir`, `Path` vs `PathBuf`, `OsStr` and names that aren't UTF-8; round-tripping line endings you didn't write |
+| 2 | **Files from inside the editor** | 1 left | Lesson 18: round-tripping line endings you didn't write |
 | 3 | **Buffers that aren't files yet** | 3 | The buffer list stops being fixed at start-up: New, Save As, and an editor that can hold nothing |
 | 4 | **Many files, many modules** | 3 | `mod`, `pub`, `use crate::`, visibility, multi-file layout |
 | 5 | **Search in file** | 3–4 | Iterator chains, byte and char indices, highlighting a match |

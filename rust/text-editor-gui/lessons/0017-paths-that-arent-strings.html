@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 17 — Paths That Aren't Strings</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 17 <span class="sep">/</span> Part 2 <span class="sep">/</span> ~50 minutes</p>
+  <h1>Paths That Aren't Strings</h1>
+  <p class="subtitle">Five stages, and the picker stops lying about what is on disk.</p>
+</header>
+
+<div class="thesis">
+  A filename is not text. Rust has a type for it, and using the wrong one is the
+  difference between opening a file and quietly inventing a new one.
+</div>
+
+<p>Lesson 16 wrote one line on borrowed time: <code>to_string_lossy()</code>, turning
+every name the filesystem handed back into a <code>String</code>. It also let you click a
+directory and get a buffer for it. Both are the same mistake, made in the same place —
+the editor has been storing filenames in a type that cannot hold them — and this lesson
+pays for it.</p>
+
+<p>By the end, <code>Buffer</code>, <code>list_dir</code>, the picker and
+<code>main</code> all speak <code>Path</code>, <code>PathBuf</code> and
+<code>OsString</code>; a file with a name that isn't valid UTF-8 opens from the command
+line and from the picker; and clicking a directory in the picker shows you what is
+inside it.</p>
+
+<h2>Before you start</h2>
+
+<p>You should be at the end of <a href="0016-the-names-in-a-directory.html">lesson 16</a>:
+<code>cargo test</code> reports twenty passing and <code>src/main.rs</code> is about 700
+lines. Stage 1 changes nothing and breaks the editor twice; stages 2 to 5 fix it.</p>
+
+<p>This is the first lesson where the compiler does most of the finding. Two stages start
+by changing one type and then doing whatever <code>cargo check</code> asks — so run it
+after every edit, and read what it says before you read what I say.</p>
+
+<div class="callout key">
+  <span class="label">Type it, don't paste it</span>
+  Same as every lesson. About ninety lines change, and most of them are one word long.
+</div>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-break">
+<h3>Make a file the editor cannot open</h3>
+
+<p class="goal">You have watched the picker open the wrong file, and the command line
+refuse the right one.</p>
+
+<p><strong>No edits in this stage.</strong> It is an experiment, and the experiment needs
+a file whose name is not valid UTF-8. Linux will happily make one, because to Linux a
+filename is a sequence of bytes and nothing more:</p>
+
+<p class="run">cd editor<br>
+touch "$(printf 'caf\xe9.txt')"<br>
+ls | cat -v<br>
+→ <em>cafM-i.txt</em> among the others</p>
+
+<p><code>\xe9</code> is the single byte that means <code>é</code> in Latin-1. In UTF-8
+that byte can only ever be the <em>second</em> half of a two-byte character, so on its
+own it is not a character at all. <code>cat -v</code> shows it as <code>M-i</code> because
+it has no other way to draw it. Every file you have opened until now was named in
+ASCII; this one is the first that isn't.</p>
+
+<h4 id="the-lie">The picker says "new file"</h4>
+
+<p class="run">cargo run -- a.rs<br>
+→ <kbd>Ctrl</kbd>+<kbd>O</kbd> — the listing includes <code>caf�.txt</code><br>
+→ click it<br>
+→ a second tab, empty, and the status bar says <em>new file: caf�.txt</em></p>
+
+<p>The file exists. The editor has just told you it doesn't. Look at the name it showed
+you: <code>�</code> is <code>U+FFFD</code>, the replacement character that
+<code>to_string_lossy</code> substituted for the byte it could not represent. That altered
+string is what the click handed to <code>Buffer::open</code>, and there is no file by that
+name — so lesson 2's "a file that doesn't exist yet is a new file" rule kicked in and
+reported a new one. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> in that tab and you would get a
+second file on disk, named with a literal <code>�</code>, beside the one you meant.</p>
+
+<p class="sidenote">This is a real category of bug: two representations of a name that
+look identical on screen and differ on disk. The editor shows one, the filesystem
+has the other, and neither side is wrong — they are just talking about different
+things.</p>
+
+<h4 id="the-panic">The command line refuses it outright</h4>
+
+<p>Close the window and try the other way in:</p>
+
+<p class="run">cargo run -- "$(printf 'caf\xe9.txt')"</p>
+
+<pre class="error" data-label="runtime panic">thread 'main' panicked at /rustc/…/library/std/src/env.rs:876:51:
+called `Result::unwrap()` on an `Err` value: "caf\xE9.txt"</pre>
+
+<p>No window at all. The panic is not in your code — the location is inside
+<code>std</code>, in <code>env.rs</code> — and it is not a bug in <code>std</code> either.
+Read the <a href="https://doc.rust-lang.org/std/env/fn.args.html">documentation for
+<code>env::args</code></a>: <em>"The returned iterator will panic during iteration if
+any argument to the process is not valid Unicode."</em> It says so, because it promised
+to give you <code>String</code>s and this argument cannot be one. The same page tells you
+what to use instead.</p>
+
+<h4 id="three-pairs">Three pairs of types</h4>
+
+<p>You already know one pair: <code>String</code> owns its text and <code>&amp;str</code>
+borrows it. Rust has two more pairs shaped exactly the same way, and this lesson is about
+meeting them:</p>
+
+<table>
+  <thead><tr><th>Owned</th><th>Borrowed</th><th>What it promises</th></tr></thead>
+  <tbody>
+    <tr><td><code>String</code></td><td><code>&amp;str</code></td><td>Valid UTF-8, always</td></tr>
+    <tr><td><code>OsString</code></td><td><code>&amp;OsStr</code></td><td>Whatever the operating system gave you — bytes on Linux</td></tr>
+    <tr><td><code>PathBuf</code></td><td><code>&amp;Path</code></td><td>An <code>OsString</code> that you intend to use as a location</td></tr>
+  </tbody>
+</table>
+
+<p>Every method you know on <code>String</code> and <code>&amp;str</code> has a
+counterpart: <code>String::from</code> and <code>PathBuf::from</code>,
+<code>.to_owned()</code> on both, <code>&amp;String</code> quietly becoming
+<code>&amp;str</code> and <code>&amp;PathBuf</code> quietly becoming
+<code>&amp;Path</code>. The difference is the promise in the third column. A
+<code>String</code> that holds <code>caf\xe9.txt</code> is impossible; a
+<code>PathBuf</code> that holds it is Tuesday.</p>
+
+<p>The editor stores every filename as a <code>String</code>. That is the bug — not the
+lossy line, which was only ever the symptom. Four stages fix it, from the inside out.</p>
+</section>
+
+<section class="stage" id="stage-field">
+<h3>The buffer's path becomes a <code>PathBuf</code></h3>
+
+<p class="goal"><code>cargo test</code> still reports twenty passing, and
+<code>Buffer::name</code> is shorter than it was.</p>
+
+<p>Change one field's type and let the compiler tell you everything that depended on it.
+<strong>Nine edits</strong>, and you will not have to hunt for any of them.</p>
+
+<p>First — the import:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the imports at the top</span></p>
+<pre><code><span class="dim"><span class="k">use</span> std::ops::<span class="t">Range</span>;</span>
+<span class="add"><span class="k">use</span> std::path::<span class="t">PathBuf</span>;</span>
+<span class="dim"><span class="k">use</span> std::sync::<span class="t">Arc</span>;</span></code></pre>
+
+<p>Second — the field:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Buffer struct</span></p>
+<pre><code><span class="dim"><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {</span>
+<span class="del">    path: <span class="t">String</span>,</span>
+<span class="add">    path: <span class="t">PathBuf</span>,</span>
+<span class="dim">    text: <span class="t">Text</span>,</span></code></pre>
+
+<p>Now stop, and run <code>cargo check</code>. Do not fix anything yet.</p>
+
+<pre class="error">error[E0308]: mismatched types
+   --> src/main.rs:237:19
+    |
+237 |             path: path.to_owned(),
+    |                   ^^^^^^^^^^^^^^^ expected `PathBuf`, found `String`
+
+error[E0277]: `PathBuf` doesn't implement `std::fmt::Display`
+   --> src/main.rs:248:72
+    |
+248 |         self.status = format!("saved {} bytes to {}", self.text.len(), self.path);
+    |                                                                        ^^^^^^^^^ `PathBuf` cannot be formatted with the default formatter; call `.display()` on it
+    |
+    = note: call `.display()` or `.to_string_lossy()` to safely print paths, as they may contain non-Unicode data
+
+error[E0599]: no method named `trim_end_matches` found for struct `PathBuf` in the current scope
+   --> src/main.rs:258:14
+
+error[E0277]: the trait bound `eframe::egui::RichText: From<&PathBuf>` is not satisfied
+    --> src/main.rs:485:24
+     |
+ 485 |             ui.heading(&buffer.path);
+
+error: could not compile `editor` (bin "editor") due to 4 previous errors</pre>
+
+<p>Four places in the program treated <code>path</code> as text. The compiler found all
+four in under a second, and for two of them told you the fix. This is what a type change
+is <em>for</em>: you are not editing a field, you are asking the compiler to audit every
+use of it. Take them in order.</p>
+
+<h4 id="from">Third — the constructor</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::open, the struct at the end</span></p>
+<pre><code><span class="dim">        <span class="k">Self</span> {</span>
+<span class="del">            path: path.<span class="f">to_owned</span>(),</span>
+<span class="add">            path: <span class="t">PathBuf</span>::<span class="f">from</span>(path),</span>
+<span class="dim">            text: <span class="t">Text</span>::<span class="f">new</span>(&amp;text),</span></code></pre>
+
+<p><code>path</code> is still a <code>&amp;str</code> here; that changes in stage 3.
+<code>PathBuf::from</code> accepts it, the same way <code>String::from</code> would —
+and, as the table said, the conversion cannot fail, because a <code>PathBuf</code>
+promises less than a <code>String</code> does.</p>
+
+<h4 id="display">Fourth — printing a path</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::save</span></p>
+<pre><code><span class="dim">        <span class="k">self</span>.dirty = <span class="k">false</span>;</span>
+<span class="del">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path);</span>
+<span class="add">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path.<span class="f">display</span>());</span>
+<span class="dim">        <span class="f">Ok</span>(())
+    }</span></code></pre>
+
+<p>The compiler's note is the whole lesson in one line: <em>call <code>.display()</code>
+or <code>.to_string_lossy()</code> to safely print paths, as they may contain non-Unicode
+data.</em> <code>PathBuf</code> refuses to be a <code>{}</code> argument, on purpose,
+because printing it would need a decision about the bytes that aren't text, and it will
+not make that decision for you silently. <code>.display()</code> is you making it: show
+what can be shown, substitute what can't. It is fine <em>here</em>, because a status
+message is for reading, not for opening.</p>
+
+<h4 id="file-name">Fifth — the name, and the code you get to delete</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer, fn name — the whole thing</span></p>
+<pre><code><span class="dim">        <span class="k">self</span>.text.<span class="f">line_col</span>(char_index)
+    }
+</span>
+<span class="del">    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; &amp;<span class="k">str</span> {
+        <span class="k">self</span>.path
+            .<span class="f">trim_end_matches</span>(<span class="s">&#x27;/&#x27;</span>)
+            .<span class="f">rsplit</span>(<span class="s">&#x27;/&#x27;</span>)
+            .<span class="f">next</span>()
+            .<span class="f">filter</span>(|name| !name.<span class="f">is_empty</span>())
+            .<span class="f">unwrap_or</span>(&amp;<span class="k">self</span>.path)
+    }</span>
+<span class="add">    <span class="c">/// The last part of the path, for the tab. Lossy on purpose: a name that</span>
+    <span class="c">/// isn&#x27;t UTF-8 still gets shown, and this string is never used to open anything.</span>
+    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; <span class="t">String</span> {
+        <span class="k">match</span> <span class="k">self</span>.path.<span class="f">file_name</span>() {
+            <span class="f">Some</span>(name) =&gt; name.<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>(),
+            <span class="t">None</span> =&gt; <span class="k">self</span>.path.<span class="f">display</span>().<span class="f">to_string</span>(),
+        }
+    }</span>
+<span class="dim">}</span></code></pre>
+
+<p>Lesson 9 wrote seven lines to find the last part of a path: trim a trailing slash,
+split on the rest, take the first piece, fall back to the whole thing. That was a
+correct implementation of something <code>std</code> already had — on the type we weren't
+using. <a href="https://doc.rust-lang.org/std/path/struct.Path.html#method.file_name"><code>Path::file_name</code></a>
+does exactly that work, including the trailing slash, and returns
+<code>Option&lt;&amp;OsStr&gt;</code>: <code>None</code> when there is no last part,
+which is what a path like <code>..</code> or <code>/</code> has.</p>
+
+<p>Two things changed in the signature. It returns <code>String</code> rather than
+<code>&amp;str</code>, because <code>to_string_lossy</code> may have to build a new
+string to put the <code>�</code> in — it cannot promise to hand back a borrow of what
+was there. And the doc comment says <em>lossy on purpose</em>, because it is: this string
+goes on a tab, and a tab is for eyes. The rule this lesson is really teaching is not
+"never be lossy"; it is "be lossy at the display, never in the data".</p>
+
+<p class="sidenote">Lesson 10's three <code>name_of_…</code> tests are untouched and still
+pass. A test that survives a rewrite of the thing it tests is the test earning its place —
+it pinned the behaviour, not the implementation.</p>
+
+<h4 id="tab-row">Sixth — the tab row</h4>
+
+<div class="callout note">
+  <span class="label">This edit compiles either way</span>
+  <code>buffer.name()</code> is a <code>String</code> now, so <code>.to_owned()</code> on
+  it makes a copy of a copy. The compiler accepts it and clippy says nothing, so nothing
+  will tell you it's there — delete the suffix now while you know why.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the tab row</span></p>
+<pre><code><span class="dim">                    <span class="k">let</span> label = <span class="k">if</span> buffer.dirty {
+                        <span class="f">format</span>!(<span class="s">&quot;• {}&quot;</span>, buffer.<span class="f">name</span>())
+                    } <span class="k">else</span> {</span>
+<span class="del">                        buffer.<span class="f">name</span>().<span class="f">to_owned</span>()</span>
+<span class="add">                        buffer.<span class="f">name</span>()</span>
+<span class="dim">                    };</span></code></pre>
+
+<h4 id="heading">Seventh — the heading</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, above the scroll area</span></p>
+<pre><code><span class="dim">            <span class="k">if</span> save_requested &amp;&amp; <span class="k">let</span> <span class="f">Err</span>(error) = buffer.<span class="f">save</span>() {
+                buffer.status = <span class="f">format</span>!(<span class="s">&quot;save failed: {error}&quot;</span>);
+            }
+</span>
+<span class="del">            ui.<span class="f">heading</span>(&amp;buffer.path);</span>
+<span class="add">            ui.<span class="f">heading</span>(buffer.path.<span class="f">display</span>().<span class="f">to_string</span>());</span>
+<span class="dim">            egui::<span class="t">ScrollArea</span>::<span class="f">vertical</span>().<span class="f">show</span>(ui, |ui| {</span></code></pre>
+
+<p>The same move as the status message: <code>.display()</code> makes a value that can be
+printed, and <code>.to_string()</code> makes it a <code>String</code> egui will take.</p>
+
+<p><code>cargo check</code> is silent now. <code>cargo test</code> is not — the tests build
+a <code>Buffer</code> by hand, and hand it a <code>String</code>. Two edits.</p>
+
+<p>Eighth — the helper:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, buffer_with</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Buffer</span> {
+        <span class="t">Buffer</span> {</span>
+<span class="del">            path: <span class="s">&quot;test.rs&quot;</span>.<span class="f">to_owned</span>(),</span>
+<span class="add">            path: <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;test.rs&quot;</span>),</span>
+<span class="dim">            text: <span class="t">Text</span>::<span class="f">new</span>(text),</span></code></pre>
+
+<p>Ninth — the two tests that set a path:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, the two name tests that set a path</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">name_of_a_nested_path</span>() {
+        <span class="k">let</span> <span class="k">mut</span> b = <span class="f">buffer_with</span>(<span class="s">&quot;&quot;</span>);</span>
+<span class="del">        b.path = <span class="s">&quot;src/widgets/main.rs&quot;</span>.<span class="f">to_owned</span>();</span>
+<span class="add">        b.path = <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;src/widgets/main.rs&quot;</span>);</span>
+<span class="dim">        <span class="f">assert_eq</span>!(b.<span class="f">name</span>(), <span class="s">&quot;main.rs&quot;</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">name_of_a_trailing_slash</span>() {
+        <span class="k">let</span> <span class="k">mut</span> b = <span class="f">buffer_with</span>(<span class="s">&quot;&quot;</span>);</span>
+<span class="del">        b.path = <span class="s">&quot;src/&quot;</span>.<span class="f">to_owned</span>();</span>
+<span class="add">        b.path = <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;src/&quot;</span>);</span>
+<span class="dim">        <span class="f">assert_eq</span>!(b.<span class="f">name</span>(), <span class="s">&quot;src&quot;</span>);
+    }</span></code></pre>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test<br>
+→ silent, <em>test result: ok. 20 passed; 0 failed</em></p>
+
+<p>Nothing visible has changed. The buffer stores the right type now, but every way of
+<em>getting</em> a path into it still goes through <code>&amp;str</code>. That is stage
+3.</p>
+</section>
+
+<section class="stage" id="stage-door">
+<h3>The door takes a <code>Path</code></h3>
+
+<p class="goal"><code>cargo run -- "$(printf 'caf\xe9.txt')"</code> opens the file instead
+of panicking.</p>
+
+<p><code>Buffer::open</code>, <code>Editor::open</code> and <code>open_path</code> all
+take <code>&amp;str</code>, and <code>main</code> builds its list with
+<code>env::args()</code>. Change the signatures to <code>&amp;Path</code>, and
+<code>main</code> to the function that doesn't panic. <strong>Seven edits.</strong></p>
+
+<p>First — the borrowed half of the pair joins the import:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the imports at the top</span></p>
+<pre><code><span class="dim"><span class="k">use</span> std::ops::<span class="t">Range</span>;</span>
+<span class="del"><span class="k">use</span> std::path::<span class="t">PathBuf</span>;</span>
+<span class="add"><span class="k">use</span> std::path::{<span class="t">Path</span>, <span class="t">PathBuf</span>};</span>
+<span class="dim"><span class="k">use</span> std::sync::<span class="t">Arc</span>;</span></code></pre>
+
+<p>Second — <code>Buffer::open</code>. The parameter changes, and the two messages that
+printed it need <code>.display()</code> for the same reason <code>save</code> did.
+<code>cargo fmt</code> will split the last arm across four lines once it grows; type it
+that way:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Buffer, fn open — the signature and the match</span></p>
+<pre><code><span class="dim">    <span class="c">/// Open a file into a new editor. A file that doesn&#x27;t exist yet is not an</span>
+    <span class="c">/// error — it&#x27;s a new file, and starts empty.</span></span>
+<span class="del">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
+            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
+                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {path}&quot;</span>))
+            }
+            <span class="f">Err</span>(error) =&gt; (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;could not open {path}: {error}&quot;</span>)),
+        };</span>
+<span class="add">    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="t">Path</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
+            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
+                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {}&quot;</span>, path.<span class="f">display</span>()))
+            }
+            <span class="f">Err</span>(error) =&gt; (
+                <span class="t">String</span>::<span class="f">new</span>(),
+                <span class="f">format</span>!(<span class="s">&quot;could not open {}: {error}&quot;</span>, path.<span class="f">display</span>()),
+            ),
+        };</span>
+<span class="dim">        <span class="k">Self</span> {
+            path: <span class="t">PathBuf</span>::<span class="f">from</span>(path),</span></code></pre>
+
+<p>Nothing else in the body changes. <code>fs::read_to_string(path)</code> accepted a
+<code>&amp;str</code> before and accepts a <code>&amp;Path</code> now — open
+<a href="https://doc.rust-lang.org/std/fs/fn.read_to_string.html">its signature</a> and
+you'll see why: the parameter is <code>P: AsRef&lt;Path&gt;</code>, "anything that can be
+viewed as a path". It was generic all along. We were handing it the narrow type.</p>
+
+<p>Third — <code>Editor::open</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, fn open</span></p>
+<pre><code><span class="dim">        <span class="k">self</span>.active = <span class="k">self</span>.active.<span class="f">min</span>(<span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>);</span>
+<span class="dim">    }
+</span>
+<span class="del">    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">String</span>]) -&gt; <span class="k">Self</span> {</span>
+<span class="add">    <span class="k">fn</span> <span class="f">open</span>(paths: &amp;[<span class="t">PathBuf</span>]) -&gt; <span class="k">Self</span> {</span>
+<span class="dim">        <span class="k">let</span> buffers = paths.<span class="f">iter</span>().<span class="f">map</span>(|p| <span class="t">Buffer</span>::<span class="f">open</span>(p)).<span class="f">collect</span>();</span></code></pre>
+
+<p>Fourth — <code>open_path</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, fn open_path</span></p>
+<pre><code><span class="dim">    <span class="c">/// Open a file into a new buffer, and switch to it.</span></span>
+<span class="del">    <span class="k">fn</span> <span class="f">open_path</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, path: &amp;<span class="k">str</span>) {</span>
+<span class="add">    <span class="k">fn</span> <span class="f">open_path</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, path: &amp;<span class="t">Path</span>) {</span>
+<span class="dim">        <span class="k">self</span>.buffers.<span class="f">push</span>(<span class="t">Buffer</span>::<span class="f">open</span>(path));</span></code></pre>
+
+<p>Fifth — the picker still holds <code>String</code>s until stage 4, so its call needs a
+bridge:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, the bottom</span></p>
+<pre><code><span class="dim">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(name) = chosen {</span>
+<span class="del">            <span class="k">self</span>.<span class="f">open_path</span>(&amp;name);</span>
+<span class="add">            <span class="k">self</span>.<span class="f">open_path</span>(<span class="t">Path</span>::<span class="f">new</span>(&amp;name));</span>
+<span class="dim">            <span class="k">self</span>.picker = <span class="t">None</span>;</span></code></pre>
+
+<p><code>Path::new</code> does not copy anything. It is a view: the same bytes, looked at
+as a path. This line is a stopgap and stage 5 replaces it.</p>
+
+<h4 id="args-os">Sixth — the function that doesn't panic</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn main</span></p>
+<pre><code><span class="dim"><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {</span>
+<span class="del">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = env::<span class="f">args</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">collect</span>();</span>
+<span class="add">    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">PathBuf</span>&gt; = env::<span class="f">args_os</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">map</span>(<span class="t">PathBuf</span>::from).<span class="f">collect</span>();</span>
+<span class="dim">    <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {</span>
+<span class="del">        vec![<span class="s">&quot;scratch.md&quot;</span>.<span class="f">to_owned</span>()]</span>
+<span class="add">        vec![<span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;scratch.md&quot;</span>)]</span>
+<span class="dim">    } <span class="k">else</span> {
+        paths
+    };</span></code></pre>
+
+<p><code>env::args_os</code> is the same iterator with the promise removed: it yields
+<code>OsString</code>, so an argument that isn't UTF-8 is just an argument.
+<code>.map(PathBuf::from)</code> turns each one into the type <code>Editor::open</code>
+wants.</p>
+
+<p>Look at that <code>map</code> next to the one in <code>Editor::open</code>:
+<code>.map(|p| Buffer::open(p))</code>. Both pass a function to <code>map</code>. One
+wraps it in a closure that does nothing but call it; the other passes the function
+itself. <code>PathBuf::from</code> without parentheses is a value — the function, not its
+result — and <code>map</code> is happy to take it. The closure form isn't wrong; it's just
+a longer way of writing the same thing.</p>
+
+<p>Seventh — the test helper that builds an editor from names:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, editor_with</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">editor_with</span>(names: &amp;[&amp;<span class="k">str</span>]) -&gt; <span class="t">Editor</span> {</span>
+<span class="del">        <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">String</span>&gt; = names.<span class="f">iter</span>().<span class="f">map</span>(|n| (*n).<span class="f">to_owned</span>()).<span class="f">collect</span>();</span>
+<span class="add">        <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">PathBuf</span>&gt; = names.<span class="f">iter</span>().<span class="f">map</span>(<span class="t">PathBuf</span>::from).<span class="f">collect</span>();</span>
+<span class="dim">        <span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)
+    }</span></code></pre>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test<br>
+→ silent, <em>test result: ok. 20 passed; 0 failed</em></p>
+
+<p class="run">cargo run -- "$(printf 'caf\xe9.txt')"<br>
+→ a window, with the tab and heading reading <code>caf�.txt</code><br>
+→ type something, <kbd>Ctrl</kbd>+<kbd>S</kbd>: <em>saved … bytes to caf�.txt</em><br>
+→ <code>ls | cat -v</code> still shows one <code>cafM-i.txt</code>, and it has your text in it</p>
+
+<p>The <code>�</code> on the tab is <code>.display()</code> doing its job — showing you the
+name — while the <code>PathBuf</code> underneath still holds the real bytes, which is why
+the save went to the right file. Display lossy, data exact.</p>
+
+<p>The picker, though, is still broken: it lists <code>String</code>s. Stage 4.</p>
+</section>
+
+<section class="stage" id="stage-names">
+<h3>The names stop being strings</h3>
+
+<p class="goal"><code>cargo test</code> reports twenty-one passing, and clicking
+<code>caf�.txt</code> in the picker opens the file.</p>
+
+<p>This time, write the test before the fix, so you see it fail for the right reason.
+<strong>Nine edits.</strong></p>
+
+<p>First — a new import, for the type the test is about to need:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the imports at the top</span></p>
+<pre><code><span class="dim"><span class="k">use</span> std::env;</span>
+<span class="add"><span class="k">use</span> std::ffi::<span class="t">OsString</span>;</span>
+<span class="dim"><span class="k">use</span> std::fs;</span></code></pre>
+
+<h4 id="the-test">Second — the test</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, at the end</span></p>
+<pre><code><span class="dim">        <span class="f">assert</span>!(<span class="f">list_dir</span>(<span class="s">&quot;no/such/directory&quot;</span>).<span class="f">is_err</span>());
+    }</span>
+<span class="add">
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_names_files_that_exist</span>() {
+        <span class="k">use</span> std::os::unix::ffi::<span class="t">OsStringExt</span>;
+
+        <span class="k">let</span> dir = env::<span class="f">temp_dir</span>().<span class="f">join</span>(<span class="s">&quot;editor-lesson-17&quot;</span>);
+        fs::<span class="f">create_dir_all</span>(&amp;dir).<span class="f">unwrap</span>();
+        <span class="k">let</span> name = <span class="t">OsString</span>::<span class="f">from_vec</span>(b<span class="s">&quot;caf\xe9.txt&quot;</span>.<span class="f">to_vec</span>());
+        fs::<span class="f">write</span>(dir.<span class="f">join</span>(&amp;name), <span class="s">&quot;&quot;</span>).<span class="f">unwrap</span>();
+
+        <span class="k">for</span> listed <span class="k">in</span> <span class="f">list_dir</span>(&amp;dir).<span class="f">unwrap</span>() {
+            <span class="f">assert</span>!(
+                dir.<span class="f">join</span>(&amp;listed).<span class="f">exists</span>(),
+                <span class="s">&quot;{listed:?} was listed but does not exist&quot;</span>
+            );
+        }
+    }</span>
+<span class="dim">}</span></code></pre>
+
+<p>Read it as a sentence: <em>every name <code>list_dir</code> returns must be the name
+of something that exists</em>. That is the contract the lossy line broke.</p>
+
+<p>The setup is the interesting part. <code>env::temp_dir()</code> is
+<code>/tmp</code> on this machine; <code>create_dir_all</code> makes the directory and
+does nothing if it is already there, so the test can run twice.
+<code>b"caf\xe9.txt"</code> is a <em>byte string</em> — a <code>&amp;[u8]</code>, not a
+<code>&amp;str</code> — and that matters, because the ordinary
+<code>"caf\xe9.txt"</code> would not compile: Rust will not let you write invalid UTF-8
+into a string literal any more than it will let you store it in a <code>String</code>.
+<code>OsString::from_vec</code> takes those bytes as they are.</p>
+
+<p><code>from_vec</code> is not on <code>OsString</code> by default. It comes from the
+trait <code>OsStringExt</code>, and the <code>use</code> inside the function brings it
+into scope. That's how Rust attaches platform-specific methods: the trait only exists on
+Unix, so the method is only callable where "an <code>OsString</code> is a
+<code>Vec&lt;u8&gt;</code>" is actually true. This test is Linux-only. So is the bug.</p>
+
+<p class="sidenote"><code>{listed:?}</code> in the message is the <code>Debug</code>
+format, which is what you use when a type refuses <code>{}</code>. For a name that isn't
+UTF-8 it prints the replacement character, which is why the failure below is readable at
+all.</p>
+
+<p>Now run it:</p>
+
+<pre class="error">error[E0308]: mismatched types
+   --> src/main.rs:715:32
+    |
+715 |         for listed in list_dir(&dir).unwrap() {
+    |                       -------- ^^^^ expected `&str`, found `&PathBuf`</pre>
+
+<p>The test cannot even be compiled, because <code>list_dir</code> wants a
+<code>&amp;str</code> and a directory from <code>temp_dir</code> is a
+<code>PathBuf</code>. That is the signature admitting it was wrong before the body gets
+a chance to.</p>
+
+<p>Third — the parameter:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">fn list_dir, the signature</span></p>
+<pre><code><span class="dim"><span class="c">/// The names in a directory, sorted. Not the paths — just the names.</span></span>
+<span class="del"><span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="k">str</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt; {</span>
+<span class="add"><span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="t">Path</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt; {</span>
+<span class="dim">    <span class="k">let</span> <span class="k">mut</span> names = <span class="t">Vec</span>::<span class="f">new</span>();</span></code></pre>
+
+<p><code>cargo test</code> again, and the compiler lists four callers that hand it a
+string literal — one in <code>fn ui</code>, three in the tests. <code>Path::new</code> at
+each. Fourth:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the Ctrl+O handler</span></p>
+<pre><code><span class="dim">            <span class="k">if</span> open_requested {</span>
+<span class="del">                <span class="k">match</span> <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>) {</span>
+<span class="add">                <span class="k">match</span> <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)) {</span>
+<span class="dim">                    <span class="f">Ok</span>(names) =&gt; <span class="k">self</span>.picker = <span class="f">Some</span>(names),</span></code></pre>
+
+<p>Fifth — the three tests from lesson 16:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, the three list_dir tests from lesson 16</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {</span>
+<span class="del">        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>).<span class="f">unwrap</span>();</span>
+<span class="add">        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();</span>
+<span class="dim">        <span class="f">assert</span>!(names.<span class="f">contains</span>(&amp;<span class="s">&quot;Cargo.toml&quot;</span>.<span class="f">to_owned</span>()));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_sorts_its_names</span>() {</span>
+<span class="del">        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="s">&quot;.&quot;</span>).<span class="f">unwrap</span>();</span>
+<span class="add">        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();</span>
+<span class="dim">        <span class="k">let</span> <span class="k">mut</span> sorted = names.<span class="f">clone</span>();
+        sorted.<span class="f">sort</span>();
+        <span class="f">assert_eq</span>!(names, sorted);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_reports_a_directory_that_is_not_there</span>() {</span>
+<span class="del">        <span class="f">assert</span>!(<span class="f">list_dir</span>(<span class="s">&quot;no/such/directory&quot;</span>).<span class="f">is_err</span>());</span>
+<span class="add">        <span class="f">assert</span>!(<span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;no/such/directory&quot;</span>)).<span class="f">is_err</span>());</span>
+<span class="dim">    }</span></code></pre>
+
+<p>It compiles. Run it.</p>
+
+<pre class="error" data-label="cargo test">thread 'tests::list_dir_names_files_that_exist' panicked at src/main.rs:716:13:
+"caf�.txt" was listed but does not exist
+
+test result: FAILED. 20 passed; 1 failed</pre>
+
+<p>There it is: the exact lie from stage 1, caught by a test instead of by you. The name
+that was listed is not the name on disk.</p>
+
+<h4 id="keep-the-bytes">Sixth — keep what the filesystem gave you</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">fn list_dir — the return type and the push</span></p>
+<pre><code><span class="dim"><span class="c">/// The names in a directory, sorted. Not the paths — just the names.</span></span>
+<span class="del"><span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="t">Path</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt; {</span>
+<span class="add"><span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="t">Path</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">OsString</span>&gt;&gt; {</span>
+<span class="dim">    <span class="k">let</span> <span class="k">mut</span> names = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">for</span> entry <span class="k">in</span> fs::<span class="f">read_dir</span>(dir)? {</span>
+<span class="del">        names.<span class="f">push</span>(entry?.<span class="f">file_name</span>().<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>());</span>
+<span class="add">        names.<span class="f">push</span>(entry?.<span class="f">file_name</span>());</span>
+<span class="dim">    }
+    names.<span class="f">sort</span>();
+    <span class="f">Ok</span>(names)
+}</span></code></pre>
+
+<p><code>entry.file_name()</code> already returned an <code>OsString</code>; lesson 16
+converted it and threw the bytes away. Now we keep it. That is the whole fix — one
+deleted method call — and the rest of this stage is the compiler walking you to the
+places that assumed a <code>String</code>.</p>
+
+<p>Seventh — the field:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="dim">    <span class="c">/// The directory listing on screen, if the picker is open.</span></span>
+<span class="del">    picker: <span class="t">Option</span>&lt;<span class="t">Vec</span>&lt;<span class="t">String</span>&gt;&gt;,</span>
+<span class="add">    picker: <span class="t">Option</span>&lt;<span class="t">Vec</span>&lt;<span class="t">OsString</span>&gt;&gt;,</span>
+<span class="dim">    position: <span class="t">String</span>,</span></code></pre>
+
+<p>Eighth — the label:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, inside the modal</span></p>
+<pre><code><span class="dim">                <span class="k">for</span> name <span class="k">in</span> names {</span>
+<span class="del">                    <span class="k">if</span> ui.<span class="f">button</span>(name).<span class="f">clicked</span>() {</span>
+<span class="add">                    <span class="k">if</span> ui.<span class="f">button</span>(name.<span class="f">to_string_lossy</span>()).<span class="f">clicked</span>() {</span>
+<span class="dim">                        chosen = <span class="f">Some</span>(name.<span class="f">clone</span>());
+                    }
+                }</span></code></pre>
+
+<p>The lossy conversion is back, and it has moved to the only place it is harmless: the
+button's text. The <code>name</code> that goes into <code>chosen</code>, and from there to
+<code>open_path</code>, is the <code>OsString</code> with every byte intact. Compare this
+line with the one you deleted in edit six. Same call, different side of the boundary.</p>
+
+<p>Ninth — the test that looked for <code>Cargo.toml</code> as a <code>String</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, list_dir_finds_the_crate_manifest</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {
+        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();</span>
+<span class="del">        <span class="f">assert</span>!(names.<span class="f">contains</span>(&amp;<span class="s">&quot;Cargo.toml&quot;</span>.<span class="f">to_owned</span>()));</span>
+<span class="add">        <span class="f">assert</span>!(names.<span class="f">contains</span>(&amp;<span class="t">OsString</span>::<span class="f">from</span>(<span class="s">&quot;Cargo.toml&quot;</span>)));</span>
+<span class="dim">    }</span></code></pre>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test<br>
+→ silent, <em>test result: ok. 21 passed; 0 failed</em></p>
+
+<p class="run">cargo run -- a.rs<br>
+→ <kbd>Ctrl</kbd>+<kbd>O</kbd>, click <code>caf�.txt</code><br>
+→ a second tab, with the text you saved in stage 3, and an empty status line</p>
+
+<p>Same click as stage 1; different file. The label still says <code>�</code>, because
+it must — but the click carries the real name now.</p>
+</section>
+
+<section class="stage" id="stage-dirs">
+<h3>A directory is not a file</h3>
+
+<p class="goal">Clicking <code>src/</code> in the picker shows what is inside it,
+<code>..</code> goes back up, and clicking a file still opens it.</p>
+
+<p>Click <code>src</code> in the picker right now and you get a tab for a directory: it
+reads as empty, the status bar says <em>could not open src: Is a directory</em>, and
+saving would fail the same way. The listing knows names; it doesn't know what they
+are. This stage gives it a type that does, and a directory to be relative to.
+<strong>Eight edits.</strong></p>
+
+<h4 id="entry">First — two structs, and a <code>list_dir</code> that fills one of them</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">above the Pending enum — list_dir, with two structs in front of it</span></p>
+<pre><code><span class="del"><span class="c">/// The names in a directory, sorted. Not the paths — just the names.</span>
+<span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="t">Path</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">OsString</span>&gt;&gt; {
+    <span class="k">let</span> <span class="k">mut</span> names = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">for</span> entry <span class="k">in</span> fs::<span class="f">read_dir</span>(dir)? {
+        names.<span class="f">push</span>(entry?.<span class="f">file_name</span>());
+    }
+    names.<span class="f">sort</span>();
+    <span class="f">Ok</span>(names)
+}</span>
+<span class="add"><span class="c">/// One thing in a directory: its name, and whether it is a directory itself.</span>
+<span class="k">struct</span> <span class="t">Entry</span> {
+    name: <span class="t">OsString</span>,
+    is_dir: <span class="k">bool</span>,
+}
+
+<span class="c">/// What the picker is showing: a directory, and what is in it.</span>
+<span class="k">struct</span> <span class="t">Picker</span> {
+    dir: <span class="t">PathBuf</span>,
+    entries: <span class="t">Vec</span>&lt;<span class="t">Entry</span>&gt;,
+}
+
+<span class="c">/// What is in a directory, sorted by name. Not the paths — just the names.</span>
+<span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="t">Path</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">Entry</span>&gt;&gt; {
+    <span class="k">let</span> <span class="k">mut</span> entries = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">for</span> entry <span class="k">in</span> fs::<span class="f">read_dir</span>(dir)? {
+        <span class="k">let</span> entry = entry?;
+        entries.<span class="f">push</span>(<span class="t">Entry</span> {
+            name: entry.<span class="f">file_name</span>(),
+            is_dir: entry.<span class="f">file_type</span>()?.<span class="f">is_dir</span>(),
+        });
+    }
+    entries.<span class="f">sort_by</span>(|a, b| a.name.<span class="f">cmp</span>(&amp;b.name));
+    <span class="f">Ok</span>(entries)
+}</span>
+<span class="dim">
+<span class="c">/// Something the editor is waiting for permission to do.</span></span></code></pre>
+
+<p>An <code>Entry</code> is one thing in a directory: its name, and whether it is a
+directory itself. A <code>Picker</code> is what is on screen: <em>which</em> directory,
+and its entries. Lesson 16's picker only had the second half, because the directory was
+always <code>"."</code>; the moment you can navigate, the listing needs to remember where
+it is.</p>
+
+<p>Three things to notice in the new <code>list_dir</code>. <code>let entry = entry?;</code>
+unwraps once, because the entry is now used twice. <code>entry.file_type()?</code> is a
+<em>third</em> question mark — asking what kind of thing an entry is can fail
+separately from reading the directory and from reading the entry, and the type says so.
+And <code>sort_by</code> takes a closure that compares two entries, since a
+<code>Vec&lt;Entry&gt;</code> has no order of its own the way <code>Vec&lt;OsString&gt;</code>
+did.</p>
+
+<p class="sidenote"><code>file_type()</code> describes the entry itself, not what it
+points at. A symbolic link to a directory reports as a link, so it will show without
+the <code>/</code> and open as a file. <code>fs::metadata(dir.join(&amp;name))</code>
+follows links, at the price of one more system call per entry. Left as is — it's a real
+trade-off, not an oversight, and you now know where to make it.</p>
+
+<p>Second — the field holds a <code>Picker</code>:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct</span></p>
+<pre><code><span class="dim">    <span class="c">/// The directory listing on screen, if the picker is open.</span></span>
+<span class="del">    picker: <span class="t">Option</span>&lt;<span class="t">Vec</span>&lt;<span class="t">OsString</span>&gt;&gt;,</span>
+<span class="add">    picker: <span class="t">Option</span>&lt;<span class="t">Picker</span>&gt;,</span>
+<span class="dim">    position: <span class="t">String</span>,</span></code></pre>
+
+<p>Third — one place that lists a directory and puts it on screen, or says why it
+can't:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor, after fn open_path</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">open_path</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, path: &amp;<span class="t">Path</span>) {
+        <span class="k">self</span>.buffers.<span class="f">push</span>(<span class="t">Buffer</span>::<span class="f">open</span>(path));
+        <span class="k">self</span>.active = <span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>;
+    }</span>
+<span class="add">
+    <span class="c">/// Show a directory in the picker, or say why it can&#x27;t be shown.</span>
+    <span class="k">fn</span> <span class="f">browse</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, dir: <span class="t">PathBuf</span>) {
+        <span class="k">match</span> <span class="f">list_dir</span>(&amp;dir) {
+            <span class="f">Ok</span>(entries) =&gt; <span class="k">self</span>.picker = <span class="f">Some</span>(<span class="t">Picker</span> { dir, entries }),
+            <span class="f">Err</span>(error) =&gt; {
+                <span class="k">self</span>.buffers[<span class="k">self</span>.active].status =
+                    <span class="f">format</span>!(<span class="s">&quot;cannot read {}: {error}&quot;</span>, dir.<span class="f">display</span>());
+            }
+        }
+    }</span>
+<span class="dim">
+    <span class="c">/// Close a buffer, keeping `active` pointing at the file it was on.</span></span></code></pre>
+
+<p>This is the <code>match</code> that used to live in the <kbd>Ctrl</kbd>+<kbd>O</kbd>
+handler, made into a method so the picker can call it too. <code>dir</code> is taken by
+value — a <code>PathBuf</code>, not a <code>&amp;Path</code> — because on success it moves
+into the <code>Picker</code> and stays there. Passing a borrow would mean cloning it a
+line later.</p>
+
+<p>Fourth — the shortcut starts from where the editor is running:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the Ctrl+O handler</span></p>
+<pre><code><span class="dim">            <span class="k">let</span> open_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">O</span>));</span>
+<span class="del">            <span class="k">if</span> open_requested {
+                <span class="k">match</span> <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)) {
+                    <span class="f">Ok</span>(names) =&gt; <span class="k">self</span>.picker = <span class="f">Some</span>(names),
+                    <span class="f">Err</span>(error) =&gt; {
+                        <span class="k">self</span>.buffers[<span class="k">self</span>.active].status =
+                            <span class="f">format</span>!(<span class="s">&quot;cannot read this directory: {error}&quot;</span>);
+                    }
+                }
+            }</span>
+<span class="add">            <span class="k">if</span> open_requested {
+                <span class="k">let</span> dir = env::<span class="f">current_dir</span>().<span class="f">unwrap_or_else</span>(|_| <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;.&quot;</span>));
+                <span class="k">self</span>.<span class="f">browse</span>(dir);
+            }</span>
+<span class="dim">
+            <span class="k">let</span> close_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">W</span>));</span></code></pre>
+
+<p><code>env::current_dir()</code> can fail, in theory — the directory could have been
+deleted under you. If it does, <code>"."</code> makes <code>read_dir</code> fail in the
+same way a line later, and <code>browse</code> puts that in the status bar. One fallback,
+one message.</p>
+
+<h4 id="navigate">Fifth — the modal</h4>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, the modal</span></p>
+<pre><code><span class="del">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(names) = &amp;<span class="k">self</span>.picker {</span>
+<span class="add">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(picker) = &amp;<span class="k">self</span>.picker {</span>
+<span class="dim">            egui::<span class="t">Modal</span>::<span class="f">new</span>(egui::<span class="t">Id</span>::<span class="f">new</span>(<span class="s">&quot;picker&quot;</span>)).<span class="f">show</span>(ui.<span class="f">ctx</span>(), |ui| {</span>
+<span class="del">                ui.<span class="f">heading</span>(<span class="s">&quot;Open file&quot;</span>);</span>
+<span class="add">                ui.<span class="f">heading</span>(picker.dir.<span class="f">display</span>().<span class="f">to_string</span>());</span>
+<span class="dim">                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);</span>
+<span class="del">                <span class="k">for</span> name <span class="k">in</span> names {
+                    <span class="k">if</span> ui.<span class="f">button</span>(name.<span class="f">to_string_lossy</span>()).<span class="f">clicked</span>() {
+                        chosen = <span class="f">Some</span>(name.<span class="f">clone</span>());
+                    }
+                }</span>
+<span class="add">                <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(parent) = picker.dir.<span class="f">parent</span>()
+                    &amp;&amp; ui.<span class="f">button</span>(<span class="s">&quot;..&quot;</span>).<span class="f">clicked</span>()
+                {
+                    chosen = <span class="f">Some</span>((parent.<span class="f">to_owned</span>(), <span class="k">true</span>));
+                }
+                <span class="k">for</span> entry <span class="k">in</span> &amp;picker.entries {
+                    <span class="k">let</span> label = <span class="k">if</span> entry.is_dir {
+                        <span class="f">format</span>!(<span class="s">&quot;{}/&quot;</span>, entry.name.<span class="f">to_string_lossy</span>())
+                    } <span class="k">else</span> {
+                        entry.name.<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>()
+                    };
+                    <span class="k">if</span> ui.<span class="f">button</span>(label).<span class="f">clicked</span>() {
+                        chosen = <span class="f">Some</span>((picker.dir.<span class="f">join</span>(&amp;entry.name), entry.is_dir));
+                    }
+                }</span>
+<span class="dim">                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">if</span> ui.<span class="f">button</span>(<span class="s">&quot;Cancel&quot;</span>).<span class="f">clicked</span>() {</span></code></pre>
+
+<p>Three changes. The heading is the directory, so you can see where you are. A
+<code>..</code> button appears when the directory has a parent — <code>parent()</code>
+returns an <code>Option</code>, and for <code>/</code> it is <code>None</code>, so the
+root has no way up. And each entry's button records a pair: the full path, built with
+<code>picker.dir.join(&amp;entry.name)</code>, and whether it is a directory.</p>
+
+<p>That <code>join</code> is what <code>Path::new(&amp;name)</code> in stage 3 was
+standing in for. A name is relative to the directory it was listed from; now that the
+picker knows which directory that is, it can build the real path instead of hoping the
+process is running in the right place.</p>
+
+<p><code>chosen</code> holds a tuple, <code>(PathBuf, bool)</code>. A struct would be
+ceremony for a value that lives for twenty lines and is destructured once.</p>
+
+<p>Sixth — act on the pair:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn pick, the bottom</span></p>
+<pre><code><span class="del">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(name) = chosen {
+            <span class="k">self</span>.<span class="f">open_path</span>(<span class="t">Path</span>::<span class="f">new</span>(&amp;name));
+            <span class="k">self</span>.picker = <span class="t">None</span>;</span>
+<span class="add">        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>((path, is_dir)) = chosen {
+            <span class="k">if</span> is_dir {
+                <span class="k">self</span>.<span class="f">browse</span>(path);
+            } <span class="k">else</span> {
+                <span class="k">self</span>.<span class="f">open_path</span>(&amp;path);
+                <span class="k">self</span>.picker = <span class="t">None</span>;
+            }</span>
+<span class="dim">        } <span class="k">else</span> <span class="k">if</span> cancelled {
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        }
+    }</span></code></pre>
+
+<p>A directory re-lists — <code>browse</code> replaces the picker with a new one and the
+modal stays open, showing the new directory next frame. A file opens and closes the
+picker, as before. Same decide-then-act shape as lesson 16: the closure records, the
+code after it moves.</p>
+
+<p>Seventh — the tests that read the listing. Two are adjusted for <code>Entry</code>,
+and a new one between them checks that <code>src</code> and <code>Cargo.toml</code> are
+told apart:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, the list_dir tests — two change, one is new</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {</span>
+<span class="del">        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(names.<span class="f">contains</span>(&amp;<span class="t">OsString</span>::<span class="f">from</span>(<span class="s">&quot;Cargo.toml&quot;</span>)));</span>
+<span class="add">        <span class="k">let</span> entries = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(entries.<span class="f">iter</span>().<span class="f">any</span>(|entry| entry.name == <span class="s">&quot;Cargo.toml&quot;</span>));</span>
+<span class="dim">    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_sorts_its_names</span>() {</span>
+<span class="del">        <span class="k">let</span> names = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();</span>
+<span class="add">        <span class="k">let</span> entries = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="k">let</span> names: <span class="t">Vec</span>&lt;&amp;<span class="t">OsString</span>&gt; = entries.<span class="f">iter</span>().<span class="f">map</span>(|entry| &amp;entry.name).<span class="f">collect</span>();</span>
+<span class="dim">        <span class="k">let</span> <span class="k">mut</span> sorted = names.<span class="f">clone</span>();
+        sorted.<span class="f">sort</span>();
+        <span class="f">assert_eq</span>!(names, sorted);
+    }</span>
+<span class="add">
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_knows_a_directory_from_a_file</span>() {
+        <span class="k">let</span> entries = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="k">let</span> src = entries.<span class="f">iter</span>().<span class="f">find</span>(|e| e.name == <span class="s">&quot;src&quot;</span>).<span class="f">unwrap</span>();
+        <span class="k">let</span> toml = entries.<span class="f">iter</span>().<span class="f">find</span>(|e| e.name == <span class="s">&quot;Cargo.toml&quot;</span>).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(src.is_dir);
+        <span class="f">assert</span>!(!toml.is_dir);
+    }</span>
+<span class="dim">
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_reports_a_directory_that_is_not_there</span>() {</span></code></pre>
+
+<p><code>iter().any(...)</code> and <code>iter().find(...)</code> are the questions
+<code>contains</code> used to answer, asked through a closure because an
+<code>Entry</code> has to be looked inside. The sort test collects the names first so it
+can compare them the way it did before.</p>
+
+<p>Eighth — the test from stage 4 reads the name out of the entry:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, list_dir_names_files_that_exist — the assert</span></p>
+<pre><code><span class="dim">        <span class="k">for</span> listed <span class="k">in</span> <span class="f">list_dir</span>(&amp;dir).<span class="f">unwrap</span>() {
+            <span class="f">assert</span>!(</span>
+<span class="del">                dir.<span class="f">join</span>(&amp;listed).<span class="f">exists</span>(),
+                <span class="s">&quot;{listed:?} was listed but does not exist&quot;</span></span>
+<span class="add">                dir.<span class="f">join</span>(&amp;listed.name).<span class="f">exists</span>(),
+                <span class="s">&quot;{:?} was listed but does not exist&quot;</span>,
+                listed.name</span>
+<span class="dim">            );
+        }</span></code></pre>
+
+<p class="run">cargo clippy --all-targets &amp;&amp; cargo test<br>
+→ silent, <em>test result: ok. 22 passed; 0 failed</em></p>
+
+<p class="run">cargo run -- a.rs<br>
+→ <kbd>Ctrl</kbd>+<kbd>O</kbd>: the heading is the full path of <code>editor</code>, and <code>src/</code> and <code>target/</code> have slashes<br>
+→ click <code>src/</code>: the heading ends in <code>/src</code>, and the list is <code>..</code> and <code>main.rs</code><br>
+→ click <code>..</code>: back where you started<br>
+→ click <code>Cargo.toml</code>: it opens, and the picker closes</p>
+
+<div class="callout warn">
+  <span class="label">One thing this gets wrong, on purpose</span>
+  Click a directory you cannot read — <code>/root</code>, from <code>..</code> up to
+  <code>/</code> — and <code>browse</code> writes the error to the status bar, which is
+  behind the modal. The picker stays where it was, so nothing is lost, but the message is
+  invisible until you cancel. Putting the error inside the picker means giving
+  <code>Picker</code> a place to hold it. It is a small change, and it is yours if it
+  bothers you.
+</div>
+
+<div class="callout note">
+  <span class="label">Remove the experiment</span>
+  The file from stage 1 is still in <code>editor/</code>, and it will sit in the picker
+  forever. <code>rm "$(printf 'caf\xe9.txt')"</code> from that directory. The test makes
+  its own copy under <code>/tmp</code> and does not need this one.
+</div>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>769 lines, twenty-two tests green. Two new structs, one new method, two rewritten
+ones, and not a <code>String</code> left anywhere a filename is stored.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the imports at the top</span></p>
+<pre><code><span class="k">use</span> eframe::egui;
+<span class="k">use</span> egui::text::{<span class="t">ByteIndex</span>, <span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};
+<span class="k">use</span> ropey::<span class="t">Rope</span>;
+<span class="k">use</span> std::<span class="k">char</span>;
+<span class="k">use</span> std::env;
+<span class="k">use</span> std::ffi::<span class="t">OsString</span>;
+<span class="k">use</span> std::fs;
+<span class="k">use</span> std::io;
+<span class="k">use</span> std::ops::<span class="t">Range</span>;
+<span class="k">use</span> std::path::{<span class="t">Path</span>, <span class="t">PathBuf</span>};
+<span class="k">use</span> std::sync::<span class="t">Arc</span>;
+<span class="k">use</span> std::time::<span class="t">Instant</span>;</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: about 185 lines, untouched</span>
+  The colours, <code>scan</code>, <code>highlight</code>, <code>Text</code> and its
+  <code>TextBuffer</code> impl are exactly as lesson 11 left them.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">above the Pending enum</span></p>
+<pre><code><span class="c">/// One thing in a directory: its name, and whether it is a directory itself.</span>
+<span class="k">struct</span> <span class="t">Entry</span> {
+    name: <span class="t">OsString</span>,
+    is_dir: <span class="k">bool</span>,
+}
+
+<span class="c">/// What the picker is showing: a directory, and what is in it.</span>
+<span class="k">struct</span> <span class="t">Picker</span> {
+    dir: <span class="t">PathBuf</span>,
+    entries: <span class="t">Vec</span>&lt;<span class="t">Entry</span>&gt;,
+}
+
+<span class="c">/// What is in a directory, sorted by name. Not the paths — just the names.</span>
+<span class="k">fn</span> <span class="f">list_dir</span>(dir: &amp;<span class="t">Path</span>) -&gt; io::<span class="t">Result</span>&lt;<span class="t">Vec</span>&lt;<span class="t">Entry</span>&gt;&gt; {
+    <span class="k">let</span> <span class="k">mut</span> entries = <span class="t">Vec</span>::<span class="f">new</span>();
+    <span class="k">for</span> entry <span class="k">in</span> fs::<span class="f">read_dir</span>(dir)? {
+        <span class="k">let</span> entry = entry?;
+        entries.<span class="f">push</span>(<span class="t">Entry</span> {
+            name: entry.<span class="f">file_name</span>(),
+            is_dir: entry.<span class="f">file_type</span>()?.<span class="f">is_dir</span>(),
+        });
+    }
+    entries.<span class="f">sort_by</span>(|a, b| a.name.<span class="f">cmp</span>(&amp;b.name));
+    <span class="f">Ok</span>(entries)
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: the Pending enum, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">struct Buffer, and the two methods that changed</span></p>
+<pre><code><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {
+    path: <span class="t">PathBuf</span>,
+    text: <span class="t">Text</span>,
+    status: <span class="t">String</span>,
+    <span class="c">/// Does this buffer hold edits that aren&#x27;t on disk?</span>
+    dirty: <span class="k">bool</span>,
+}
+
+<span class="k">impl</span> <span class="t">Buffer</span> {
+    <span class="c">/// Open a file into a new editor. A file that doesn&#x27;t exist yet is not an</span>
+    <span class="c">/// error — it&#x27;s a new file, and starts empty.</span>
+    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="t">Path</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
+            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
+                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {}&quot;</span>, path.<span class="f">display</span>()))
+            }
+            <span class="f">Err</span>(error) =&gt; (
+                <span class="t">String</span>::<span class="f">new</span>(),
+                <span class="f">format</span>!(<span class="s">&quot;could not open {}: {error}&quot;</span>, path.<span class="f">display</span>()),
+            ),
+        };
+        <span class="k">Self</span> {
+            path: <span class="t">PathBuf</span>::<span class="f">from</span>(path),
+            text: <span class="t">Text</span>::<span class="f">new</span>(&amp;text),
+            status,
+            dirty: <span class="k">false</span>,
+        }
+    }
+    <span class="c">/// Write the buffer back to the file it came from.</span>
+    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
+        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, <span class="k">self</span>.text.<span class="f">as_str</span>())?;
+        <span class="k">self</span>.text.<span class="f">mark_saved</span>();
+        <span class="k">self</span>.dirty = <span class="k">false</span>;
+        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path.<span class="f">display</span>());
+        <span class="f">Ok</span>(())
+    }
+<span class="gap">fn line_col, unchanged — 4 lines</span>
+    <span class="c">/// The last part of the path, for the tab. Lossy on purpose: a name that</span>
+    <span class="c">/// isn&#x27;t UTF-8 still gets shown, and this string is never used to open anything.</span>
+    <span class="k">fn</span> <span class="f">name</span>(&amp;<span class="k">self</span>) -&gt; <span class="t">String</span> {
+        <span class="k">match</span> <span class="k">self</span>.path.<span class="f">file_name</span>() {
+            <span class="f">Some</span>(name) =&gt; name.<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>(),
+            <span class="t">None</span> =&gt; <span class="k">self</span>.path.<span class="f">display</span>().<span class="f">to_string</span>(),
+        }
+    }
+}</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">the Editor struct — one field changed</span></p>
+<pre><code><span class="k">struct</span> <span class="t">Editor</span> {
+    buffers: <span class="t">Vec</span>&lt;<span class="t">Buffer</span>&gt;,
+    active: <span class="k">usize</span>,
+    <span class="c">/// An action held up until the question on screen is answered.</span>
+    confirm: <span class="t">Option</span>&lt;<span class="t">Pending</span>&gt;,
+    <span class="c">/// Set once the user has answered &quot;quit anyway&quot;, so the close we send</span>
+    <span class="c">/// ourselves isn&#x27;t mistaken for a fresh request and cancelled again.</span>
+    quitting: <span class="k">bool</span>,
+    <span class="c">/// The directory listing on screen, if the picker is open.</span>
+    picker: <span class="t">Option</span>&lt;<span class="t">Picker</span>&gt;,
+    position: <span class="t">String</span>,
+    frame_ms: f32,
+    line_col_us: f32,
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: unsaved, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor — open_path and browse</span></p>
+<pre><code>    <span class="c">/// Open a file into a new buffer, and switch to it.</span>
+    <span class="k">fn</span> <span class="f">open_path</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, path: &amp;<span class="t">Path</span>) {
+        <span class="k">self</span>.buffers.<span class="f">push</span>(<span class="t">Buffer</span>::<span class="f">open</span>(path));
+        <span class="k">self</span>.active = <span class="k">self</span>.buffers.<span class="f">len</span>() - <span class="s">1</span>;
+    }
+
+    <span class="c">/// Show a directory in the picker, or say why it can&#x27;t be shown.</span>
+    <span class="k">fn</span> <span class="f">browse</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, dir: <span class="t">PathBuf</span>) {
+        <span class="k">match</span> <span class="f">list_dir</span>(&amp;dir) {
+            <span class="f">Ok</span>(entries) =&gt; <span class="k">self</span>.picker = <span class="f">Some</span>(<span class="t">Picker</span> { dir, entries }),
+            <span class="f">Err</span>(error) =&gt; {
+                <span class="k">self</span>.buffers[<span class="k">self</span>.active].status =
+                    <span class="f">format</span>!(<span class="s">&quot;cannot read {}: {error}&quot;</span>, dir.<span class="f">display</span>());
+            }
+        }
+    }</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: close, open, ask — about 60 lines, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl Editor — fn pick</span></p>
+<pre><code>    <span class="c">/// Draw the file picker, and act on what was clicked.</span>
+    <span class="k">fn</span> <span class="f">pick</span>(&amp;<span class="k">mut</span> <span class="k">self</span>, ui: &amp;egui::<span class="t">Ui</span>) {
+        <span class="k">let</span> <span class="k">mut</span> chosen = <span class="t">None</span>;
+        <span class="k">let</span> <span class="k">mut</span> cancelled = <span class="k">false</span>;
+
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(picker) = &amp;<span class="k">self</span>.picker {
+            egui::<span class="t">Modal</span>::<span class="f">new</span>(egui::<span class="t">Id</span>::<span class="f">new</span>(<span class="s">&quot;picker&quot;</span>)).<span class="f">show</span>(ui.<span class="f">ctx</span>(), |ui| {
+                ui.<span class="f">heading</span>(picker.dir.<span class="f">display</span>().<span class="f">to_string</span>());
+                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>(parent) = picker.dir.<span class="f">parent</span>()
+                    &amp;&amp; ui.<span class="f">button</span>(<span class="s">&quot;..&quot;</span>).<span class="f">clicked</span>()
+                {
+                    chosen = <span class="f">Some</span>((parent.<span class="f">to_owned</span>(), <span class="k">true</span>));
+                }
+                <span class="k">for</span> entry <span class="k">in</span> &amp;picker.entries {
+                    <span class="k">let</span> label = <span class="k">if</span> entry.is_dir {
+                        <span class="f">format</span>!(<span class="s">&quot;{}/&quot;</span>, entry.name.<span class="f">to_string_lossy</span>())
+                    } <span class="k">else</span> {
+                        entry.name.<span class="f">to_string_lossy</span>().<span class="f">into_owned</span>()
+                    };
+                    <span class="k">if</span> ui.<span class="f">button</span>(label).<span class="f">clicked</span>() {
+                        chosen = <span class="f">Some</span>((picker.dir.<span class="f">join</span>(&amp;entry.name), entry.is_dir));
+                    }
+                }
+                ui.<span class="f">add_space</span>(<span class="s">8</span>.<span class="s">0</span>);
+                <span class="k">if</span> ui.<span class="f">button</span>(<span class="s">&quot;Cancel&quot;</span>).<span class="f">clicked</span>() {
+                    cancelled = <span class="k">true</span>;
+                }
+            });
+        }
+
+        <span class="k">if</span> <span class="k">let</span> <span class="f">Some</span>((path, is_dir)) = chosen {
+            <span class="k">if</span> is_dir {
+                <span class="k">self</span>.<span class="f">browse</span>(path);
+            } <span class="k">else</span> {
+                <span class="k">self</span>.<span class="f">open_path</span>(&amp;path);
+                <span class="k">self</span>.picker = <span class="t">None</span>;
+            }
+        } <span class="k">else</span> <span class="k">if</span> cancelled {
+            <span class="k">self</span>.picker = <span class="t">None</span>;
+        }
+    }</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: save_for, carry_out, and the start of fn ui — about 50 lines, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui — two lines changed, the rest elided</span></p>
+<pre><code>            <span class="k">let</span> open_requested = ui.<span class="f">input</span>(|i| i.modifiers.command &amp;&amp; i.<span class="f">key_pressed</span>(egui::<span class="t">Key</span>::<span class="t">O</span>));
+            <span class="k">if</span> open_requested {
+                <span class="k">let</span> dir = env::<span class="f">current_dir</span>().<span class="f">unwrap_or_else</span>(|_| <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;.&quot;</span>));
+                <span class="k">self</span>.<span class="f">browse</span>(dir);
+            }
+<span class="gap">the close shortcut, the tab row and the save shortcut, unchanged — about 30 lines</span>
+            ui.<span class="f">heading</span>(buffer.path.<span class="f">display</span>().<span class="f">to_string</span>());</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">fn main — the first lines</span></p>
+<pre><code><span class="k">fn</span> <span class="f">main</span>() -&gt; eframe::<span class="t">Result</span> {
+    <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">PathBuf</span>&gt; = env::<span class="f">args_os</span>().<span class="f">skip</span>(<span class="s">1</span>).<span class="f">map</span>(<span class="t">PathBuf</span>::from).<span class="f">collect</span>();
+    <span class="k">let</span> paths = <span class="k">if</span> paths.<span class="f">is_empty</span>() {
+        vec![<span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;scratch.md&quot;</span>)]
+    } <span class="k">else</span> {
+        paths
+    };</code></pre>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests — the helpers and the list_dir tests</span></p>
+<pre><code>    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Buffer</span> {
+        <span class="t">Buffer</span> {
+            path: <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;test.rs&quot;</span>),
+            text: <span class="t">Text</span>::<span class="f">new</span>(text),
+            status: <span class="t">String</span>::<span class="f">new</span>(),
+            dirty: <span class="k">false</span>,
+        }
+    }
+<span class="gap">the line_col, name and scan tests, unchanged apart from two PathBuf::from — about 55 lines</span>
+    <span class="k">fn</span> <span class="f">editor_with</span>(names: &amp;[&amp;<span class="k">str</span>]) -&gt; <span class="t">Editor</span> {
+        <span class="k">let</span> paths: <span class="t">Vec</span>&lt;<span class="t">PathBuf</span>&gt; = names.<span class="f">iter</span>().<span class="f">map</span>(<span class="t">PathBuf</span>::from).<span class="f">collect</span>();
+        <span class="t">Editor</span>::<span class="f">open</span>(&amp;paths)
+    }
+<span class="gap">the close and unsaved tests, unchanged — about 50 lines</span>
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {
+        <span class="k">let</span> entries = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(entries.<span class="f">iter</span>().<span class="f">any</span>(|entry| entry.name == <span class="s">&quot;Cargo.toml&quot;</span>));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_sorts_its_names</span>() {
+        <span class="k">let</span> entries = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="k">let</span> names: <span class="t">Vec</span>&lt;&amp;<span class="t">OsString</span>&gt; = entries.<span class="f">iter</span>().<span class="f">map</span>(|entry| &amp;entry.name).<span class="f">collect</span>();
+        <span class="k">let</span> <span class="k">mut</span> sorted = names.<span class="f">clone</span>();
+        sorted.<span class="f">sort</span>();
+        <span class="f">assert_eq</span>!(names, sorted);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_knows_a_directory_from_a_file</span>() {
+        <span class="k">let</span> entries = <span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;.&quot;</span>)).<span class="f">unwrap</span>();
+        <span class="k">let</span> src = entries.<span class="f">iter</span>().<span class="f">find</span>(|e| e.name == <span class="s">&quot;src&quot;</span>).<span class="f">unwrap</span>();
+        <span class="k">let</span> toml = entries.<span class="f">iter</span>().<span class="f">find</span>(|e| e.name == <span class="s">&quot;Cargo.toml&quot;</span>).<span class="f">unwrap</span>();
+        <span class="f">assert</span>!(src.is_dir);
+        <span class="f">assert</span>!(!toml.is_dir);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_reports_a_directory_that_is_not_there</span>() {
+        <span class="f">assert</span>!(<span class="f">list_dir</span>(<span class="t">Path</span>::<span class="f">new</span>(<span class="s">&quot;no/such/directory&quot;</span>)).<span class="f">is_err</span>());
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_names_files_that_exist</span>() {
+        <span class="k">use</span> std::os::unix::ffi::<span class="t">OsStringExt</span>;
+
+        <span class="k">let</span> dir = env::<span class="f">temp_dir</span>().<span class="f">join</span>(<span class="s">&quot;editor-lesson-17&quot;</span>);
+        fs::<span class="f">create_dir_all</span>(&amp;dir).<span class="f">unwrap</span>();
+        <span class="k">let</span> name = <span class="t">OsString</span>::<span class="f">from_vec</span>(b<span class="s">&quot;caf\xe9.txt&quot;</span>.<span class="f">to_vec</span>());
+        fs::<span class="f">write</span>(dir.<span class="f">join</span>(&amp;name), <span class="s">&quot;&quot;</span>).<span class="f">unwrap</span>();
+
+        <span class="k">for</span> listed <span class="k">in</span> <span class="f">list_dir</span>(&amp;dir).<span class="f">unwrap</span>() {
+            <span class="f">assert</span>!(
+                dir.<span class="f">join</span>(&amp;listed.name).<span class="f">exists</span>(),
+                <span class="s">&quot;{:?} was listed but does not exist&quot;</span>,
+                listed.name
+            );
+        }
+    }
+}</code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">Why does <code>env::args()</code> panic on <code>caf\xe9.txt</code> when <code>env::args_os()</code> does not?</p>
+  <ul class="options">
+    <li data-correct><code>args()</code> promised <code>String</code>s, and this argument cannot be one</li>
+    <li><code>args()</code> reads the arguments before the process has a locale set</li>
+    <li><code>args_os()</code> replaces the invalid byte with <code>U+FFFD</code> silently</li>
+    <li><code>args()</code> is only meant for arguments that name existing files</li>
+  </ul>
+  <p class="why">A <code>String</code> is valid UTF-8 by definition. <code>args()</code>
+  yields <code>String</code>s, so an argument that isn't UTF-8 has no honest value to
+  yield — and its documentation says it panics. <code>args_os()</code> yields
+  <code>OsString</code>, which promises nothing about the bytes.
+  <a class="review" href="#the-panic">↑ Review: the command line refuses it outright (stage 1)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why is it fine for <code>Buffer::name</code> to be lossy when it was a bug for <code>list_dir</code> to be?</p>
+  <ul class="options">
+    <li data-correct>A tab label is only read; a listed name is used to open the file</li>
+    <li>By the time <code>name</code> runs, the file has already been read</li>
+    <li>Tab labels are short enough that a substituted byte is not noticeable</li>
+    <li><code>Buffer::name</code> is only called from tests, never from the UI</li>
+  </ul>
+  <p class="why">The rule is where the loss happens, not whether. A name that has had a
+  byte replaced no longer names the file — harmless on a button, fatal in a path. The
+  <code>PathBuf</code> underneath the tab still holds the real bytes.
+  <a class="review" href="#file-name">↑ Review: the name, and the code you get to delete (stage 2)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">After changing <code>Buffer.path</code> to <code>PathBuf</code>, what did <code>cargo check</code> do?</p>
+  <ul class="options">
+    <li data-correct>Listed every place that treated the path as text, with fixes for two</li>
+    <li>Compiled, because <code>PathBuf</code> and <code>String</code> convert implicitly</li>
+    <li>Reported one error at the field and stopped until it was fixed</li>
+    <li>Warned about the old <code>name</code> implementation and kept going</li>
+  </ul>
+  <p class="why">Four errors at once, each at a use site, two with the exact method to
+  call. Changing a type is asking the compiler to audit every use of it — which is why the
+  stage said to run <code>cargo check</code> before fixing anything.
+  <a class="review" href="#from">↑ Review: the constructor (stage 2)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">There are three <code>?</code>s in the finished <code>list_dir</code>. What does the third one handle?</p>
+  <ul class="options">
+    <li data-correct>Asking the filesystem what kind of thing an entry is</li>
+    <li>Sorting the entries, which can fail on names that don't compare</li>
+    <li>Reading the entry's name, which can fail if it isn't UTF-8</li>
+    <li>Joining the name onto the directory to make the full path</li>
+  </ul>
+  <p class="why"><code>entry.file_type()</code> is a separate call with its own
+  <code>io::Result</code>. Opening the directory, reading each entry, and asking each
+  entry's type are three questions to the filesystem, and each can be answered "no".
+  <a class="review" href="#entry">↑ Review: two structs, and a list_dir that fills one of them (stage 5)</a></p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 18</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://doc.rust-lang.org/std/path/index.html"><code>std::path</code></a> — the
+module page, not a tutorial about it. It is short. Read the opening section on
+<code>Path</code> versus <code>PathBuf</code>, then skim the method list on
+<a href="https://doc.rust-lang.org/std/path/struct.Path.html"><code>Path</code></a> and
+notice how many of them return <code>Option</code>.</p>
+
+<p>Then two minutes on
+<a href="https://doc.rust-lang.org/std/ffi/struct.OsString.html"><code>OsString</code></a>
+— specifically the paragraph on "Conversions", which is a list of the decisions this
+lesson made you take by hand.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> The picker now sorts
+  <code>Cargo.toml</code> before <code>src/</code>, because it sorts by name and nothing
+  else. Most file browsers put directories first. That is one <code>sort_by</code> away —
+  the closure needs to compare <code>is_dir</code> first and fall back to the name, and
+  <code>Ordering</code> has a method for exactly that chain. Try it before lesson 18; if
+  you want to see what <code>cmp</code> returns, ask.
+</div>
+
+<nav class="footer-nav">
+  <a href="0016-the-names-in-a-directory.html">← Lesson 16: The Names in a Directory</a>
+  <a href="../ROADMAP.md">Roadmap</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <span>Next: lesson 18 — line endings you didn't write</span>
+</nav>
+
+</body>
+</html>

@@ -57,6 +57,28 @@ language concept the next editor feature demands.
 
 **Final total: 12.** Undo/redo was dropped — egui already provides it (see below).
 
+### Parts after lesson 12 (see ROADMAP.md for the plan)
+
+13. ✅ Knowing what changed — `dirty`, a rope snapshot _(444 lines, 13 tests)_
+14. ✅ The index that outlived its buffer — `close`, the clamp, Ctrl+W _(508 lines, 14 tests)_
+15. ✅ Being asked first — `Modal`, `enum Pending`, `quitting` echo fix _(620 lines, 17 tests)_
+16. ✅ The names in a directory — `read_dir`, Ctrl+O picker, `open_path` seam
+    _(written 2026-08-31; 700 lines, 20 tests; lesson stated 659, corrected 2026-09-12)_
+17. ✅ Paths that aren't strings — `PathBuf`/`Path`/`OsString`, `args_os`, `Entry`/`Picker`,
+    directory navigation _(written 2026-09-12; 769 lines, 22 tests; five stages)_
+    - Every premise proven before writing: `env::args()` panics on `caf\xe9.txt` (real
+      output quoted); the lesson-16 picker reports the file as *new* (headless click, status
+      `new file: caf�.txt`, text empty); stage 4's picker opens it (text read back); the end
+      state navigates `src/` → `..` → opens `Cargo.toml` (headless probe, harness in the
+      session transcript).
+    - `DirEntry::file_type()` does **not** follow symlinks — found because the probe crate
+      symlinks `target/`, which then listed without a slash. Kept `file_type()?` for the
+      third-`?` teaching point; sidenote names `fs::metadata` as the alternative.
+    - `browse` on an unreadable directory writes to the status bar *behind* the modal.
+      Named in a warn callout as deliberate; a `Picker.error` field is the fix if wanted.
+    - The quit-dialog per-file Save and the lesson-14 last-buffer guard are still open
+      (part 3 deletes the guard — ADR 0002).
+
 ### Three planned premises that measurement killed
 
 Recording these because the pattern matters: **every time I checked a planned premise
@@ -211,6 +233,21 @@ catches all four classes above. **Do it before generating any listing from a reb
 **They now live in `~/.cache/text-editor-sources/`, not `/tmp`** — `/tmp` was cleaned
 three times, and each rebuild is where the drift above creeps in. That directory is outside
 the repo, so it breaks no rule about `main`; it just stops the archaeology repeating.
+
+**Lesson 17 added the check that makes this mechanical (2026-09-12).** `/tmp/l17/apply.py`
+(in the session transcript; worth promoting into the repo as `sources.py`'s partner) reads
+the *rendered* lesson, takes each stage's blocks as patches — `dim`+`del` lines are the
+context to find, `dim`+`add` the replacement — applies them in order to the previous
+stage's source, and diffs the result against the compiled stage source. Lesson 17's five
+stages reproduce `l17_s2`, `l17_s3`, `l17_s4` and `l17` byte for byte, and stage 4's
+intermediate states after edits 2 and 5 match the sources that produced the quoted
+compiler error and red test. On the first run it caught five blocks whose dimmed context
+skipped a blank line or matched the wrong `Self {` — none of which the six `build.py`
+audits can see. It needs the stage sources, which is why it is not in `build.py` yet.
+
+Cached sources now: `l13 l14 l14_s1 l14_s2 l14_s2_tests l14_s3 l15 l15_s1 l15_s2 l16
+l17_s2 l17_s3 l17_s4_a l17_s4_red l17_s4 l17`. `l15.rs` was rebuilt with the `quitting`
+fix from 5fadda3 (620 lines); `l16.rs` from lesson 16's checkpoint (700 lines).
 
 Worth doing properly at some point: a `sources.py` that rebuilds every end state from the
 checkpoints and compiles it, so this is one command rather than an archaeology session.

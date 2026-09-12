@@ -189,6 +189,7 @@ FIELD_USE = re.compile(r"\bself\.([a-z_][a-z0-9_]*)\b")
 FIELD_DECL = re.compile(r"^\s*([a-z_][a-z0-9_]*):\s*\S")
 OPEN_SPAN = re.compile(r"<span\b")
 ADD_SPAN = re.compile(r'<span class="add">')
+DEL_SPAN = re.compile(r'<span class="del">')
 PRE = re.compile(r"<pre[^>]*>(.*?)</pre>", re.S)
 
 
@@ -240,10 +241,18 @@ def check_field_order(docs: list[pathlib.Path]) -> int:
             for block in PRE.finditer(stage.group(1)):
                 at = stage.start() + block.start()
                 markup = block.group(1)
+                # A field that is deleted and re-added in the same block has
+                # changed type, not appeared: the reader already has it.
+                retyped = set()
+                for _, deleted in spans(markup, DEL_SPAN):
+                    for line in plain(deleted).splitlines():
+                        decl = FIELD_DECL.match(line)
+                        if decl and "(" not in line:
+                            retyped.add(decl.group(1))
                 for _, added in spans(markup, ADD_SPAN):
                     for line in plain(added).splitlines():
                         decl = FIELD_DECL.match(line)
-                        if decl and "(" not in line:
+                        if decl and "(" not in line and decl.group(1) not in retyped:
                             declared.setdefault(decl.group(1), at)
                 for use in FIELD_USE.finditer(plain(markup)):
                     used.setdefault(use.group(1), at)
@@ -360,7 +369,6 @@ def check_band_lines(docs: list[pathlib.Path]) -> int:
     return problems
 
 
-DEL_SPAN = re.compile(r'<span class="del">')
 
 
 def check_deleted_lines(docs: list[pathlib.Path]) -> int:

@@ -361,3 +361,9 @@ finished lesson code — that needs Deryk's decision before it happens.
 - Benchmarks used `Context::run_ui` headlessly. Gotcha: you must call
   `out.textures_delta.clear()` or epaint panics on drop with "Dropped TexturesDelta with
   1 unapplied deltas".
+
+- **2026-09-12: the build-first lesson variants are gone.** Deryk asked for them to be
+  removed ("they aren't needed now"). Lessons 1, 16 and 17 had one each, plus
+  `assets/spoiler.css`, `spoiler.js` and `vocab.css`, which nothing else used. The
+  walked-through lessons are unchanged; lesson 1's *concise* variant stays. Don't write a
+  build-first variant for new lessons unless asked again.

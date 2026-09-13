@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 18 — Line Endings You Didn't Write</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 18 <span class="sep">/</span> Part 2 <span class="sep">/</span> ~45 minutes</p>
+  <h1>Line Endings You Didn't Write</h1>
+  <p class="subtitle">Five stages, and a file from Windows comes back the way it went in.</p>
+</header>
+
+<div class="thesis">
+  The buffer holds text. The file holds bytes. Whatever the file does at the end of
+  each line is its business — the editor's job is to notice on the way in and put it
+  back on the way out.
+</div>
+
+<p>Every file you have opened in this editor so far was made on this machine, and on
+Linux a line ends with one byte: <code>\n</code>. Windows ends a line with two,
+<code>\r\n</code>, and most of the text files in the world were written there. Open one
+of those in the editor as it stands and two things go wrong at once: the cursor stops
+lining up with the letters, and the first line you add gets a different ending from
+every line around it. The second one is the bug that matters. It puts a change into the
+file that nobody typed, and the next <code>git diff</code> shows it.</p>
+
+<p>By the end, the buffer holds <code>\n</code> and nothing else, whatever the file had;
+the status bar says <code>LF</code> or <code>CRLF</code>; and saving writes the file's own
+ending back — including on the lines you added. Three round trips are tests, and one is
+the experiment you run by hand in stage 1 and again in stage 5.</p>
+
+<h2>Before you start</h2>
+
+<p>You should be at the end of <a href="0017-paths-that-arent-strings.html">lesson 17</a>:
+<code>cargo test</code> reports twenty-two passing and <code>src/main.rs</code> is about
+770 lines. Stage 1 changes nothing and shows you the bug; stages 2 to 5 fix it, and each
+of the last three starts with a compiler error or a red test that you will see before
+you see the fix.</p>
+
+<p>This lesson leans on three earlier ones. The <code>enum Pending</code> from
+<a href="0015-being-asked-first.html">lesson 15</a> is the model for the enum here; the
+match guard from <a href="0005-open-any-file.html">lesson 5</a> comes back in stage 2; and
+the borrow rule from lesson 1 — many readers or one writer — is what stage 4's error is
+about.</p>
+
+<div class="callout key">
+  <span class="label">Type it, don't paste it</span>
+  Same as every lesson. About a hundred lines change, half of them tests.
+</div>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-break">
+<h3>A file you didn't write</h3>
+
+<p class="goal">You have watched the editor put two kinds of line ending into a file
+that arrived with one.</p>
+
+<p><strong>No edits in this stage.</strong> It is an experiment, and it needs a file with
+Windows line endings. You don't need Windows to make one — <code>printf</code> will write
+whatever bytes you ask for:</p>
+
+<p class="run">cd editor<br>
+printf 'one\r\ntwo\r\n' &gt; crlf.txt<br>
+file crlf.txt<br>
+→ <em>crlf.txt: ASCII text, with CRLF line terminators</em><br>
+cat -A crlf.txt<br>
+→ <em>one^M$</em><br>
+→ <em>two^M$</em></p>
+
+<p><code>\r</code> is <em>carriage return</em>, byte 13, and <code>\n</code> is <em>line
+feed</em>, byte 10. The names are from teletypes, where one moved the print head back to
+the left and the other moved the paper up a line. Windows kept both; Unix kept the second.
+<code>cat -A</code> draws <code>\r</code> as <code>^M</code> and the end of every line as
+<code>$</code>, so those two lines are the whole story: each line ends in both bytes. Six
+letters and two line breaks — ten bytes.</p>
+
+<h4 id="the-invisible-character">The character you can't see</h4>
+
+<p>Open it in the editor and click at the end of the first line:</p>
+
+<p class="run">cargo run -- crlf.txt<br>
+→ the status bar says <em>10 bytes</em><br>
+→ click after the <em>e</em> of <em>one</em>, or press End: the cursor sits one cell to
+the right of the <em>e</em>, with a gap between them, and the status bar says
+<em>Ln 1, Col 5</em></p>
+
+<p>Column five, on a three-letter line. The fourth character is <code>\r</code>. Rust
+gave it to egui as part of the text, because <code>fs::read_to_string</code> reads bytes
+and checks that they are UTF-8 and does nothing else. egui has no picture for it, but
+it still reserves a cell — measured: the same width as a letter, and no pixels in it.
+That is the gap. Your <code>line_col</code> is telling the truth about a character you
+cannot see.</p>
+
+<p class="sidenote">Line numbers were right all along. <code>ropey</code> treats
+<code>\r\n</code> as a single line break, so <code>char_to_line</code> gave the right
+line even with the <code>\r</code> in the text. Only the column was off, and only by
+the one invisible character. Two libraries, two opinions about the same two bytes.</p>
+
+<h4 id="the-bare-newline">The line you add is different from the others</h4>
+
+<p>With the cursor still at the end of the first line, press Enter, type
+<code>x</code>, and save:</p>
+
+<p class="run">→ Enter, <em>x</em>, Ctrl+S<br>
+→ status: <em>saved 12 bytes to crlf.txt</em></p>
+
+<p>Then close the editor and look at the file again:</p>
+
+<p class="run">file crlf.txt<br>
+→ <em>crlf.txt: ASCII text, with CRLF, LF line terminators</em><br>
+cat -A crlf.txt<br>
+→ <em>one^M$</em><br>
+→ <em>x$</em><br>
+→ <em>two^M$</em></p>
+
+<p>One line has lost its <code>^M</code>. When you press Enter, egui inserts
+<code>\n</code> — one byte, the Unix ending, no matter what the surrounding text uses.
+<code>Buffer::save</code> then writes the buffer out exactly as it is. So the file now has
+two conventions in it, and neither <code>file</code> nor <code>git diff</code> will let
+that pass unremarked. (If your cursor landed on the other side of the invisible character,
+the bare <code>$</code> is on a different line. Either way, one of the three has lost it.)</p>
+
+<p class="sidenote">The fix is not to make egui insert <code>\r\n</code>. The buffer
+should hold one convention — <code>\n</code>, the one every Rust string function
+assumes — and the conversion belongs at the door, in <code>open</code> and
+<code>save</code>, where the file's bytes come in and go out. That is what the next four
+stages build.</p>
+
+<div class="callout note">
+  <span class="label">Leave crlf.txt as it is</span>
+  Stage 3 opens it again to check the status bar, and stage 5 recreates it for the
+  final experiment.
+</div>
+</section>
+
+<section class="stage" id="stage-enum">
+<h3>A name for the two endings</h3>
+
+<p class="goal">The editor can look at a piece of text and say which ending it uses,
+and four tests prove it.</p>
+
+<p>This stage takes three edits: an enum, its tests, and then a repair the compiler will
+ask for.</p>
+
+<p>First — the type. It goes between <code>list_dir</code> and the <code>Pending</code>
+enum from lesson 15, which it resembles:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">between list_dir and the Pending enum</span></p>
+<pre><code><span class="dim">    <span class="f">Ok</span>(entries)
+}
+</span>
+<span class="add"><span class="c">/// How a file marks the end of a line. Unix writes `\n`; Windows writes `\r\n`.</span>
+<span class="c">/// The buffer only ever holds `\n` — this remembers what the file had, so</span>
+<span class="c">/// saving can put it back.</span>
+#[<span class="f">derive</span>(<span class="t">Clone</span>, <span class="t">Copy</span>)]
+<span class="k">enum</span> <span class="t">LineEnding</span> {
+    <span class="t">Lf</span>,
+    <span class="t">CrLf</span>,
+}
+
+<span class="k">impl</span> <span class="t">LineEnding</span> {
+    <span class="c">/// Which ending the text uses, judged by its first line break. Text with</span>
+    <span class="c">/// no line break gets `Lf`, which is what this editor writes anyway.</span>
+    <span class="k">fn</span> <span class="f">detect</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">match</span> text.<span class="f">split_once</span>(<span class="s">&#x27;\n&#x27;</span>) {
+            <span class="f">Some</span>((first_line, _)) <span class="k">if</span> first_line.<span class="f">ends_with</span>(<span class="s">&#x27;\r&#x27;</span>) =&gt; <span class="k">Self</span>::<span class="t">CrLf</span>,
+            _ =&gt; <span class="k">Self</span>::<span class="t">Lf</span>,
+        }
+    }
+
+    <span class="c">/// The name shown in the status bar.</span>
+    <span class="k">fn</span> <span class="f">label</span>(<span class="k">self</span>) -&gt; &amp;&#x27;static <span class="k">str</span> {
+        <span class="k">match</span> <span class="k">self</span> {
+            <span class="k">Self</span>::<span class="t">Lf</span> =&gt; <span class="s">&quot;LF&quot;</span>,
+            <span class="k">Self</span>::<span class="t">CrLf</span> =&gt; <span class="s">&quot;CRLF&quot;</span>,
+        }
+    }
+}
+</span>
+<span class="dim"><span class="c">/// Something the editor is waiting for permission to do.</span></span></code></pre>
+
+<p>Two variants, no data in either, the same <code>#[derive(Clone, Copy)]</code> as
+<code>Pending</code>. Then an <code>impl</code> block with two functions.</p>
+
+<p><strong><code>detect</code></strong> has no <code>self</code>, so it is called on the
+type — <code>LineEnding::detect(text)</code>, the way <code>Buffer::open</code> is. It
+asks one question: does the first line end in <code>\r</code>? <code>split_once('\n')</code>
+returns an <code>Option</code> holding the text before the first <code>\n</code> and the
+text after it. If there is a first line and it ends in <code>\r</code>, the file is
+<code>CrLf</code>. The match guard — <code>Some(…) if …</code> — is the one from lesson
+5's <code>ErrorKind::NotFound</code>. Everything else, including text with no line break
+at all, is <code>Lf</code>, which is what this editor would write anyway.</p>
+
+<p><strong><code>label</code></strong> takes <code>self</code> by value, which is fine
+for a <code>Copy</code> type, and returns <code>&amp;'static str</code>. You saw
+<code>'static</code> in lesson 8. A string literal lives inside the compiled binary for
+the whole run of the program, so a reference to one never has an owner that could go
+away, and <code>'static</code> is the name for that.</p>
+
+<p>Second — four tests. Put them above the <code>list_dir</code> tests:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, above the list_dir tests</span></p>
+<pre><code><span class="dim">        <span class="f">assert_eq</span>!(editor.<span class="f">unsaved</span>(), <span class="s">0</span>);
+    }
+</span>
+<span class="add">    #[test]
+    <span class="k">fn</span> <span class="f">detect_sees_lf</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\ntwo\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_sees_crlf</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\r\ntwo\r\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">CrLf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_defaults_to_lf_without_a_line_break</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_goes_by_the_first_line_break</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\ntwo\r\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+</span>
+<span class="dim">    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {</span></code></pre>
+
+<p class="run">cargo test</p>
+
+<p>It doesn't compile. The first two errors, verbatim; the same pair repeats for each
+of the four tests:</p>
+
+<pre class="error">error[E0369]: binary operation `==` cannot be applied to type `LineEnding`
+   --&gt; src/main.rs:753:9
+    |
+753 |         assert_eq!(LineEnding::detect("one\ntwo\n"), LineEnding::Lf);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |
+    |         LineEnding
+    |         LineEnding
+    |
+note: an implementation of `PartialEq` might be missing for `LineEnding`
+   --&gt; src/main.rs:230:1
+    |
+230 | enum LineEnding {
+    | ^^^^^^^^^^^^^^^ must implement `PartialEq`
+help: consider annotating `LineEnding` with `#[derive(PartialEq)]`
+    |
+230 + #[derive(PartialEq)]
+231 | enum LineEnding {
+    |
+
+error[E0277]: `LineEnding` doesn't implement `std::fmt::Debug`
+   --&gt; src/main.rs:753:9
+    |
+753 |         assert_eq!(LineEnding::detect("one\ntwo\n"), LineEnding::Lf);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `std::fmt::Debug` is not implemented for `LineEnding`
+    |
+    = note: add `#[derive(Debug)]` to `LineEnding` or manually `impl std::fmt::Debug for LineEnding`
+help: consider annotating `LineEnding` with `#[derive(Debug)]`
+    |
+230 + #[derive(Debug)]
+231 | enum LineEnding {
+    |</pre>
+
+<h4 id="derive">What a type has to be able to do before you can test it</h4>
+
+<p><code>assert_eq!</code> needs two things from a type. It has to compare the two sides
+with <code>==</code>, and if they differ it has to print both, so you can see what went
+wrong. A type you write yourself can do neither until you say so. <code>PartialEq</code>
+is the trait behind <code>==</code>; <code>Debug</code> is the trait behind
+<code>{:?}</code>, which you used in lesson 17's assertion message. <code>Pending</code>
+never needed either, because no test ever compared one.</p>
+
+<p><code>derive</code> writes the implementation for you, and for an enum with no data
+it is exactly what you would write by hand: two values are equal if they are the same
+variant, and printing one prints its name. The compiler told you the fix twice over;
+third — take it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the line above enum LineEnding</span></p>
+<pre><code><span class="dim"><span class="c">/// saving can put it back.</span></span>
+<span class="del">#[<span class="f">derive</span>(<span class="t">Clone</span>, <span class="t">Copy</span>)]</span>
+<span class="add">#[<span class="f">derive</span>(<span class="t">Clone</span>, <span class="t">Copy</span>, <span class="t">PartialEq</span>, <span class="t">Debug</span>)]</span>
+<span class="dim"><span class="k">enum</span> <span class="t">LineEnding</span> {</span></code></pre>
+
+<p class="run">cargo test<br>
+→ <em>26 passed</em></p>
+
+<div class="callout note">
+  <span class="label">One warning, expected</span>
+  <code>warning: method `label` is never used</code>. The tests call
+  <code>detect</code>; nothing calls <code>label</code> until stage 3 puts it in the
+  status bar.
+</div>
+</section>
+
+<section class="stage" id="stage-field">
+<h3>The buffer remembers what it was given</h3>
+
+<p class="goal">Opening <code>crlf.txt</code> shows <em>CRLF</em> in the status bar, the
+cursor sits against the last letter, and the column is right.</p>
+
+<p>This stage takes five edits. The first three go in together and won't build until
+the fourth; the fifth is a test.</p>
+
+<p>First — a field:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the Buffer struct</span></p>
+<pre><code><span class="dim"><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {
+    path: <span class="t">PathBuf</span>,
+    text: <span class="t">Text</span>,</span>
+<span class="add">    <span class="c">/// How the file on disk ends its lines. The text above only ever holds `\n`.</span>
+    line_ending: <span class="t">LineEnding</span>,</span>
+<span class="dim">    status: <span class="t">String</span>,</span></code></pre>
+
+<p>Second — set it. <code>Buffer::open</code> already has the file's text in a
+<code>String</code> called <code>text</code>. Detect the ending from that, then replace
+every <code>\r\n</code> with <code>\n</code> before the rope ever sees it:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::open, between the match and the Self</span></p>
+<pre><code><span class="dim">        };</span>
+<span class="add">        <span class="k">let</span> line_ending = <span class="t">LineEnding</span>::<span class="f">detect</span>(&amp;text);
+        <span class="k">let</span> text = text.<span class="f">replace</span>(<span class="s">&quot;\r\n&quot;</span>, <span class="s">&quot;\n&quot;</span>);</span>
+<span class="dim">        <span class="k">Self</span> {
+            path: <span class="t">PathBuf</span>::<span class="f">from</span>(path),
+            text: <span class="t">Text</span>::<span class="f">new</span>(&amp;text),</span>
+<span class="add">            line_ending,</span>
+<span class="dim">            status,</span></code></pre>
+
+<p>The second new line shadows <code>text</code> with a new <code>String</code> — the
+same trick <code>main</code> uses on <code>paths</code>. Order matters: <code>detect</code>
+has to look at the text before <code>replace</code> takes the evidence away.
+<code>replace</code> builds a fresh <code>String</code> even when there is nothing to
+replace; on the 2.3 MB file from lesson 11 that is about a tenth of a millisecond, once,
+at open. From here on the rope holds <code>\n</code> and nothing else.</p>
+
+<p>Third — show it. The status bar gets one more segment, between the saved state and
+the highlighting state:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status bar</span></p>
+<pre><code><span class="dim">            ui.<span class="f">label</span>(<span class="f">format</span>!(</span>
+<span class="del">                <span class="s">&quot;{}  ·  {} bytes  ·  {saved}  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,</span>
+<span class="add">                <span class="s">&quot;{}  ·  {} bytes  ·  {saved}  ·  {}  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,</span>
+<span class="dim">                <span class="k">self</span>.position,
+                <span class="k">self</span>.buffers[<span class="k">self</span>.active].text.<span class="f">len</span>(),</span>
+<span class="add">                <span class="k">self</span>.buffers[<span class="k">self</span>.active].line_ending.<span class="f">label</span>(),</span>
+<span class="dim">                <span class="k">self</span>.line_col_us,</span></code></pre>
+
+<p class="run">cargo test</p>
+
+<pre class="error">error[E0063]: missing field `line_ending` in initializer of `Buffer`
+   --&gt; src/main.rs:628:9
+    |
+628 |         Buffer {
+    |         ^^^^^^ missing `line_ending`</pre>
+
+<p>Not in <code>open</code> — you set it there. Line 628 is <code>buffer_with</code>, the
+test helper from lesson 10 that builds a <code>Buffer</code> by hand, and a struct literal
+must name every field. Fourth — give it one:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, buffer_with</span></p>
+<pre><code><span class="dim">            path: <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;test.rs&quot;</span>),
+            text: <span class="t">Text</span>::<span class="f">new</span>(text),</span>
+<span class="add">            line_ending: <span class="t">LineEnding</span>::<span class="t">Lf</span>,</span>
+<span class="dim">            status: <span class="t">String</span>::<span class="f">new</span>(),</span></code></pre>
+
+<p>Fifth — a test that a Windows file arrives as bare newlines. It needs a real file,
+which means a helper that writes one into the temporary directory, the way lesson 17's
+last test did. The helper returns the path, so each test can open the file it asked
+for:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, between the detect tests and the list_dir tests</span></p>
+<pre><code><span class="dim">        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\ntwo\r\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+</span>
+<span class="add">    <span class="c">/// A file on disk with Windows line endings, for the round-trip tests.</span>
+    <span class="k">fn</span> <span class="f">crlf_file</span>(name: &amp;<span class="k">str</span>) -&gt; <span class="t">PathBuf</span> {
+        <span class="k">let</span> dir = env::<span class="f">temp_dir</span>().<span class="f">join</span>(<span class="s">&quot;editor-lesson-18&quot;</span>);
+        fs::<span class="f">create_dir_all</span>(&amp;dir).<span class="f">unwrap</span>();
+        <span class="k">let</span> path = dir.<span class="f">join</span>(name);
+        fs::<span class="f">write</span>(&amp;path, <span class="s">&quot;one\r\ntwo\r\n&quot;</span>).<span class="f">unwrap</span>();
+        path
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">a_crlf_file_is_held_with_bare_newlines</span>() {
+        <span class="k">let</span> b = <span class="t">Buffer</span>::<span class="f">open</span>(&amp;<span class="f">crlf_file</span>(<span class="s">&quot;held.txt&quot;</span>));
+        <span class="f">assert_eq</span>!(b.text.<span class="f">as_str</span>(), <span class="s">&quot;one\ntwo\n&quot;</span>);
+        <span class="f">assert_eq</span>!(b.line_ending, <span class="t">LineEnding</span>::<span class="t">CrLf</span>);
+    }
+</span>
+<span class="dim">    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {</span></code></pre>
+
+<p class="run">cargo test<br>
+→ <em>27 passed</em><br>
+cargo run -- crlf.txt<br>
+→ the status bar says <em>8 bytes</em> and <em>CRLF</em><br>
+→ press End on the first line: the cursor sits against the <em>e</em>, and the status
+bar says <em>Ln 1, Col 4</em></p>
+
+<p>Eight bytes, not ten: the count is of the buffer, which no longer holds the two
+<code>\r</code>s. Column four: there is no invisible character to stand on.</p>
+
+<div class="callout warn">
+  <span class="label">Don't save it yet</span>
+  Ctrl+S at this stage writes the buffer as it is — <code>\n</code> only — so a Windows
+  file would come back a Unix one. That is the mirror of stage 1's bug, and stage 4
+  starts by proving it before fixing it. If you did save, run the
+  <code>printf</code> from stage 1 again.
+</div>
+</section>
+
+<section class="stage" id="stage-save">
+<h3>Writing back what you were given</h3>
+
+<p class="goal">A test proves that saving a CRLF file changes nothing on disk — and
+first, that it currently does.</p>
+
+<p>This stage takes five edits: a test that fails, an import, a method, the save that
+uses it, and the save that compiles.</p>
+
+<p>First — the test, straight after the one from stage 3. It writes the file, opens it,
+saves it without touching it, and reads the bytes back:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, after a_crlf_file_is_held_with_bare_newlines</span></p>
+<pre><code><span class="dim">        <span class="f">assert_eq</span>!(b.line_ending, <span class="t">LineEnding</span>::<span class="t">CrLf</span>);
+    }
+</span>
+<span class="add">    #[test]
+    <span class="k">fn</span> <span class="f">saving_a_crlf_file_writes_it_back_unchanged</span>() {
+        <span class="k">let</span> path = <span class="f">crlf_file</span>(<span class="s">&quot;unchanged.txt&quot;</span>);
+        <span class="t">Buffer</span>::<span class="f">open</span>(&amp;path).<span class="f">save</span>().<span class="f">unwrap</span>();
+        <span class="f">assert_eq</span>!(fs::<span class="f">read_to_string</span>(&amp;path).<span class="f">unwrap</span>(), <span class="s">&quot;one\r\ntwo\r\n&quot;</span>);
+    }
+</span>
+<span class="dim">    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {</span></code></pre>
+
+<p class="run">cargo test</p>
+
+<pre class="error" data-label="cargo test">test tests::saving_a_crlf_file_writes_it_back_unchanged ... FAILED
+
+failures:
+
+---- tests::saving_a_crlf_file_writes_it_back_unchanged stdout ----
+
+thread 'tests::saving_a_crlf_file_writes_it_back_unchanged' panicked at src/main.rs:798:9:
+assertion `left == right` failed
+  left: "one\ntwo\n"
+ right: "one\r\ntwo\r\n"</pre>
+
+<p>That is the whole bug in two lines, and it is why the test compares strings rather
+than <code>Vec&lt;u8&gt;</code>s: <code>Debug</code> prints a string with its escapes
+showing, so the <code>\r</code>s that are missing on the left are visible as text. Open
+a Windows file, save it, and it is a Unix file.</p>
+
+<h4 id="cow">One function, two kinds of answer</h4>
+
+<p>Second — an import:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the imports at the top</span></p>
+<pre><code><span class="dim"><span class="k">use</span> ropey::<span class="t">Rope</span>;</span>
+<span class="add"><span class="k">use</span> std::borrow::<span class="t">Cow</span>;</span>
+<span class="dim"><span class="k">use</span> std::<span class="k">char</span>;</span></code></pre>
+
+<p>Third — the method that produces what goes to disk:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in impl LineEnding, after label</span></p>
+<pre><code><span class="dim">            <span class="k">Self</span>::<span class="t">CrLf</span> =&gt; <span class="s">&quot;CRLF&quot;</span>,
+        }
+    }</span>
+<span class="add">
+    <span class="c">/// The text as it should be written to disk. For `Lf` that is the text</span>
+    <span class="c">/// itself, borrowed; for `CrLf` it is a new string with every line break</span>
+    <span class="c">/// rewritten.</span>
+    <span class="k">fn</span> <span class="f">apply</span>(<span class="k">self</span>, text: &amp;<span class="k">str</span>) -&gt; <span class="t">Cow</span>&lt;&#x27;_, <span class="k">str</span>&gt; {
+        <span class="k">match</span> <span class="k">self</span> {
+            <span class="k">Self</span>::<span class="t">Lf</span> =&gt; <span class="t">Cow</span>::<span class="f">Borrowed</span>(text),
+            <span class="k">Self</span>::<span class="t">CrLf</span> =&gt; <span class="t">Cow</span>::<span class="f">Owned</span>(text.<span class="f">replace</span>(<span class="s">&#x27;\n&#x27;</span>, <span class="s">&quot;\r\n&quot;</span>)),
+        }
+    }</span>
+<span class="dim">}</span></code></pre>
+
+<p><code>Cow</code> is <em>clone on write</em>, and it is an enum with two variants:
+<code>Borrowed</code> holds a reference, <code>Owned</code> holds a value. For a
+<code>&amp;str</code> the owned form is a <code>String</code>. It exists for exactly this
+situation — a function that <em>usually</em> has nothing to do and can hand back what it
+was given, but <em>sometimes</em> has to build something new. The two cases have
+different types, <code>&amp;str</code> and <code>String</code>, and <code>Cow</code>
+is one type that holds either.</p>
+
+<p>Why not return a <code>String</code> every time? Because most files are
+<code>Lf</code>, and for them that would copy the entire buffer on every Ctrl+S to
+produce a string identical to the one you already had. With <code>Cow</code>, the
+<code>Lf</code> arm costs nothing — no allocation, no copy — and only the
+<code>CrLf</code> arm pays for the <code>replace</code>.</p>
+
+<p>The <code>'_</code> in <code>Cow&lt;'_, str&gt;</code> says the borrowed variant, if
+that is what comes back, borrows from the argument. It is the same lifetime the compiler
+was filling in silently for <code>Buffer::name</code> back when it returned
+<code>&amp;str</code>; <code>Cow</code> just makes you write the placeholder.</p>
+
+<p>Fourth — use it in <code>save</code>. The obvious way:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::save</span></p>
+<pre><code><span class="dim">    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {</span>
+<span class="del">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, <span class="k">self</span>.text.<span class="f">as_str</span>())?;</span>
+<span class="add">        <span class="k">let</span> contents = <span class="k">self</span>.line_ending.<span class="f">apply</span>(<span class="k">self</span>.text.<span class="f">as_str</span>());
+        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, contents.<span class="f">as_bytes</span>())?;</span>
+<span class="dim">        <span class="k">self</span>.text.<span class="f">mark_saved</span>();
+        <span class="k">self</span>.dirty = <span class="k">false</span>;</span>
+<span class="del">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, <span class="k">self</span>.text.<span class="f">len</span>(), <span class="k">self</span>.path.<span class="f">display</span>());</span>
+<span class="add">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, contents.<span class="f">len</span>(), <span class="k">self</span>.path.<span class="f">display</span>());</span>
+<span class="dim">        <span class="f">Ok</span>(())</span></code></pre>
+
+<p class="run">cargo test</p>
+
+<pre class="error">error[E0502]: cannot borrow `self.text` as mutable because it is also borrowed as immutable
+   --&gt; src/main.rs:311:9
+    |
+309 |         let contents = self.line_ending.apply(self.text.as_str());
+    |                                               --------- immutable borrow occurs here
+310 |         fs::write(&amp;self.path, contents.as_bytes())?;
+311 |         self.text.mark_saved();
+    |         ^^^^^^^^^^^^^^^^^^^^^^ mutable borrow occurs here
+312 |         self.dirty = false;
+313 |         self.status = format!("saved {} bytes to {}", contents.len(), self.path.display());
+    |                                                       -------- immutable borrow later used here</pre>
+
+<h4 id="e0502">The borrow that outlived its usefulness</h4>
+
+<p>Read the three markers in order. <code>contents</code> might be
+<code>Cow::Borrowed</code>, in which case it is a borrow of <code>self.text</code> —
+line 309. <code>mark_saved</code> needs <code>&amp;mut self.text</code> — line 311. And
+the borrow is still alive at line 311, because line 313 uses <code>contents</code>
+afterwards. Many readers or one writer, never both at once: lesson 1's rule, and this
+time the reader is a <code>Cow</code>.</p>
+
+<p>The compiler doesn't know which variant <code>apply</code> returned, and it doesn't
+matter — a <code>Cow</code> that <em>can</em> be a borrow is treated as one. The fix is to
+finish with <code>contents</code> before <code>mark_saved</code> runs. Fifth — take the
+length first, and the borrow ends there:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in Buffer::save, again</span></p>
+<pre><code><span class="dim">        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, contents.<span class="f">as_bytes</span>())?;</span>
+<span class="add">        <span class="k">let</span> written = contents.<span class="f">len</span>();</span>
+<span class="dim">        <span class="k">self</span>.text.<span class="f">mark_saved</span>();
+        <span class="k">self</span>.dirty = <span class="k">false</span>;</span>
+<span class="del">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {} bytes to {}&quot;</span>, contents.<span class="f">len</span>(), <span class="k">self</span>.path.<span class="f">display</span>());</span>
+<span class="add">        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {written} bytes to {}&quot;</span>, <span class="k">self</span>.path.<span class="f">display</span>());</span>
+<span class="dim">        <span class="f">Ok</span>(())</span></code></pre>
+
+<p class="run">cargo test<br>
+→ <em>28 passed</em><br>
+cargo run -- crlf.txt<br>
+→ Ctrl+S: <em>saved 10 bytes to crlf.txt</em></p>
+
+<p>Ten bytes written, eight in the status bar. The two numbers mean different things
+now — what is on disk and what is in the buffer — and for a Windows file they differ by
+one byte per line.</p>
+
+<p class="sidenote"><code>contents.as_bytes()</code> works because a <code>Cow&lt;str&gt;</code>
+can be used wherever a <code>&amp;str</code> can: it <em>dereferences</em> to one, the way
+a <code>String</code> does. <code>fs::write</code> wants bytes rather than text, and
+<code>as_bytes</code> is the same call you would make on either.</p>
+</section>
+
+<section class="stage" id="stage-typed">
+<h3>The line you typed gets the file's ending</h3>
+
+<p class="goal">Stage 1's experiment, repeated, leaves <code>crlf.txt</code> with one kind
+of line ending.</p>
+
+<p>Stage 4 proved the untouched round trip. The bug in stage 1 needed an edit, so this
+stage takes two edits, both tests, and then you repeat the experiment.</p>
+
+<p>First — the edit that started the lesson. When you press Enter, egui calls
+<code>insert_text</code> on your <code>Text</code> with a bare <code>\n</code>; the test
+makes the same call directly. <code>insert_text</code> belongs to the
+<code>TextBuffer</code> trait, which <code>mod tests</code> hasn't imported, so the call
+is written with the trait's full name in front:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, after saving_a_crlf_file_writes_it_back_unchanged</span></p>
+<pre><code><span class="dim">        <span class="f">assert_eq</span>!(fs::<span class="f">read_to_string</span>(&amp;path).<span class="f">unwrap</span>(), <span class="s">&quot;one\r\ntwo\r\n&quot;</span>);
+    }
+</span>
+<span class="add">    #[test]
+    <span class="k">fn</span> <span class="f">a_line_typed_into_a_crlf_file_gets_a_crlf_ending</span>() {
+        <span class="k">let</span> path = <span class="f">crlf_file</span>(<span class="s">&quot;typed.txt&quot;</span>);
+        <span class="k">let</span> <span class="k">mut</span> b = <span class="t">Buffer</span>::<span class="f">open</span>(&amp;path);
+        egui::<span class="t">TextBuffer</span>::<span class="f">insert_text</span>(&amp;<span class="k">mut</span> b.text, <span class="s">&quot;x\n&quot;</span>, <span class="f">CharIndex</span>(<span class="s">4</span>));
+        b.<span class="f">save</span>().<span class="f">unwrap</span>();
+        <span class="f">assert_eq</span>!(fs::<span class="f">read_to_string</span>(&amp;path).<span class="f">unwrap</span>(), <span class="s">&quot;one\r\nx\r\ntwo\r\n&quot;</span>);
+    }
+</span>
+<span class="dim">    #[test]
+    <span class="k">fn</span> <span class="f">list_dir_finds_the_crate_manifest</span>() {</span></code></pre>
+
+<p>Second — two tests for <code>apply</code> on its own, next to the ones for
+<code>detect</code>. The first checks the promise that made <code>Cow</code> worth
+using: for <code>Lf</code>, nothing is copied. <code>matches!</code> is
+<code>assert!</code>'s companion for enums — true if the value fits the pattern, and
+<code>Cow::Borrowed(_)</code> is a pattern:</p>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests, after the detect tests</span></p>
+<pre><code><span class="dim">        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\ntwo\r\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+</span>
+<span class="add">    #[test]
+    <span class="k">fn</span> <span class="f">apply_lf_borrows_the_text_as_it_is</span>() {
+        <span class="f">assert</span>!(<span class="f">matches</span>!(<span class="t">LineEnding</span>::<span class="t">Lf</span>.<span class="f">apply</span>(<span class="s">&quot;a\nb\n&quot;</span>), <span class="t">Cow</span>::<span class="f">Borrowed</span>(_)));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">apply_crlf_rewrites_every_line_break</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="t">CrLf</span>.<span class="f">apply</span>(<span class="s">&quot;a\nb\n&quot;</span>), <span class="s">&quot;a\r\nb\r\n&quot;</span>);
+    }
+</span>
+<span class="dim">    <span class="c">/// A file on disk with Windows line endings, for the round-trip tests.</span></span></code></pre>
+
+<p class="run">cargo test<br>
+→ <em>31 passed</em></p>
+
+<p>Now the experiment. Make the file again, open it, and do exactly what you did in
+stage 1 — End on the first line, Enter, <code>x</code>, Ctrl+S:</p>
+
+<p class="run">printf 'one\r\ntwo\r\n' &gt; crlf.txt<br>
+cargo run -- crlf.txt<br>
+→ End, Enter, <em>x</em>, Ctrl+S: <em>saved 13 bytes to crlf.txt</em><br>
+file crlf.txt<br>
+→ <em>crlf.txt: ASCII text, with CRLF line terminators</em><br>
+cat -A crlf.txt<br>
+→ <em>one^M$</em><br>
+→ <em>x^M$</em><br>
+→ <em>two^M$</em></p>
+
+<p>Thirteen bytes: three lines of one letter or three, each with a two-byte ending. The
+line you typed has the same ending as the two you didn't, and <code>file</code> has
+nothing to add.</p>
+
+<div class="callout warn">
+  <span class="label">What this does to a file with mixed endings</span>
+  <code>detect</code> goes by the first line break, and <code>apply</code> gives every
+  line that ending. So a file that arrives with both — like the one stage 1 produced —
+  leaves uniform after its first save. That is a change nobody typed, and it is the same
+  kind of change this lesson set out to stop; it is smaller, it is consistent, and it is
+  what most editors do. The honest alternative is to refuse to guess and ask — which is a
+  dialog, and part 3's problem.
+</div>
+
+<p class="sidenote">Two endings this lesson does not handle. A lone <code>\r</code>,
+which classic Mac OS used until 2001, is neither detected nor normalised. And text
+<em>pasted</em> into the editor goes into the buffer as it is — egui only normalises
+pasted line breaks for single-line fields — so a paste from a Windows clipboard can put a
+<code>\r</code> into a buffer that is supposed to hold none. Both are one
+<code>replace</code> away, in <code>insert_text</code>; neither has come up yet.</p>
+
+<div class="callout note">
+  <span class="label">Tidy up</span>
+  <code>crlf.txt</code> is in <code>editor/</code>, next to <code>scratch.md</code>.
+  Delete it before you commit, or it turns up in the next lesson's picker.
+</div>
+
+<p class="run">rm crlf.txt</p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>879 lines, thirty-one tests green. One new enum with three functions, one new field,
+two lines in <code>open</code>, three in <code>save</code>, two in the status bar, and nine
+tests. Part 2 is finished: the editor lists, navigates and opens from inside, stores
+filenames in the type that can hold them, and gives back the bytes it was given.</p>
+
+<p class="filename">editor/src/main.rs<span class="where">the imports at the top</span></p>
+<pre><code><span class="k">use</span> eframe::egui;
+<span class="k">use</span> egui::text::{<span class="t">ByteIndex</span>, <span class="t">CharIndex</span>, <span class="t">LayoutJob</span>};
+<span class="k">use</span> ropey::<span class="t">Rope</span>;
+<span class="k">use</span> std::borrow::<span class="t">Cow</span>;
+<span class="k">use</span> std::<span class="k">char</span>;
+<span class="k">use</span> std::env;
+<span class="k">use</span> std::ffi::<span class="t">OsString</span>;
+<span class="k">use</span> std::fs;
+<span class="k">use</span> std::io;
+<span class="k">use</span> std::ops::<span class="t">Range</span>;
+<span class="k">use</span> std::path::{<span class="t">Path</span>, <span class="t">PathBuf</span>};
+<span class="k">use</span> std::sync::<span class="t">Arc</span>;
+<span class="k">use</span> std::time::<span class="t">Instant</span>;</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: about 210 lines, untouched</span>
+  The colours, <code>scan</code>, <code>highlight</code>, <code>Text</code>, the
+  <code>TextBuffer</code> impl, <code>Entry</code>, <code>Picker</code> and
+  <code>list_dir</code> are as lessons 11 and 17 left them.
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">between list_dir and the Pending enum</span></p>
+<pre><code><span class="c">/// How a file marks the end of a line. Unix writes `\n`; Windows writes `\r\n`.</span>
+<span class="c">/// The buffer only ever holds `\n` — this remembers what the file had, so</span>
+<span class="c">/// saving can put it back.</span>
+#[<span class="f">derive</span>(<span class="t">Clone</span>, <span class="t">Copy</span>, <span class="t">PartialEq</span>, <span class="t">Debug</span>)]
+<span class="k">enum</span> <span class="t">LineEnding</span> {
+    <span class="t">Lf</span>,
+    <span class="t">CrLf</span>,
+}
+
+<span class="k">impl</span> <span class="t">LineEnding</span> {
+    <span class="c">/// Which ending the text uses, judged by its first line break. Text with</span>
+    <span class="c">/// no line break gets `Lf`, which is what this editor writes anyway.</span>
+    <span class="k">fn</span> <span class="f">detect</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">match</span> text.<span class="f">split_once</span>(<span class="s">&#x27;\n&#x27;</span>) {
+            <span class="f">Some</span>((first_line, _)) <span class="k">if</span> first_line.<span class="f">ends_with</span>(<span class="s">&#x27;\r&#x27;</span>) =&gt; <span class="k">Self</span>::<span class="t">CrLf</span>,
+            _ =&gt; <span class="k">Self</span>::<span class="t">Lf</span>,
+        }
+    }
+
+    <span class="c">/// The name shown in the status bar.</span>
+    <span class="k">fn</span> <span class="f">label</span>(<span class="k">self</span>) -&gt; &amp;&#x27;static <span class="k">str</span> {
+        <span class="k">match</span> <span class="k">self</span> {
+            <span class="k">Self</span>::<span class="t">Lf</span> =&gt; <span class="s">&quot;LF&quot;</span>,
+            <span class="k">Self</span>::<span class="t">CrLf</span> =&gt; <span class="s">&quot;CRLF&quot;</span>,
+        }
+    }
+
+    <span class="c">/// The text as it should be written to disk. For `Lf` that is the text</span>
+    <span class="c">/// itself, borrowed; for `CrLf` it is a new string with every line break</span>
+    <span class="c">/// rewritten.</span>
+    <span class="k">fn</span> <span class="f">apply</span>(<span class="k">self</span>, text: &amp;<span class="k">str</span>) -&gt; <span class="t">Cow</span>&lt;&#x27;_, <span class="k">str</span>&gt; {
+        <span class="k">match</span> <span class="k">self</span> {
+            <span class="k">Self</span>::<span class="t">Lf</span> =&gt; <span class="t">Cow</span>::<span class="f">Borrowed</span>(text),
+            <span class="k">Self</span>::<span class="t">CrLf</span> =&gt; <span class="t">Cow</span>::<span class="f">Owned</span>(text.<span class="f">replace</span>(<span class="s">&#x27;\n&#x27;</span>, <span class="s">&quot;\r\n&quot;</span>)),
+        }
+    }
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: the Pending enum, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">struct Buffer, open and save</span></p>
+<pre><code><span class="c">/// One open file.</span>
+<span class="k">struct</span> <span class="t">Buffer</span> {
+    path: <span class="t">PathBuf</span>,
+    text: <span class="t">Text</span>,
+    <span class="c">/// How the file on disk ends its lines. The text above only ever holds `\n`.</span>
+    line_ending: <span class="t">LineEnding</span>,
+    status: <span class="t">String</span>,
+    <span class="c">/// Does this buffer hold edits that aren&#x27;t on disk?</span>
+    dirty: <span class="k">bool</span>,
+}
+
+<span class="k">impl</span> <span class="t">Buffer</span> {
+    <span class="c">/// Open a file into a new editor. A file that doesn&#x27;t exist yet is not an</span>
+    <span class="c">/// error — it&#x27;s a new file, and starts empty.</span>
+    <span class="k">fn</span> <span class="f">open</span>(path: &amp;<span class="t">Path</span>) -&gt; <span class="k">Self</span> {
+        <span class="k">let</span> (text, status) = <span class="k">match</span> fs::<span class="f">read_to_string</span>(path) {
+            <span class="f">Ok</span>(contents) =&gt; (contents, <span class="t">String</span>::<span class="f">new</span>()),
+            <span class="f">Err</span>(error) <span class="k">if</span> error.<span class="f">kind</span>() == io::<span class="t">ErrorKind</span>::<span class="t">NotFound</span> =&gt; {
+                (<span class="t">String</span>::<span class="f">new</span>(), <span class="f">format</span>!(<span class="s">&quot;new file: {}&quot;</span>, path.<span class="f">display</span>()))
+            }
+            <span class="f">Err</span>(error) =&gt; (
+                <span class="t">String</span>::<span class="f">new</span>(),
+                <span class="f">format</span>!(<span class="s">&quot;could not open {}: {error}&quot;</span>, path.<span class="f">display</span>()),
+            ),
+        };
+        <span class="k">let</span> line_ending = <span class="t">LineEnding</span>::<span class="f">detect</span>(&amp;text);
+        <span class="k">let</span> text = text.<span class="f">replace</span>(<span class="s">&quot;\r\n&quot;</span>, <span class="s">&quot;\n&quot;</span>);
+        <span class="k">Self</span> {
+            path: <span class="t">PathBuf</span>::<span class="f">from</span>(path),
+            text: <span class="t">Text</span>::<span class="f">new</span>(&amp;text),
+            line_ending,
+            status,
+            dirty: <span class="k">false</span>,
+        }
+    }
+    <span class="c">/// Write the buffer back to the file it came from.</span>
+    <span class="k">fn</span> <span class="f">save</span>(&amp;<span class="k">mut</span> <span class="k">self</span>) -&gt; io::<span class="t">Result</span>&lt;()&gt; {
+        <span class="k">let</span> contents = <span class="k">self</span>.line_ending.<span class="f">apply</span>(<span class="k">self</span>.text.<span class="f">as_str</span>());
+        fs::<span class="f">write</span>(&amp;<span class="k">self</span>.path, contents.<span class="f">as_bytes</span>())?;
+        <span class="k">let</span> written = contents.<span class="f">len</span>();
+        <span class="k">self</span>.text.<span class="f">mark_saved</span>();
+        <span class="k">self</span>.dirty = <span class="k">false</span>;
+        <span class="k">self</span>.status = <span class="f">format</span>!(<span class="s">&quot;saved {written} bytes to {}&quot;</span>, <span class="k">self</span>.path.<span class="f">display</span>());
+        <span class="f">Ok</span>(())
+    }
+<span class="gap">fn line_col and fn name, unchanged — 13 lines</span>
+}</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: struct Editor, both impl blocks, and the start of fn ui — about 180 lines, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in fn ui, the status bar label</span></p>
+<pre><code>            ui.<span class="f">label</span>(<span class="f">format</span>!(
+                <span class="s">&quot;{}  ·  {} bytes  ·  {saved}  ·  {}  ·  {highlighting}  ·  line_col {:.0} µs  ·  {:.2} ms/frame&quot;</span>,
+                <span class="k">self</span>.position,
+                <span class="k">self</span>.buffers[<span class="k">self</span>.active].text.<span class="f">len</span>(),
+                <span class="k">self</span>.buffers[<span class="k">self</span>.active].line_ending.<span class="f">label</span>(),
+                <span class="k">self</span>.line_col_us,
+                <span class="k">self</span>.frame_ms
+            ));</code></pre>
+
+<div class="callout note">
+  <span class="label">Between these: the rest of fn ui and main — about 110 lines, unchanged</span>
+</div>
+
+<p class="filename">editor/src/main.rs<span class="where">in mod tests — buffer_with, and everything new</span></p>
+<pre><code>    <span class="k">fn</span> <span class="f">buffer_with</span>(text: &amp;<span class="k">str</span>) -&gt; <span class="t">Buffer</span> {
+        <span class="t">Buffer</span> {
+            path: <span class="t">PathBuf</span>::<span class="f">from</span>(<span class="s">&quot;test.rs&quot;</span>),
+            text: <span class="t">Text</span>::<span class="f">new</span>(text),
+            line_ending: <span class="t">LineEnding</span>::<span class="t">Lf</span>,
+            status: <span class="t">String</span>::<span class="f">new</span>(),
+            dirty: <span class="k">false</span>,
+        }
+    }
+<span class="gap">the line_col, name, scan, close and unsaved tests, unchanged — about 120 lines</span>
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_sees_lf</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\ntwo\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_sees_crlf</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\r\ntwo\r\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">CrLf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_defaults_to_lf_without_a_line_break</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">detect_goes_by_the_first_line_break</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="f">detect</span>(<span class="s">&quot;one\ntwo\r\n&quot;</span>), <span class="t">LineEnding</span>::<span class="t">Lf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">apply_lf_borrows_the_text_as_it_is</span>() {
+        <span class="f">assert</span>!(<span class="f">matches</span>!(<span class="t">LineEnding</span>::<span class="t">Lf</span>.<span class="f">apply</span>(<span class="s">&quot;a\nb\n&quot;</span>), <span class="t">Cow</span>::<span class="f">Borrowed</span>(_)));
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">apply_crlf_rewrites_every_line_break</span>() {
+        <span class="f">assert_eq</span>!(<span class="t">LineEnding</span>::<span class="t">CrLf</span>.<span class="f">apply</span>(<span class="s">&quot;a\nb\n&quot;</span>), <span class="s">&quot;a\r\nb\r\n&quot;</span>);
+    }
+
+    <span class="c">/// A file on disk with Windows line endings, for the round-trip tests.</span>
+    <span class="k">fn</span> <span class="f">crlf_file</span>(name: &amp;<span class="k">str</span>) -&gt; <span class="t">PathBuf</span> {
+        <span class="k">let</span> dir = env::<span class="f">temp_dir</span>().<span class="f">join</span>(<span class="s">&quot;editor-lesson-18&quot;</span>);
+        fs::<span class="f">create_dir_all</span>(&amp;dir).<span class="f">unwrap</span>();
+        <span class="k">let</span> path = dir.<span class="f">join</span>(name);
+        fs::<span class="f">write</span>(&amp;path, <span class="s">&quot;one\r\ntwo\r\n&quot;</span>).<span class="f">unwrap</span>();
+        path
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">a_crlf_file_is_held_with_bare_newlines</span>() {
+        <span class="k">let</span> b = <span class="t">Buffer</span>::<span class="f">open</span>(&amp;<span class="f">crlf_file</span>(<span class="s">&quot;held.txt&quot;</span>));
+        <span class="f">assert_eq</span>!(b.text.<span class="f">as_str</span>(), <span class="s">&quot;one\ntwo\n&quot;</span>);
+        <span class="f">assert_eq</span>!(b.line_ending, <span class="t">LineEnding</span>::<span class="t">CrLf</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">saving_a_crlf_file_writes_it_back_unchanged</span>() {
+        <span class="k">let</span> path = <span class="f">crlf_file</span>(<span class="s">&quot;unchanged.txt&quot;</span>);
+        <span class="t">Buffer</span>::<span class="f">open</span>(&amp;path).<span class="f">save</span>().<span class="f">unwrap</span>();
+        <span class="f">assert_eq</span>!(fs::<span class="f">read_to_string</span>(&amp;path).<span class="f">unwrap</span>(), <span class="s">&quot;one\r\ntwo\r\n&quot;</span>);
+    }
+
+    #[test]
+    <span class="k">fn</span> <span class="f">a_line_typed_into_a_crlf_file_gets_a_crlf_ending</span>() {
+        <span class="k">let</span> path = <span class="f">crlf_file</span>(<span class="s">&quot;typed.txt&quot;</span>);
+        <span class="k">let</span> <span class="k">mut</span> b = <span class="t">Buffer</span>::<span class="f">open</span>(&amp;path);
+        egui::<span class="t">TextBuffer</span>::<span class="f">insert_text</span>(&amp;<span class="k">mut</span> b.text, <span class="s">&quot;x\n&quot;</span>, <span class="f">CharIndex</span>(<span class="s">4</span>));
+        b.<span class="f">save</span>().<span class="f">unwrap</span>();
+        <span class="f">assert_eq</span>!(fs::<span class="f">read_to_string</span>(&amp;path).<span class="f">unwrap</span>(), <span class="s">&quot;one\r\nx\r\ntwo\r\n&quot;</span>);
+    }
+
+<span class="gap">the five list_dir tests, unchanged — about 45 lines</span>
+}</code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<div class="quiz">
+  <p class="q">Before this lesson, why did adding one line to a Windows file leave it with two kinds of line ending?</p>
+  <ul class="options">
+    <li data-correct>Enter inserts <code>\n</code>, and <code>save</code> wrote the buffer byte for byte</li>
+    <li><code>read_to_string</code> dropped the <code>\r</code>s, and <code>save</code> could not restore them</li>
+    <li><code>ropey</code> stores <code>\r\n</code> as one character and writes it back as <code>\n</code></li>
+    <li>egui converts <code>\r\n</code> to <code>\n</code> when it lays the text out</li>
+  </ul>
+  <p class="why">Nothing was converting anything. The file's <code>\r\n</code>s went into
+  the buffer and came back out; the one line you typed got egui's <code>\n</code>; and
+  <code>save</code> wrote the mixture it was given.
+  <a class="review" href="#the-bare-newline">↑ Review: the line you add is different from the others (stage 1)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does <code>LineEnding</code> derive <code>PartialEq</code> and <code>Debug</code> when <code>Pending</code> never needed to?</p>
+  <ul class="options">
+    <li data-correct><code>assert_eq!</code> compares the two sides and prints them if they differ</li>
+    <li>An enum used as a struct field must be comparable so the struct can be</li>
+    <li><code>match</code> on an enum needs <code>PartialEq</code> to test each arm</li>
+    <li>The status bar prints it, and printing needs <code>Debug</code></li>
+  </ul>
+  <p class="why">The tests are the only place a <code>LineEnding</code> is compared or
+  printed. <code>match</code> works on any enum without either trait, and the status bar
+  prints <code>label()</code>, a <code>&amp;str</code>, not the enum.
+  <a class="review" href="#derive">↑ Review: what a type has to be able to do before you can test it (stage 2)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">What does returning <code>Cow&lt;str&gt;</code> from <code>apply</code> buy over returning <code>String</code>?</p>
+  <ul class="options">
+    <li data-correct>The <code>Lf</code> case hands back the buffer's text without copying it</li>
+    <li>The <code>CrLf</code> case can rewrite the line breaks without allocating</li>
+    <li>The caller can write either variant to disk without converting it to bytes</li>
+    <li>The compiler can check that the text is never modified after it is returned</li>
+  </ul>
+  <p class="why">The <code>CrLf</code> arm allocates either way. What <code>Cow</code>
+  saves is the common case: for a Unix file, <code>Borrowed</code> is the same text with
+  no work done, which a <code>String</code> return type could not express.
+  <a class="review" href="#cow">↑ Review: one function, two kinds of answer (stage 4)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why did the first version of the new <code>save</code> fail to compile?</p>
+  <ul class="options">
+    <li data-correct><code>contents</code> might borrow <code>self.text</code>, and was used after <code>mark_saved</code></li>
+    <li><code>fs::write</code> takes ownership of <code>contents</code>, so it was gone by the last line</li>
+    <li><code>apply</code> takes <code>self</code> by value, which moved the line ending out</li>
+    <li>A <code>Cow</code> cannot be held across a call that returns a <code>Result</code></li>
+  </ul>
+  <p class="why">The compiler can't know which variant came back, so it treats
+  <code>contents</code> as a possible borrow of <code>self.text</code> for as long as it is
+  used. Taking the length before <code>mark_saved</code> moves its last use above the
+  mutable borrow.
+  <a class="review" href="#e0502">↑ Review: the borrow that outlived its usefulness (stage 4)</a></p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 19</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://doc.rust-lang.org/std/borrow/enum.Cow.html"><code>std::borrow::Cow</code></a>
+— the type's own page. Read the opening paragraphs and the first example, which is
+almost exactly <code>apply</code>: a function that returns its input unchanged unless
+it has to change it. Then look down the method list for <code>into_owned</code> and
+<code>to_mut</code>, which are the two ways out of a <code>Cow</code>.</p>
+
+<p>Then, if <code>'static</code> and <code>'_</code> are still opaque, ten minutes on
+<a href="https://rust-book.cs.brown.edu/ch10-03-lifetime-syntax.html">chapter 10.3 of
+the Rust book</a>, up to and including "Lifetime Elision". You have been using elided
+lifetimes since lesson 2; this is the section that names what the compiler has been
+filling in.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> The status bar now shows the
+  buffer's byte count while the save message shows the disk's. If you think the bar
+  should show what the file would be on disk, that is either an <code>apply</code> on
+  every frame or a count kept up to date on every edit — one is wasteful and the other is
+  a cache, and lesson 8 has an opinion about caches. Ask, and we will talk it through
+  before you pick.
+</div>
+
+<nav class="footer-nav">
+  <a href="0017-paths-that-arent-strings.html">← Lesson 17: Paths That Aren't Strings</a>
+  <a href="../ROADMAP.md">Roadmap</a>
+  <a href="../reference/rust-toolchain.html">Reference: toolchain commands</a>
+  <span>Next: part 3 — buffers that aren't files yet</span>
+</nav>
+
+</body>
+</html>

@@ -20,7 +20,7 @@ evaporate are in [docs/adr/](docs/adr/).
 | --- | --- | --- |
 | **A working editor** | [1–12](lessons/) | Opens files, edits and saves them without corrupting UTF-8, highlights Rust, tabs across buffers, degrades honestly above 512 KB, keeps its text in a rope with a measured justification, and tests the parts worth testing |
 | **1 — Don't lose my work** | [13–15](lessons/0013-knowing-what-changed.html) | The editor cannot silently discard your edits by any route |
-| **2 — Files from inside the editor** *(in progress)* | [16–17](lessons/0016-the-names-in-a-directory.html) of 18 | A picker that lists, navigates and opens; filenames stored in the type that can hold them |
+| **2 — Files from inside the editor** | [16–18](lessons/0016-the-names-in-a-directory.html) | A picker that lists, navigates and opens; filenames stored in the type that can hold them; a file's line endings come back the way they went in |
 
 | Lesson | Title | What it delivered |
 | --- | --- | --- |
@@ -29,12 +29,12 @@ evaporate are in [docs/adr/](docs/adr/).
 | [15](lessons/0015-being-asked-first.html) | Being Asked First | A confirmation before closing a modified buffer or the window, and your first hand-written enum |
 | [16](lessons/0016-the-names-in-a-directory.html) | The Names in a Directory | `fs::read_dir` behind a Ctrl+O picker; an iterator of `Result`s, and a lossy line written on borrowed time |
 | [17](lessons/0017-paths-that-arent-strings.html) | Paths That Aren't Strings | `Path`/`PathBuf`/`OsString` replace `String` everywhere a filename lives; the picker tells directories from files and navigates |
+| [18](lessons/0018-line-endings-you-didnt-write.html) | Line Endings You Didn't Write | `enum LineEnding` detected at open and applied at save, so a CRLF file round-trips byte for byte; `Cow`, `derive(PartialEq, Debug)`, and a borrow error that a `Cow` can cause |
 
 ## Next
 
 | # | Part | Lessons | What you'll learn |
 | --- | --- | --- | --- |
-| 2 | **Files from inside the editor** | 1 left | Lesson 18: round-tripping line endings you didn't write |
 | 3 | **Buffers that aren't files yet** | 3 | The buffer list stops being fixed at start-up: New, Save As, and an editor that can hold nothing |
 | 4 | **Many files, many modules** | 3 | `mod`, `pub`, `use crate::`, visibility, multi-file layout |
 | 5 | **Search in file** | 3–4 | Iterator chains, byte and char indices, highlighting a match |

@@ -78,6 +78,27 @@ language concept the next editor feature demands.
       Named in a warn callout as deliberate; a `Picker.error` field is the fix if wanted.
     - The quit-dialog per-file Save and the lesson-14 last-buffer guard are still open
       (part 3 deletes the guard — ADR 0002).
+18. ✅ Line endings you didn't write — `enum LineEnding`, `detect`/`label`/`apply`, `Cow`,
+    normalise `\r\n` at open and apply the ending at save; closes part 2
+    _(written 2026-09-13; 879 lines, 31 tests; five stages)_
+    - Premises measured before writing (probe crate `/tmp/l18probe`, harness in the session
+      transcript): egui gives `\r` a glyph with a letter's advance (7.83 px) and a 0×0
+      texture rect, so the cursor floats one cell past the last letter and `line_col`
+      reports Col 5 on a three-letter line; ropey treats `\r\n` as one line break, so line
+      numbers were already right; Enter inserts `"\n"` (`egui-0.36.1/src/widgets/text_edit/builder.rs:1166`);
+      an edit then save on a CRLF file wrote `one\r\nx\ntwo\r\n`, and `file` reports it as
+      "with CRLF, LF line terminators". The untouched round trip was already exact.
+    - The obvious `save` (`let contents = self.line_ending.apply(...)` used after
+      `mark_saved`) fails with a real E0502 because `Cow::Borrowed` keeps `self.text`
+      borrowed; the lesson shows it and fixes it by taking the length first.
+    - Open items, named in the lesson: multiline paste goes into the buffer as-is
+      (`builder.rs:1119`), so a Windows clipboard can put a `\r` into a buffer that is
+      supposed to hold none, and `apply` would then write `\r\r\n`; a lone `\r` is neither
+      detected nor normalised; a mixed-ending file becomes uniform on first save; the status
+      bar counts buffer bytes while the save message counts disk bytes.
+    - Stage sources were built by `l18-tooling/mk.py` — textual edits over `l17.rs` — rather
+      than by hand, and `l18-tooling/apply.py` checks nine intermediate states (the two
+      compiler-error states and the red test included). Do it this way from now on.
 
 ### Three planned premises that measurement killed
 
@@ -246,7 +267,9 @@ skipped a blank line or matched the wrong `Self {` — none of which the six `bu
 audits can see. It needs the stage sources, which is why it is not in `build.py` yet.
 
 Cached sources now: `l13 l14 l14_s1 l14_s2 l14_s2_tests l14_s3 l15 l15_s1 l15_s2 l16
-l17_s2 l17_s3 l17_s4_a l17_s4_red l17_s4 l17`. `l15.rs` was rebuilt with the `quitting`
+l17_s2 l17_s3 l17_s4_a l17_s4_red l17_s4 l17 l18_s2_nod l18_s2 l18_s3_e0063 l18_s3_fixed l18_s3
+l18_s4_red l18_s4_e0502 l18_s4 l18`, with each lesson's `mk.py`/`gen.py`/`apply.py` in
+`l17-tooling/` and `l18-tooling/`. `l15.rs` was rebuilt with the `quitting`
 fix from 5fadda3 (620 lines); `l16.rs` from lesson 16's checkpoint (700 lines).
 
 Worth doing properly at some point: a `sources.py` that rebuilds every end state from the

@@ -1024,7 +1024,7 @@ counterpart: <code>String::from</code> and <code>PathBuf::from</code>,
 <code>&amp;str</code> and <code>&amp;PathBuf</code> quietly becoming
 <code>&amp;Path</code>. The difference is the promise in the third column. A
 <code>String</code> that holds <code>caf\xe9.txt</code> is impossible; a
-<code>PathBuf</code> that holds it is Tuesday.</p>
+<code>PathBuf</code> that holds it is perfectly ordinary.</p>
 
 <p>The editor stores every filename as a <code>String</code>. That is the bug — not the
 lossy line, which was only ever the symptom. Four stages fix it, from the inside out.</p>

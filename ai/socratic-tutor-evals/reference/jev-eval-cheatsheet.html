@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference — JevEval Cheat Sheet</title>
+<!-- @assets:style.css -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Reference <span class="sep">/</span> Evaluating a Socratic Tutor</p>
+  <h1>JevEval Cheat Sheet</h1>
+  <p class="subtitle">Everything needed to design, score and debug a JevEval metric. Source:
+  the <a href="https://deepeval.com/docs/metrics-jev-eval">deepeval JevEval docs</a>, unless
+  marked otherwise. Print this one.</p>
+</header>
+
+<h2>The evaluation loop</h2>
+
+<table>
+  <tr><th style="width:12rem">Step</th><th>What it means</th></tr>
+  <tr><td><strong>1. Spec</strong></td><td>The behaviour you want: the tutor's system prompt, verbatim in <code>NOTES.md</code>.</td></tr>
+  <tr><td><strong>2. Test cases</strong></td><td>Conversations that trigger each rule, including adversarial ones. Look at lots of outputs before trusting any metric (<a href="https://hamel.dev/blog/posts/evals/">Husain</a>).</td></tr>
+  <tr><td><strong>3. Questions</strong></td><td>One bounded question per rule, weighted by how much you care.</td></tr>
+  <tr><td><strong>4. Run and read</strong></td><td>The total says <em>whether</em> something failed; the per-question breakdown says <em>which</em> rule.</td></tr>
+  <tr><td><strong>5. Iterate</strong></td><td>Change the prompt or the question, then rerun the <em>same</em> test cases.</td></tr>
+</table>
+
+<h2>Question types</h2>
+
+<table>
+  <tr><th>Type</th><th>Use when</th><th>Value</th><th>Gotcha</th></tr>
+  <tr><td><strong>Noul</strong></td><td>A true-or-false statement. Use several for a checklist.</td><td><code>P(true)</code></td><td>Phrase it so <em>true</em> is the behaviour you want.</td></tr>
+  <tr><td><strong>Score</strong></td><td>Ordered outcomes, where "in between" means something. 2–10 levels.</td><td><code>Σ k·P(k) / (n−1)</code></td><td>Levels <strong>worst first</strong>, or the score silently inverts.</td></tr>
+  <tr><td><strong>Choice</strong></td><td>Unordered outcomes; options may share a credit; the behaviour may not come up at all.</td><td><code>Σ P(o)·c(o) / Σ P(o)</code>, over options with a credit</td><td>Drops out if the <code>None</code> options hold ≥ 0.5.</td></tr>
+</table>
+
+<h2>The score</h2>
+
+<pre><code>JevEval = Σ wᵢ·vᵢ / Σ wᵢ     over applicable questions only</code></pre>
+
+<table>
+  <tr><th style="width:12rem">Rule</th><th>Detail</th></tr>
+  <tr><td>Nothing applies</td><td>Score is 1: nothing applicable was left to fail.</td></tr>
+  <tr><td>Pass</td><td><code>score ≥ threshold</code>. Default threshold 0.5; <code>None</code> runs the metric score-only.</td></tr>
+  <tr><td><code>strict_mode=True</code></td><td>Score is 0 or 1, and the threshold becomes 1.</td></tr>
+  <tr><td>What Jev can see</td><td>"A field that is not in <code>evaluation_params</code> is invisible to Jev, so every field your questions mention must be listed."</td></tr>
+  <tr><td>Weights and credits</td><td>Stay in your code. Jev only ever sees the questions and the option descriptions.</td></tr>
+</table>
+
+<h2>TypeScript: the arithmetic</h2>
+
+<p>From <a href="../lessons/0001-where-a-score-comes-from.html">lesson 1</a>, where every
+line was run against the docs' worked example and printed their 0.461.</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">the scoring functions</span></p>
+<pre><code><span class="k">type</span> <span class="t">Question</span> = { name: <span class="k">string</span>; weight: <span class="k">number</span>; value: <span class="k">number</span> | <span class="k">null</span> };
+
+<span class="c">// A weighted mean of every question&#x27;s value.</span>
+<span class="k">function</span> <span class="f">jevEval</span>(questions: <span class="t">Question</span>[]): <span class="k">number</span> {
+  <span class="k">let</span> weighted = <span class="s">0</span>;
+  <span class="k">let</span> totalWeight = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {
+    <span class="k">if</span> (q.value === <span class="k">null</span>) <span class="k">continue</span>; <span class="c">// this question doesn&#x27;t apply</span>
+    weighted += q.weight * q.value;
+    totalWeight += q.weight;
+  }
+  <span class="k">if</span> (totalWeight === <span class="s">0</span>) <span class="k">return</span> <span class="s">1</span>; <span class="c">// nothing applicable was left to fail</span>
+  <span class="k">return</span> weighted / totalWeight;
+}
+
+<span class="c">// A Score&#x27;s value is the expected level, counted from 0, over the top level.</span>
+<span class="k">function</span> <span class="f">scoreValue</span>(levels: <span class="k">string</span>[], answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;): <span class="k">number</span> {
+  <span class="k">let</span> expected = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> [level, label] <span class="k">of</span> levels.<span class="f">entries</span>()) {
+    expected += level * (answer[label] ?? <span class="s">0</span>);
+  }
+  <span class="k">return</span> expected / (levels.length - <span class="s">1</span>);
+}
+
+<span class="k">type</span> <span class="t">Credits</span> = <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span> | <span class="k">null</span>&gt;;
+
+<span class="c">// A Choice&#x27;s value is the credit Jev&#x27;s answer earns, averaged over the options</span>
+<span class="c">// that count. When the null options hold half the probability or more, the</span>
+<span class="c">// question doesn&#x27;t apply, and the value is null.</span>
+<span class="k">function</span> <span class="f">choiceValue</span>(
+  credits: <span class="t">Credits</span>,
+  answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;
+): <span class="k">number</span> | <span class="k">null</span> {
+  <span class="k">let</span> noneMass = <span class="s">0</span>;
+  <span class="k">let</span> mass = <span class="s">0</span>;
+  <span class="k">let</span> earned = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> [option, credit] <span class="k">of</span> <span class="t">Object</span>.<span class="f">entries</span>(credits)) {
+    <span class="k">const</span> p = answer[option] ?? <span class="s">0</span>;
+    <span class="k">if</span> (credit === <span class="k">null</span>) {
+      noneMass += p;
+      <span class="k">continue</span>;
+    }
+    mass += p;
+    earned += p * credit;
+  }
+  <span class="k">if</span> (noneMass &gt;= <span class="s">0.5</span>) <span class="k">return</span> <span class="k">null</span>;
+  <span class="k">return</span> earned / mass;
+}
+
+<span class="k">const</span> missingCredits: <span class="t">Credits</span> = {
+  left_it_out: <span class="s">1</span>,
+  flagged_it_as_unknown: <span class="s">1</span>,
+  hedged_it: <span class="s">0.5</span>,
+  stated_it_as_fact: <span class="s">0</span>,
+  nothing_missing: <span class="k">null</span>,
+};</code></pre>
+
+<div class="callout warn">
+  <span class="label">Not here yet: the Jev request</span>
+  The request that fills in these probabilities is added after lesson 2 runs it. Until
+  then, two things are unchecked: what <code>answer.score</code> means, and whether a
+  Score's probabilities are keyed by position or by label. There are also two routes to
+  choose between: the OpenRouter decisions API from exercise 21, and the
+  <code>@typesafe-ai/sdk</code> package the docs list (with <code>TYPESAFE_API_KEY</code>).
+</div>
+
+<h2>Python: deepeval</h2>
+
+<pre><code>pip install typesafe-sdk          # the docs' command; deepeval itself as well
+export TYPESAFE_API_KEY=...</code></pre>
+
+<table>
+  <tr><th>Single turn</th><th>Conversation</th></tr>
+  <tr><td><code>JevEval</code> + <code>LLMTestCase</code><br>params: <code>SingleTurnParams</code></td>
+      <td><code>ConversationalJevEval</code> + <code>ConversationalTestCase(scenario, expected_outcome, turns=[Turn(role, content)])</code><br>params: <code>MultiTurnParams</code>; <code>ROLE</code> and <code>CONTENT</code> are added automatically</td></tr>
+</table>
+
+<pre><code>from deepeval.metrics.jev_eval import Noul, Score, Choice
+from deepeval.metrics import JevEval, ConversationalJevEval
+from deepeval.test_case import SingleTurnParams, MultiTurnParams
+
+metric.measure(test_case)
+print(metric.score, metric.reason)
+print(metric.score_breakdown)
+# each entry: question, type, weight, value, applicable, probabilities, confidence
+
+from deepeval import evaluate
+evaluate(test_cases=[test_case], metrics=[metric])</code></pre>
+
+<p>Questions about a conversation talk about <code>turns</code> as a whole ("by the end of
+turns", "at any point in turns") or about a role ("the assistant", "the user").</p>
+
+<h2>The worked example</h2>
+
+<table>
+  <tr><th>Question</th><th>Weight</th><th>Jev's answer</th><th>Value</th></tr>
+  <tr><td>Noul: every fact appears in a tool output</td><td>2</td><td>P(true) 0.30</td><td>0.30</td></tr>
+  <tr><td>Noul: every tool value reported accurately</td><td>1</td><td>P(true) 0.90</td><td>0.90</td></tr>
+  <tr><td>Score: how grounded, 4 levels</td><td>1</td><td>0.05 / 0.30 / 0.55 / 0.10</td><td>1.7 ÷ 3 = 0.567</td></tr>
+  <tr><td>Choice: what it did with missing information</td><td>1</td><td><code>None</code> option 0.05</td><td>0.225 ÷ 0.95 = 0.237</td></tr>
+  <tr><td colspan="3"><strong>(2 · 0.30 + 0.90 + 0.567 + 0.237) ÷ 5</strong></td><td><strong>0.461</strong></td></tr>
+</table>
+
+<nav class="footer-nav">
+  <a href="../lessons/0001-where-a-score-comes-from.html">Lesson 1: Where a Score Comes From</a>
+  <a href="../ROADMAP.md">Roadmap</a>
+  <a href="../RESOURCES.md">Resources</a>
+</nav>
+
+</body>
+</html>

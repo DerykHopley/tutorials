@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 1 — Where a Score Comes From</title>
+<!-- @assets:style.css,quiz.css,quiz.js -->
+<style>
+/* ---- generated from assets/style.css — do not edit here ---- */
+/* ============================================================
+   Shared stylesheet for the "Text Editor GUI in Rust" workspace.
+   Every lesson and reference doc links this file.
+   Tufte-inspired: generous margins, sidenotes, restrained colour.
+   ============================================================ */
+
+:root {
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-faint: #767676;
+  --paper: #fffff8;
+  --rule: #d8d8cf;
+  --accent: #a0512d;         /* rust, obviously */
+  --accent-soft: #f3e6df;
+
+  /* Inline code is a "chip" sharing the code blocks' exact surface, so an
+     identifier in a sentence and the same identifier in a block read as one
+     system. The warm ink echoes --code-accent and keeps chips feeling like
+     code rather than like redacted text — at 7.3:1 on the chip ground, which
+     clears WCAG AAA even at the 12px chips actually render at.
+     Every code colour is a variable so @media print can flip the whole theme
+     back to light — dark chips and blocks are a toner sink on paper. */
+  --chip-bg: #2b2f36;
+  --chip-border: #3d434c;
+  --chip-ink: #f3b184;
+
+  --code-bg: #2b2f36;
+  --code-border: #3d434c;
+  --code-ink: #e8e5de;
+  --code-accent: #d2703f;
+  --code-faint: #99a0aa;
+
+  --tok-c: #8b929c;          /* comment */
+  --tok-k: #cf9be0;          /* keyword */
+  --tok-s: #a3cf8c;          /* string  */
+  --tok-t: #7fc3e6;          /* type    */
+  --tok-f: #edc07d;          /* fn name */
+  --tok-hl: #4d4327;         /* line highlight */
+  --tok-add-bg: #2f3d34;     /* newly added line */
+  --tok-add-bar: #63ac7d;
+  --tok-del-bg: #3a2b2d;     /* line being removed */
+  --tok-del-bar: #b8656b;
+
+  --err-bg: #362a2c;
+  --err-border: #574044;
+  --err-accent: #e8878f;
+  --ok: #2b6b3f;
+  --no: #9b2c2c;
+  --serif: et-book, Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --mono: "Iosevka", "JetBrains Mono", "SF Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+}
+
+html {
+  font-size: 15px;
+  background: var(--paper);
+}
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: var(--paper);
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 4rem 2rem 8rem;
+  line-height: 1.62;
+  counter-reset: sidenote;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.eyebrow .sep { opacity: 0.4; margin: 0 0.5em; }
+
+/* ---------- typography ---------- */
+
+h1 {
+  font-weight: 400;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 3rem 0 0.8rem;
+  line-height: 1.25;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin: 2rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+/* Subsection *within* a stage. Deliberately smaller and quieter than h3 so
+   it never reads as a stage of its own. */
+h4 {
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  margin: 2rem 0 0.5rem;
+}
+
+.subtitle {
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 0.4rem;
+}
+
+p { margin: 0 0 1.1rem; }
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { background: var(--accent-soft); }
+
+strong { font-weight: 650; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 3rem 0;
+}
+
+ul, ol { padding-left: 1.3rem; margin: 0 0 1.1rem; }
+li { margin-bottom: 0.4rem; }
+
+/* ---------- code ---------- */
+
+/* --- inline code: a chip you can spot mid-sentence --- */
+
+code {
+  font-family: var(--mono);
+  font-size: 0.82em;
+  line-height: 1.4;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  padding: 0.12em 0.4em;
+  border: 1px solid var(--chip-border);
+  border-radius: 3.5px;
+  /* keep short identifiers intact, but never blow out the measure */
+  overflow-wrap: break-word;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Code inside a link keeps the chip surface — the underline already says
+   "link", and the paper-coloured accent is unreadable on a dark chip. */
+a code { color: var(--chip-ink); }
+
+/* Headings set their own scale and weight; a boxed chip fights them.
+   Use colour alone to mark code here. */
+h1 code, h2 code, h3 code, h4 code,
+.subtitle code, .thesis code,
+.recall > summary code {
+  font-size: 0.86em;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* --- code blocks: a flat panel, visually distinct from chips --- */
+
+pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-radius: 4px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0 0 1.3rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  /* A default light scrollbar cuts a white bar across a dark block. */
+  scrollbar-width: thin;
+  scrollbar-color: #5b626d transparent;
+}
+pre::-webkit-scrollbar { height: 9px; }
+pre::-webkit-scrollbar-track { background: transparent; }
+pre::-webkit-scrollbar-thumb {
+  background: #4d545e;
+  border-radius: 5px;
+}
+pre::-webkit-scrollbar-thumb:hover { background: #646c78; }
+
+/* Strip chip styling everywhere the context is already monospaced. */
+pre code,
+.run code,
+.filename code,
+.quiz .options button code {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Compiler output is not code to type. Mark it unmistakably. */
+pre.error {
+  background: var(--err-bg);
+  border-color: var(--err-border);
+  border-left: 3px solid var(--err-accent);
+}
+/* The label defaults to "compiler output" because that is the common case, but the
+   same red block is right for anything a tool told you and you did not type: a test
+   failure, a runtime panic. Override with data-label="…" rather than inventing a
+   second style, so the treatment stays identical and only the word changes. */
+pre.error[data-label]::before { content: attr(data-label); }
+pre.error::before {
+  content: "compiler output";
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--err-accent);
+  margin: -0.15rem 0 0.7rem;
+}
+
+pre .c  { color: var(--tok-c); font-style: italic; }
+pre .k  { color: var(--tok-k); font-weight: 600; }
+pre .s  { color: var(--tok-s); }
+pre .t  { color: var(--tok-t); }
+pre .f  { color: var(--tok-f); }
+pre .hl { background: var(--tok-hl); display: inline-block; width: 100%; }
+
+/* incremental code: newly added lines vs. dimmed existing context */
+pre .add {
+  background: var(--tok-add-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-add-bar);
+}
+pre .del {
+  background: var(--tok-del-bg);
+  display: inline-block;
+  width: 100%;
+  box-shadow: inset 2px 0 0 var(--tok-del-bar);
+  text-decoration: line-through;
+  text-decoration-color: var(--tok-del-bar);
+  opacity: 0.8;
+}
+pre .dim { opacity: 0.5; }
+
+/* An elided region *inside* a function body, where the listing can't simply be
+   split in two. Deliberately not styled as a comment: a reader skimming code
+   reads `// … unchanged …` as something they might need to type. */
+pre .gap {
+  display: block;
+  /* prose, not code — let it wrap rather than run off the block */
+  white-space: normal;
+  margin: 0.35rem 0;
+  padding: 0.2rem 0;
+  text-align: center;
+  font-style: italic;
+  color: var(--code-faint);
+  border-top: 1px dashed var(--code-border);
+  border-bottom: 1px dashed var(--code-border);
+}
+
+/* A listing of somebody else's source — a library, a spec, a config you don't own.
+   Visually distinct from an edit tab so it never reads as "type this into your file",
+   and excluded from the "N edits" audit in build.py, which counts plain .filename. */
+.filename.ref {
+  background: var(--code-border);
+  color: var(--code-faint);
+  font-style: italic;
+}
+.filename.ref::after {
+  content: " · reference, not an edit";
+  font-style: normal;
+  opacity: 0.75;
+}
+
+/* Sits directly on top of its code block, like a file tab. */
+.filename {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--code-faint);
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-left: 3px solid var(--code-accent);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  padding: 0.34rem 0.85rem 0.28rem;
+  margin: 0;
+  position: relative;
+  top: 1px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+}
+
+/* Content-addressed location for a hunk — "in fn ui, after ui.heading".
+   This is what line numbers were a proxy for, except it survives the file
+   growing underneath it. Same idea as git's `@@ … @@ fn_name` hunk headers. */
+.filename .where { color: var(--chip-ink); }
+.filename .where::before {
+  content: " · ";
+  color: var(--code-faint);
+}
+
+/* Line numbers belong on a *complete file*, where they're stable and let you
+   map a compiler error onto a known-good reference. Never on a hunk — a hunk's
+   numbers go stale the moment an earlier stage adds a line.
+   The parent drops to white-space:normal so the newlines between the line
+   spans collapse; each span restores `pre` for its own content. */
+pre.numbered {
+  counter-reset: line;
+  white-space: normal;
+}
+pre.numbered .l {
+  display: block;
+  white-space: pre;
+  counter-increment: line;
+}
+pre.numbered .l::before {
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.4ch;
+  padding-right: 0.9ch;
+  text-align: right;
+  color: var(--code-faint);
+  opacity: 0.55;
+  border-right: 1px solid var(--code-border);
+  /* never let a line number end up in a copied selection */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- callouts ---------- */
+
+.callout {
+  border-left: 3px solid var(--rule);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.3rem;
+  color: var(--ink-soft);
+}
+.callout .label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.callout.key { border-left-color: var(--accent); color: var(--ink); }
+.callout.warn { border-left-color: #c08a2e; }
+
+/* A must-do detail that is easy to skim straight past — typically a change
+   inside a code block that the diff alone doesn't shout loudly enough.
+   Filled, not merely bordered: the borderless callouts don't survive fast
+   reading, which is exactly the failure mode this variant exists to fix.
+   Put it BEFORE the code block, not after — after is too late. */
+.callout.note {
+  background: #fdf4dd;
+  border: 1px solid #ecdca8;
+  border-left: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0.8rem 1.1rem 0.85rem;
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.callout.note .label { color: #8a6a13; }
+
+/* the one sentence the lesson exists to deliver */
+.thesis {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.1rem 0;
+  margin: 2rem 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ---------- sidenotes ---------- */
+
+.sidenote {
+  float: right;
+  clear: right;
+  width: 15rem;
+  margin-right: -18rem;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+@media (max-width: 1180px) {
+  .sidenote {
+    float: none;
+    width: auto;
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+}
+
+/* ---------- steps ---------- */
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.4rem;
+  margin-bottom: 1.5rem;
+}
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- build stages ---------- */
+/* One incremental step of a lesson. See LESSON-FORMAT.md. */
+
+.stage {
+  counter-increment: stage;
+  border-top: 1px solid var(--rule);
+  padding-top: 1.6rem;
+  margin: 2.6rem 0;
+}
+body { counter-reset: stage; }
+
+.stage > h3 {
+  position: relative;
+  padding-left: 2.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+/* Only the stage's *first* heading is labelled. Without :first-of-type, a
+   second <h3> inside a stage silently gets its own duplicate "Stage N". */
+.stage > h3:first-of-type::before {
+  content: "Stage " counter(stage);
+  position: absolute;
+  left: 0;
+  top: -1.35rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-left: 0;
+}
+.stage > h3 { padding-left: 0; }
+
+.goal {
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+}
+.goal::before {
+  content: "Goal — ";
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Terminal-shaped, so it matches the code blocks it sits between. */
+.run {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px dashed var(--code-border);
+  border-radius: 3px;
+  padding: 0.7rem 0.9rem;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.run::before {
+  content: "▸ run it";
+  display: block;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--code-accent);
+  margin-bottom: 0.35rem;
+}
+/* Secondary detail inside a run block — timings, caveats. */
+.run .note { color: var(--code-faint); }
+
+.legend {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  margin: 0 0 1.6rem;
+}
+.legend .swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: -1px;
+  margin-right: 0.3rem;
+  border-radius: 2px;
+}
+.legend .swatch.new { background: var(--tok-add-bg); box-shadow: inset 2px 0 0 var(--tok-add-bar); }
+.legend .swatch.gone { background: var(--tok-del-bg); box-shadow: inset 2px 0 0 var(--tok-del-bar); }
+.legend .swatch.old { background: var(--code-bg); border: 1px solid var(--code-border); }
+
+/* ---------- tables ---------- */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+th {
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+/* ---------- review anchors ---------- */
+/* Quiz explanations link back to wherever the idea was taught. Jumping to a
+   target shouldn't leave it flush against the top of the viewport, and a brief
+   ring confirms you landed on the right thing. Uses `outline`, not
+   `background`, so it can be applied to any element — a dark <pre> included —
+   without clobbering its own colours. */
+
+[id] { scroll-margin-top: 2.5rem; }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+:target { animation: land 2.6s ease-out 1; }
+
+@keyframes land {
+  0%, 45% { outline: 3px solid #e0b93f; outline-offset: 7px; }
+  100%    { outline: 3px solid transparent; outline-offset: 7px; }
+}
+
+/* ---------- footer nav ---------- */
+
+.footer-nav {
+  margin-top: 4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+}
+.footer-nav a { margin-right: 1.2rem; }
+
+.ask {
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1rem 1.2rem;
+  font-size: 0.9rem;
+  margin: 2.5rem 0 0;
+}
+.ask strong { color: var(--accent); }
+
+/* ---------- print ---------- */
+
+@media print {
+  /* Dark code blocks are for screens. On paper they're a toner sink and the
+     syntax colours muddy, so flip the whole block theme back to light. Because
+     every block colour is a variable, this is the only place it needs saying. */
+  :root {
+    --paper: #fff;
+    --chip-bg: #f6ead9;
+    --chip-border: #e5d2b8;
+    --chip-ink: #8a4420;
+    --code-bg: #f4f2e7;
+    --code-border: #ded9c6;
+    --code-ink: #111;
+    --code-accent: #a0512d;
+    --code-faint: #767676;
+    --tok-c: #7a7568;
+    --tok-k: #8438a0;
+    --tok-s: #1f6b3a;
+    --tok-t: #10557f;
+    --tok-f: #8a5c00;
+    --tok-hl: #fdf0c8;
+    --tok-add-bg: #e8f4ea;
+    --tok-add-bar: #2b6b3f;
+    --tok-del-bg: #fbeceb;
+    --tok-del-bar: #9b2c2c;
+    --err-bg: #fcf3f1;
+    --err-border: #ecd3cc;
+    --err-accent: #9b2c2c;
+  }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .sidenote { float: none; width: auto; margin: 0.6rem 0; border-left: 2px solid var(--rule); padding-left: 0.8rem; }
+  pre { white-space: pre-wrap; }
+  a { color: var(--ink); text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.7em; color: var(--ink-faint); }
+  .quiz, .ask, .footer-nav { display: none; }
+  h2 { break-after: avoid; }
+  pre, .callout, table { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---- generated from assets/quiz.css — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice components. Pairs with quiz.js.
+   Used by every lesson; extend here rather than inlining.
+   ============================================================ */
+
+.quiz {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: #fdfdf5;
+}
+
+.quiz .q {
+  font-size: 1rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.45;
+}
+/* Questions are prose, so chips stay — they're the scannable part. */
+.quiz .q code { font-size: 0.8em; }
+
+/* Options are already monospace end-to-end; a chip inside one would
+   just be a box around a box. Colour is enough, and it has to yield to
+   the correct/wrong states. */
+.quiz .options button code { font-weight: 600; }
+
+.quiz .options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.quiz .options li { margin: 0 0 0.45rem; }
+
+.quiz .options button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  text-align: left;
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+  line-height: 1.4;
+  transition: background 0.12s, border-color 0.12s;
+}
+.quiz .options button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .options button:disabled { cursor: default; }
+
+.quiz .options button.correct {
+  border-color: var(--ok);
+  background: #eaf5ed;
+  color: var(--ok);
+}
+.quiz .options button.wrong {
+  border-color: var(--no);
+  background: #f9ecec;
+  color: var(--no);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* ---- numeric answer: same surfaces as an option button ---- */
+
+.quiz .entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.quiz .entry input {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  width: 7rem;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--ink);
+}
+.quiz .entry input:focus { outline: none; border-color: var(--accent); }
+.quiz .entry input.correct { border-color: var(--ok); background: #eaf5ed; color: var(--ok); }
+.quiz .entry input.wrong { border-color: var(--no); }
+.quiz .entry button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  padding: 0.55rem 0.9rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.quiz .entry button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .entry button:disabled { cursor: default; color: var(--ink-faint); }
+.quiz .entry .feedback {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.quiz .why {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+/* Jump back to where this was taught. Lives inside .why, so it appears with
+   the explanation rather than sitting there as a hint before you've tried. */
+.quiz .why .review {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.quiz .why::before {
+  content: "Why: ";
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.quiz-score {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  text-align: right;
+  margin: -0.6rem 0 2rem;
+}
+
+/* ---- free recall: try to answer before revealing ---- */
+
+.recall {
+  border-left: 3px solid var(--accent);
+  padding: 0.2rem 0 0.2rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.recall > summary {
+  cursor: pointer;
+  font-style: italic;
+  color: var(--accent);
+  list-style: none;
+  margin-bottom: 0.3rem;
+}
+.recall > summary::-webkit-details-marker { display: none; }
+.recall > summary::before {
+  content: "▸ ";
+  font-style: normal;
+}
+.recall[open] > summary::before { content: "▾ "; }
+.recall > summary::after {
+  content: " — say your answer out loud first";
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+.recall[open] > summary::after { content: ""; }
+.recall > :not(summary) { color: var(--ink-soft); }
+
+@media print {
+  .recall > :not(summary) { display: block; }
+}
+</style>
+<script>
+/* ---- generated from assets/quiz.js — do not edit here ---- */
+/* ============================================================
+   Retrieval-practice quiz widget. Pairs with quiz.css.
+
+   Markup contract:
+
+     <div class="quiz">
+       <p class="q">Question?</p>
+       <ul class="options">
+         <li data-correct>The right answer</li>
+         <li>A wrong answer</li>
+       </ul>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   Options are shuffled on load, so answer position carries no
+   information. Feedback is immediate — the whole point is a tight
+   loop. Wrong answers don't lock the question; keep going until
+   it's right, which is what makes it practice rather than a test.
+
+   A question whose answer is a number, not an option:
+
+     <div class="quiz numeric" data-answer="0.49" data-tolerance="0.005">
+       <p class="q">Question?</p>
+       <p class="why">Shown once answered.</p>
+     </div>
+
+   The script adds the input and the Check button. A comma is read
+   as a decimal point, because a German keyboard's number pad types
+   one. It counts towards the same score as the multiple-choice
+   questions, with the same rule: a miss before the right answer
+   means it wasn't first try.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  function shuffle(nodes) {
+    for (let i = nodes.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      nodes[i].parentNode.insertBefore(nodes[j], nodes[i]);
+      [nodes[i], nodes[j]] = [nodes[j], nodes[i]];
+    }
+  }
+
+  function initNumeric(quiz, why, onFirstCorrect) {
+    const answer = parseFloat(quiz.dataset.answer);
+    const tolerance = parseFloat(quiz.dataset.tolerance || "0");
+
+    const form = document.createElement("form");
+    form.className = "entry";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "decimal";
+    input.setAttribute("aria-label", "Your answer");
+    const btn = document.createElement("button");
+    btn.type = "submit";
+    btn.textContent = "Check";
+    const feedback = document.createElement("span");
+    feedback.className = "feedback";
+    feedback.setAttribute("role", "status");
+    form.append(input, btn, feedback);
+    quiz.insertBefore(form, why);
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const guess = parseFloat(input.value.trim().replace(",", "."));
+      if (Number.isNaN(guess)) {
+        feedback.textContent = "Type a number first.";
+        return;
+      }
+
+      if (Math.abs(guess - answer) <= tolerance) {
+        input.disabled = btn.disabled = true;
+        input.classList.remove("wrong");
+        input.classList.add("correct");
+        feedback.textContent = "Correct.";
+        if (why) why.hidden = false;
+        onFirstCorrect(quiz.dataset.firstTry !== "missed");
+      } else {
+        quiz.dataset.firstTry = "missed";
+        input.classList.add("wrong");
+        feedback.textContent = "Not quite. Try again.";
+        input.select();
+      }
+    });
+  }
+
+  function initQuiz(quiz, onFirstCorrect) {
+    const list = quiz.querySelector(".options");
+    const why = quiz.querySelector(".why");
+    if (why) why.hidden = true;
+    if (quiz.classList.contains("numeric")) {
+      initNumeric(quiz, why, onFirstCorrect);
+      return;
+    }
+    if (!list) return;
+
+    shuffle(Array.from(list.children));
+
+    let solved = false;
+
+    Array.from(list.querySelectorAll("li")).forEach((li) => {
+      const isCorrect = li.hasAttribute("data-correct");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = li.innerHTML;
+      li.innerHTML = "";
+      li.appendChild(btn);
+
+      btn.addEventListener("click", () => {
+        if (solved) return;
+
+        if (isCorrect) {
+          solved = true;
+          btn.classList.add("correct");
+          list.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          if (why) why.hidden = false;
+          onFirstCorrect(quiz.dataset.firstTry !== "missed");
+        } else {
+          // Record the miss before revealing, so the score is honest.
+          quiz.dataset.firstTry = "missed";
+          btn.classList.add("wrong");
+          btn.disabled = true;
+        }
+      });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const quizzes = Array.from(document.querySelectorAll(".quiz"));
+    if (!quizzes.length) return;
+
+    let firstTry = 0;
+    let done = 0;
+
+    const score = document.querySelector(".quiz-score");
+    function render() {
+      if (!score) return;
+      score.textContent =
+        done < quizzes.length
+          ? `${done} / ${quizzes.length} answered`
+          : `${firstTry} / ${quizzes.length} first try`;
+    }
+
+    quizzes.forEach((q) =>
+      initQuiz(q, (wasFirstTry) => {
+        done++;
+        if (wasFirstTry) firstTry++;
+        render();
+      })
+    );
+
+    render();
+  });
+})();
+</script>
+<!-- /@assets -->
+</head>
+<body>
+
+<header class="masthead">
+  <p class="eyebrow">Lesson 01 <span class="sep">/</span> Evaluating a Socratic Tutor <span class="sep">/</span> ~35 minutes</p>
+  <h1>Where a Score Comes From</h1>
+  <p class="subtitle">Seven stages, from one probability to the number deepeval prints — worked out by your own code.</p>
+</header>
+
+<p>A JevEval metric asks Jev a few questions about a test case and turns the answers into
+one number between 0 and 1. You've already done the asking: in exercise 21 you sent Jev
+a Noul, a Choice and a Score. This lesson is about the other half — how the answers
+become the number.</p>
+
+<p>You'll write that arithmetic yourself, in TypeScript, without calling any API. The
+answers come from the worked example in deepeval's JevEval docs, so at the end you can
+check your result against theirs to three decimals.</p>
+
+<p>This is not busywork. When a metric says 0.46 about a conversation you thought went
+well, one of two things is wrong: the tutor, or the metric. You can only tell which if
+you know exactly how 0.46 was made.</p>
+
+<div class="thesis">
+  Jev supplies probabilities.<br>
+  Everything else — the weights, the credits, the order of the levels — is yours, and
+  the score is a weighted mean you could work out on paper.
+</div>
+
+<h2>Before you start</h2>
+
+<p>Work in the course repo, next to the exercises:</p>
+
+<p class="run">cd ~/development/TuringCollege/1-2-development-environment-api</p>
+
+<p>Create an empty file, <code>src/jev-eval.ts</code>. You'll run it with the same script as every
+exercise, <code>npm run file</code>, which is <code>tsx --env-file=.env</code>. Nothing in
+this lesson reads your API key, but that script expects <code>.env</code> to exist, and
+it does.</p>
+
+<p class="sidenote">The name leaves out the <code>NN-exercise-</code> numbering on purpose,
+so it can't collide with an exercise the course gives you later.</p>
+
+<p id="the-example">The test case comes from the docs. It evaluates an assistant that
+answers using tools, and asks whether it stuck to what the tools returned. That isn't your
+tutor — the tutor arrives in lesson 3 — but it's the one example where every probability
+Jev returned is published, which makes it the one you can check yourself against:</p>
+
+<table>
+  <tr><th>Type</th><th>Weight</th><th>Question, verbatim from the docs</th><th>Short name here</th></tr>
+  <tr><td>Noul</td><td>2</td><td>Every fact and figure in <code>actual_output</code> appears in the output of a tool in <code>tools_called</code>.</td><td>facts appear in tool output</td></tr>
+  <tr><td>Noul</td><td>1</td><td><code>actual_output</code> reports every value returned in <code>tools_called</code> accurately.</td><td>tool values reported accurately</td></tr>
+  <tr><td>Score</td><td>1</td><td>How much of <code>actual_output</code> is grounded in the outputs in <code>tools_called</code>?</td><td>how grounded</td></tr>
+  <tr><td>Choice</td><td>1</td><td>What did <code>actual_output</code> do with information the tools did not return?</td><td>missing information</td></tr>
+</table>
+
+<div class="callout key">
+  <span class="label">Type it, don't paste it</span>
+  Typing makes you look at every token; pasting lets your eyes slide over it. It's about
+  a hundred lines by the end, and most of them are numbers you'll want to have read.
+</div>
+
+<p class="legend">
+  <span class="swatch new"></span>adding &nbsp;&nbsp;
+  <span class="swatch gone"></span>removing &nbsp;&nbsp;
+  <span class="swatch old"></span>existing code, shown only for context
+</p>
+
+<section class="stage" id="stage-1">
+<h3>One question, one number</h3>
+
+<p class="goal">Your terminal prints the value of one Noul.</p>
+
+<p>Put this in the empty file:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">the whole file</span></p>
+<pre><code><span class="c">// A Noul&#x27;s value is the probability Jev gives to &quot;true&quot;.</span>
+<span class="k">const</span> factsAppear = <span class="s">0.3</span>;
+
+console.<span class="f">log</span>(<span class="s">&#x27;facts appear in tool output&#x27;</span>, factsAppear);</code></pre>
+
+<p>A <strong>Noul</strong> is a question that is one true-or-false statement. Jev doesn't
+answer "true" or "false". It answers with the probability that the statement is true —
+and that probability <em>is</em> the question's value. There's no conversion step. Jev
+gave 0.3 to "every fact and figure appears in a tool output", so this answer probably
+contains something the tools never said.</p>
+
+<p id="noul-phrasing">One consequence is easy to get wrong later, so it's worth seeing
+now. A Noul's value rewards whatever "true" means. Write the statement the other way
+round — "<code>actual_output</code> contains a fact no tool returned" — and the same
+answer would come back as 0.7, a good mark for the behaviour you don't want. Nothing
+catches this. The maths can't know which way round you meant it. So <strong>phrase every
+Noul so that true is the behaviour you want.</strong></p>
+
+<p class="run">npm run file src/jev-eval.ts<br>
+→ facts appear in tool output 0.3</p>
+</section>
+
+<section class="stage" id="stage-2">
+<h3>Two questions, one weighted mean</h3>
+
+<p class="goal">Two values and their total, lined up in a table.</p>
+
+<p>Replace the whole file. The first line of the new version is the one idea that lasts:
+a question is a name, a weight and a value.</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">replacing the whole file</span></p>
+<pre><code><span class="k">type</span> <span class="t">Question</span> = { name: <span class="k">string</span>; weight: <span class="k">number</span>; value: <span class="k">number</span> };
+
+<span class="c">// A weighted mean of every question&#x27;s value.</span>
+<span class="k">function</span> <span class="f">jevEval</span>(questions: <span class="t">Question</span>[]): <span class="k">number</span> {
+  <span class="k">let</span> weighted = <span class="s">0</span>;
+  <span class="k">let</span> totalWeight = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {
+    weighted += q.weight * q.value;
+    totalWeight += q.weight;
+  }
+  <span class="k">return</span> weighted / totalWeight;
+}
+
+<span class="k">const</span> questions: <span class="t">Question</span>[] = [
+  { name: <span class="s">&#x27;facts appear in tool output&#x27;</span>, weight: <span class="s">2</span>, value: <span class="s">0.3</span> },
+  { name: <span class="s">&#x27;tool values reported accurately&#x27;</span>, weight: <span class="s">1</span>, value: <span class="s">0.9</span> },
+];
+
+<span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {
+  console.<span class="f">log</span>(q.name.<span class="f">padEnd</span>(<span class="s">32</span>), q.value.<span class="f">toFixed</span>(<span class="s">3</span>));
+}
+console.<span class="f">log</span>(<span class="s">&#x27;JevEval&#x27;</span>.<span class="f">padEnd</span>(<span class="s">32</span>), <span class="f">jevEval</span>(questions).<span class="f">toFixed</span>(<span class="s">3</span>));</code></pre>
+
+<p><strong><code>type Question = { … }</code></strong> describes the shape of an object:
+which fields it has, and what type each one is. It's the same idea as a Python
+<code>TypedDict</code>. It produces no code — it only tells the type checker what a
+<code>Question</code> must contain.</p>
+
+<p id="weighted-mean"><strong><code>jevEval</code></strong> is the whole of the scoring rule:
+multiply each value by its weight, add those up, and divide by the total weight. For
+these two questions that's (2 × 0.3 + 1 × 0.9) ÷ (2 + 1) = 1.5 ÷ 3 = 0.5. The weight of 2
+makes the first question count twice as much as the second.</p>
+
+<p>Jev never sees the weights. It judges what happened; you decide how much each thing
+matters. That split runs through everything in this lesson.</p>
+
+<div class="callout warn">
+  <span class="label"><code>of</code>, not <code>in</code></span>
+  <code>for (const q of questions)</code> is Python's <code>for q in questions</code>.
+  TypeScript also has <code>for (const q in questions)</code>, with <code>in</code>, and
+  it gives you the <em>indexes</em> as strings — <code>'0'</code>, <code>'1'</code> — not
+  the questions. Swap it in here and the file stops at
+  <code>TypeError: Cannot read properties of undefined (reading &#x27;padEnd&#x27;)</code>. When you translate a Python loop, <code>in</code>
+  becomes <code>of</code>.
+</div>
+
+<p class="sidenote"><code>q.name.padEnd(32)</code> is Python's <code>f"{name:&lt;32}"</code>,
+and <code>value.toFixed(3)</code> is <code>f"{value:.3f}"</code>.</p>
+
+<p class="run">npm run file src/jev-eval.ts</p>
+
+<pre class="error" data-label="output"><code>facts appear in tool output      0.300
+tool values reported accurately  0.900
+JevEval                          0.500</code></pre>
+</section>
+
+<section class="stage" id="stage-3">
+<h3>A question with levels</h3>
+
+<p class="goal">A third row, <code>how grounded</code>, and the total moves.</p>
+
+<p>This stage takes two edits. First, a function that turns a Score answer into
+a value, below <code>jevEval</code>:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">after jevEval</span></p>
+<pre><code><span class="dim">  <span class="k">return</span> weighted / totalWeight;
+}</span>
+
+<span class="add"><span class="c">// A Score&#x27;s value is the expected level, counted from 0, over the top level.</span>
+<span class="k">function</span> <span class="f">scoreValue</span>(levels: <span class="k">string</span>[], answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;): <span class="k">number</span> {
+  <span class="k">let</span> expected = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> [level, label] <span class="k">of</span> levels.<span class="f">entries</span>()) {
+    expected += level * (answer[label] ?? <span class="s">0</span>);
+  }
+  <span class="k">return</span> expected / (levels.length - <span class="s">1</span>);
+}</span></code></pre>
+
+<p>Second, the question itself, as the third entry in <code>questions</code>:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">in questions, after the second entry</span></p>
+<pre><code><span class="dim">  { name: <span class="s">&#x27;tool values reported accurately&#x27;</span>, weight: <span class="s">1</span>, value: <span class="s">0.9</span> },</span>
+<span class="add">  {
+    name: <span class="s">&#x27;how grounded&#x27;</span>,
+    weight: <span class="s">1</span>,
+    value: <span class="f">scoreValue</span>(
+      [<span class="s">&#x27;Fabricated&#x27;</span>, <span class="s">&#x27;Mostly fabricated&#x27;</span>, <span class="s">&#x27;Mostly grounded&#x27;</span>, <span class="s">&#x27;Fully grounded&#x27;</span>],
+      {
+        <span class="t">Fabricated</span>: <span class="s">0.05</span>,
+        <span class="s">&#x27;Mostly fabricated&#x27;</span>: <span class="s">0.3</span>,
+        <span class="s">&#x27;Mostly grounded&#x27;</span>: <span class="s">0.55</span>,
+        <span class="s">&#x27;Fully grounded&#x27;</span>: <span class="s">0.1</span>,
+      }
+    ),
+  },</span>
+<span class="dim">];</span></code></pre>
+
+<p id="score-value">A <strong>Score</strong> is a question with ordered levels, written
+worst first. Level 0 is the worst outcome, and the highest level is the best. Jev's
+answer is a spread of probabilities over the levels, not one pick. The value is the
+<em>expected level</em> — the average level, weighted by how likely each one is
+(statisticians call it the <em>expected value</em>) — divided by the highest level:</p>
+
+<p>(0 × 0.05 + 1 × 0.30 + 2 × 0.55 + 3 × 0.10) ÷ 3 = 1.7 ÷ 3 = <strong>0.567</strong></p>
+
+<p>Why not just take the most likely level? That would be level 2, "Mostly grounded",
+worth 0.667 — and it would throw away the 35% of Jev's answer that sits below it. The
+expected level keeps all of it.</p>
+
+<p class="sidenote"><code>levels.entries()</code> is Python's <code>enumerate(levels)</code>,
+and <code>[level, label]</code> unpacks each pair the way a Python <code>for i, x in</code>
+does. <code>Record&lt;string, number&gt;</code> is <code>dict[str, float]</code>, and
+<code>answer[label] ?? 0</code> is <code>answer.get(label, 0)</code>.</p>
+
+<p class="sidenote">The docs list a Score answer's probabilities by position
+(<code>{0: 0.05, 1: 0.30, …}</code>). This lesson keys them by label, so that the next
+stage's mistake shows up in the code you can read. Which one the API actually sends is
+one of the things lesson 2 checks.</p>
+
+<p class="run">npm run file src/jev-eval.ts</p>
+
+<pre class="error" data-label="output"><code>facts appear in tool output      0.300
+tool values reported accurately  0.900
+how grounded                     0.567
+JevEval                          0.517</code></pre>
+</section>
+
+<section class="stage" id="stage-4">
+<h3>Write the levels best first — the stage that fails on purpose</h3>
+
+<p class="goal">The score changes with no error at all, and a passing test case starts
+failing.</p>
+
+<p>Reverse the order of the levels, best first. Jev's answer stays exactly as it was:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">in questions, the how grounded entry</span></p>
+<pre><code><span class="dim">    value: <span class="f">scoreValue</span>(</span>
+<span class="del">      [<span class="s">&#x27;Fabricated&#x27;</span>, <span class="s">&#x27;Mostly fabricated&#x27;</span>, <span class="s">&#x27;Mostly grounded&#x27;</span>, <span class="s">&#x27;Fully grounded&#x27;</span>],</span>
+<span class="add">      [<span class="s">&#x27;Fully grounded&#x27;</span>, <span class="s">&#x27;Mostly grounded&#x27;</span>, <span class="s">&#x27;Mostly fabricated&#x27;</span>, <span class="s">&#x27;Fabricated&#x27;</span>],</span></code></pre>
+
+<p class="run">npm run file src/jev-eval.ts</p>
+
+<pre class="error" data-label="output"><code>facts appear in tool output      0.300
+tool values reported accurately  0.900
+how grounded                     0.433
+JevEval                          0.483</code></pre>
+
+<p id="worst-first">No error and no warning. <code>how grounded</code> went from 0.567 to
+0.433 — exactly 1 − 0.567 — because level 0 is now "Fully grounded". The best outcome now
+earns nothing and the worst earns full marks. The total fell from 0.517 to 0.483, and
+deepeval's default threshold is 0.5, so a test case that passed now fails. You'd go
+looking for what's wrong with the assistant.</p>
+
+<p>The rule from the docs is that levels are written <strong>worst first</strong>. Nothing
+checks it — not TypeScript, not Jev, not deepeval — because the order is the only place
+your meaning is written down. A list of strings in the other order is still a valid list
+of strings.</p>
+
+<div class="callout note">
+  <span class="label">Put the levels back before stage 5</span>
+  Every number from here on assumes worst first. If you skip this, stage 5 won't land on
+  the docs' result and you'll have no way to tell why.
+</div>
+
+<p class="filename">src/jev-eval.ts<span class="where">in questions, the how grounded entry</span></p>
+<pre><code><span class="dim">    value: <span class="f">scoreValue</span>(</span>
+<span class="del">      [<span class="s">&#x27;Fully grounded&#x27;</span>, <span class="s">&#x27;Mostly grounded&#x27;</span>, <span class="s">&#x27;Mostly fabricated&#x27;</span>, <span class="s">&#x27;Fabricated&#x27;</span>],</span>
+<span class="add">      [<span class="s">&#x27;Fabricated&#x27;</span>, <span class="s">&#x27;Mostly fabricated&#x27;</span>, <span class="s">&#x27;Mostly grounded&#x27;</span>, <span class="s">&#x27;Fully grounded&#x27;</span>],</span></code></pre>
+
+<p class="run">npm run file src/jev-eval.ts<br>
+→ how grounded 0.567, JevEval 0.517 again</p>
+</section>
+
+<section class="stage" id="stage-5">
+<h3>A question with options</h3>
+
+<p class="goal">A fourth row, <code>missing information</code>, and the total lands on
+the docs' 0.461.</p>
+
+<p>This stage takes two edits. First, below <code>scoreValue</code>, a type for
+credits, a function that turns a Choice answer into a value, and the credits for this
+question:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">after scoreValue, before questions</span></p>
+<pre><code><span class="dim">  <span class="k">return</span> expected / (levels.length - <span class="s">1</span>);
+}</span>
+
+<span class="add"><span class="k">type</span> <span class="t">Credits</span> = <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span> | <span class="k">null</span>&gt;;
+
+<span class="c">// A Choice&#x27;s value is the credit Jev&#x27;s answer earns, averaged over the options</span>
+<span class="c">// that count. An option credited null never counts.</span>
+<span class="k">function</span> <span class="f">choiceValue</span>(credits: <span class="t">Credits</span>, answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;): <span class="k">number</span> {
+  <span class="k">let</span> mass = <span class="s">0</span>;
+  <span class="k">let</span> earned = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> [option, credit] <span class="k">of</span> <span class="t">Object</span>.<span class="f">entries</span>(credits)) {
+    <span class="k">if</span> (credit === <span class="k">null</span>) <span class="k">continue</span>;
+    <span class="k">const</span> p = answer[option] ?? <span class="s">0</span>;
+    mass += p;
+    earned += p * credit;
+  }
+  <span class="k">return</span> earned / mass;
+}
+
+<span class="k">const</span> missingCredits: <span class="t">Credits</span> = {
+  left_it_out: <span class="s">1</span>,
+  flagged_it_as_unknown: <span class="s">1</span>,
+  hedged_it: <span class="s">0.5</span>,
+  stated_it_as_fact: <span class="s">0</span>,
+  nothing_missing: <span class="k">null</span>,
+};</span>
+
+<span class="dim"><span class="k">const</span> questions: <span class="t">Question</span>[] = [</span></code></pre>
+
+<p>Second, the question, as the last entry in <code>questions</code>:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">in questions, after the how grounded entry</span></p>
+<pre><code><span class="dim">    ),
+  },</span>
+<span class="add">  {
+    name: <span class="s">&#x27;missing information&#x27;</span>,
+    weight: <span class="s">1</span>,
+    value: <span class="f">choiceValue</span>(missingCredits, {
+      left_it_out: <span class="s">0.05</span>,
+      flagged_it_as_unknown: <span class="s">0.05</span>,
+      hedged_it: <span class="s">0.25</span>,
+      stated_it_as_fact: <span class="s">0.6</span>,
+      nothing_missing: <span class="s">0.05</span>,
+    }),
+  },</span>
+<span class="dim">];</span></code></pre>
+
+<p id="choice-value">A <strong>Choice</strong> is a question with options that have no
+order: which of these happened? You give each option a <strong>credit</strong> between 0
+and 1, and Jev never sees them. Two options can share a credit — leaving the information
+out and flagging it as unknown are both honest, so both get 1. Stating it as fact gets 0.
+Hedging gets something in between.</p>
+
+<p>The value is the credit Jev's answer earns, divided by the probability that went to
+options that count:</p>
+
+<p>(0.05 × 1 + 0.05 × 1 + 0.25 × 0.5 + 0.6 × 0) ÷ (0.05 + 0.05 + 0.25 + 0.6) = 0.225 ÷ 0.95
+= <strong>0.237</strong></p>
+
+<p><code>nothing_missing</code> has a credit of <code>null</code>, which means "if this is
+what happened, this question doesn't apply". For now, <code>choiceValue</code> just leaves
+null options out of both sums — that's why the bottom of the fraction is 0.95 and not 1.
+Stage 7 finishes the job.</p>
+
+<p class="sidenote"><code>number | null</code> is Python's <code>float | None</code>, and
+<code>Object.entries(credits)</code> is <code>credits.items()</code>. Use
+<code>===</code>, never <code>==</code>: the double form also treats
+<code>undefined</code> as equal to <code>null</code>, and converts types before
+comparing.</p>
+
+<p class="run">npm run file src/jev-eval.ts</p>
+
+<pre class="error" data-label="output"><code>facts appear in tool output      0.300
+tool values reported accurately  0.900
+how grounded                     0.567
+missing information              0.237
+JevEval                          0.461</code></pre>
+
+<p>Compare the docs: (2 · 0.30 + 1 · 0.90 + 1 · 0.567 + 1 · 0.237) ÷ 5 = 0.461. Same number,
+from your code.</p>
+</section>
+
+<section class="stage" id="stage-6">
+<h3>A test case where the question doesn't come up</h3>
+
+<p class="goal">A second total, for an answer where nothing was missing — and it
+fails.</p>
+
+<p>Add a second test case at the bottom of the file. To isolate one question, it keeps
+the first three answers and changes only the fourth:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">at the end of the file</span></p>
+<pre><code><span class="dim">console.<span class="f">log</span>(<span class="s">&#x27;JevEval&#x27;</span>.<span class="f">padEnd</span>(<span class="s">32</span>), <span class="f">jevEval</span>(questions).<span class="f">toFixed</span>(<span class="s">3</span>));</span>
+
+<span class="add"><span class="c">// A second test case: an answer where the tools returned everything. The other</span>
+<span class="c">// three answers are kept the same, so only one question differs.</span>
+<span class="k">const</span> nothingMissing: <span class="t">Question</span>[] = [
+  ...questions.<span class="f">slice</span>(<span class="s">0</span>, <span class="s">3</span>),
+  {
+    name: <span class="s">&#x27;missing information&#x27;</span>,
+    weight: <span class="s">1</span>,
+    value: <span class="f">choiceValue</span>(missingCredits, {
+      left_it_out: <span class="s">0.05</span>,
+      flagged_it_as_unknown: <span class="s">0.05</span>,
+      hedged_it: <span class="s">0.1</span>,
+      stated_it_as_fact: <span class="s">0.2</span>,
+      nothing_missing: <span class="s">0.6</span>,
+    }),
+  },
+];
+console.<span class="f">log</span>(
+  <span class="s">&#x27;JevEval, nothing missing&#x27;</span>.<span class="f">padEnd</span>(<span class="s">32</span>),
+  <span class="f">jevEval</span>(nothingMissing).<span class="f">toFixed</span>(<span class="s">3</span>)
+);</span></code></pre>
+
+<p class="sidenote"><code>...questions.slice(0, 3)</code> is Python's
+<code>[*questions[:3], …]</code>: the first three entries, spread into a new list.</p>
+
+<p class="run">npm run file src/jev-eval.ts</p>
+
+<pre class="error" data-label="output"><code>facts appear in tool output      0.300
+tool values reported accurately  0.900
+how grounded                     0.567
+missing information              0.237
+JevEval                          0.461
+JevEval, nothing missing         0.488</code></pre>
+
+<p id="doesnt-apply">This time the tools returned everything, so there was nothing to
+leave out, flag or invent. Jev agrees: it put 0.6 on <code>nothing_missing</code>. But
+<code>choiceValue</code> ignores the null option and scores the remaining 0.4 as if the
+question applied: (0.05 + 0.05 + 0.1 × 0.5) ÷ 0.4 = 0.375. That's a poor mark for handling
+missing information, in a case where no information was missing. The total, 0.488, is
+under the threshold. The assistant fails for something that never happened.</p>
+</section>
+
+<section class="stage" id="stage-7">
+<h3>Let a question not apply</h3>
+
+<p class="goal">The second total rises to 0.517, because the fourth question drops
+out.</p>
+
+<p>This stage takes four edits, and each one is forced by the one before it.
+First, <code>choiceValue</code> learns to say "doesn't apply" by returning
+<code>null</code>:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">choiceValue</span></p>
+<pre><code><span class="dim"><span class="c">// A Choice&#x27;s value is the credit Jev&#x27;s answer earns, averaged over the options</span></span>
+<span class="del"><span class="c">// that count. An option credited null never counts.</span></span>
+<span class="add"><span class="c">// that count. When the null options hold half the probability or more, the</span>
+<span class="c">// question doesn&#x27;t apply, and the value is null.</span></span>
+<span class="del"><span class="k">function</span> <span class="f">choiceValue</span>(credits: <span class="t">Credits</span>, answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;): <span class="k">number</span> {</span>
+<span class="add"><span class="k">function</span> <span class="f">choiceValue</span>(
+  credits: <span class="t">Credits</span>,
+  answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;
+): <span class="k">number</span> | <span class="k">null</span> {
+  <span class="k">let</span> noneMass = <span class="s">0</span>;</span>
+<span class="dim">  <span class="k">let</span> mass = <span class="s">0</span>;
+  <span class="k">let</span> earned = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> [option, credit] <span class="k">of</span> <span class="t">Object</span>.<span class="f">entries</span>(credits)) {</span>
+<span class="del">    <span class="k">if</span> (credit === <span class="k">null</span>) <span class="k">continue</span>;</span>
+<span class="dim">    <span class="k">const</span> p = answer[option] ?? <span class="s">0</span>;</span>
+<span class="add">    <span class="k">if</span> (credit === <span class="k">null</span>) {
+      noneMass += p;
+      <span class="k">continue</span>;
+    }</span>
+<span class="dim">    mass += p;
+    earned += p * credit;
+  }</span>
+<span class="add">  <span class="k">if</span> (noneMass &gt;= <span class="s">0.5</span>) <span class="k">return</span> <span class="k">null</span>;</span>
+<span class="dim">  <span class="k">return</span> earned / mass;
+}</span></code></pre>
+
+<p>Second, a question's value has to be allowed to be <code>null</code>:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">top of the file</span></p>
+<pre><code><span class="del"><span class="k">type</span> <span class="t">Question</span> = { name: <span class="k">string</span>; weight: <span class="k">number</span>; value: <span class="k">number</span> };</span>
+<span class="add"><span class="k">type</span> <span class="t">Question</span> = { name: <span class="k">string</span>; weight: <span class="k">number</span>; value: <span class="k">number</span> | <span class="k">null</span> };</span></code></pre>
+
+<p>Third, <code>jevEval</code> skips a value that is <code>null</code>:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">in jevEval</span></p>
+<pre><code><span class="dim"><span class="k">function</span> <span class="f">jevEval</span>(questions: <span class="t">Question</span>[]): <span class="k">number</span> {
+  <span class="k">let</span> weighted = <span class="s">0</span>;
+  <span class="k">let</span> totalWeight = <span class="s">0</span>;
+  <span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {</span>
+<span class="add">    <span class="k">if</span> (q.value === <span class="k">null</span>) <span class="k">continue</span>; <span class="c">// this question doesn&#x27;t apply</span></span>
+<span class="dim">    weighted += q.weight * q.value;
+    totalWeight += q.weight;
+  }</span>
+<span class="add">  <span class="k">if</span> (totalWeight === <span class="s">0</span>) <span class="k">return</span> <span class="s">1</span>; <span class="c">// nothing applicable was left to fail</span></span>
+<span class="dim">  <span class="k">return</span> weighted / totalWeight;
+}</span></code></pre>
+
+<div class="callout note">
+  <span class="label">The file runs without this one — do it anyway</span>
+  <code>tsx</code> strips the types and runs the file, the way <code>python</code> ignores
+  type hints, so with only the first three changes in place it already prints the right numbers. A type checker
+  doesn't agree. This is what <code>tsc</code>, TypeScript's equivalent of mypy, says
+  about the print loop:
+</div>
+
+<pre class="error" data-label="tsc"><code>src/jev-eval.ts(88,34): error TS18047: &#x27;q.value&#x27; is possibly &#x27;null&#x27;.</code></pre>
+
+<p>Fourth, the print loop says what a <code>null</code> value means instead of calling
+<code>toFixed</code> on it:</p>
+
+<p class="filename">src/jev-eval.ts<span class="where">the print loop</span></p>
+<pre><code><span class="dim"><span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {</span>
+<span class="del">  console.<span class="f">log</span>(q.name.<span class="f">padEnd</span>(<span class="s">32</span>), q.value.<span class="f">toFixed</span>(<span class="s">3</span>));</span>
+<span class="add">  console.<span class="f">log</span>(q.name.<span class="f">padEnd</span>(<span class="s">32</span>), q.value === <span class="k">null</span> ? <span class="s">&#x27;n/a&#x27;</span> : q.value.<span class="f">toFixed</span>(<span class="s">3</span>));</span>
+<span class="dim">}</span></code></pre>
+
+<p class="run">npm run file src/jev-eval.ts</p>
+
+<pre class="error" data-label="output"><code>facts appear in tool output      0.300
+tool values reported accurately  0.900
+how grounded                     0.567
+missing information              0.237
+JevEval                          0.461
+JevEval, nothing missing         0.517</code></pre>
+
+<p id="applicable">The docs' rule: a Choice applies only if its null-credited options hold
+<strong>less than half</strong> of the probability. Here they hold 0.6, so
+<code>choiceValue</code> returns <code>null</code> and the question drops out.</p>
+
+<p id="denominator">The dropped question's weight leaves the bottom of the fraction too —
+the <em>denominator</em>. That's what the <code>continue</code> in <code>jevEval</code>
+does: it skips both sums, so the total is (2 × 0.3 + 0.9 + 0.567) ÷ 4 = 0.517. If the
+weight stayed behind, you'd get 2.067 ÷ 5 = 0.413 — worse than stage 6, for the same
+thing that didn't happen.</p>
+
+<p>If every question dropped out, <code>totalWeight</code> would be 0, and dividing by it
+gives <code>NaN</code>. The docs' answer is 1: nothing applicable was left to fail.</p>
+
+<p>Look at why this stage took four changes. Once one function could return
+<code>null</code>, every place that holds a value had to allow it, and every place that
+uses one had to decide what <code>null</code> means. Python's <code>Optional[float]</code>
+spreads the same way under mypy. It's not bureaucracy: each of those four places really
+did need an answer.</p>
+</section>
+
+<h2 id="where-you-ended-up">Where you ended up</h2>
+
+<p>About a hundred and ten lines. Check yours against it. The listing is already in the
+course repo's Prettier format, so <code>npm run format</code> should leave your file
+matching it.</p>
+
+<p class="filename">src/jev-eval.ts</p>
+<pre class="numbered"><code><span class="l"><span class="k">type</span> <span class="t">Question</span> = { name: <span class="k">string</span>; weight: <span class="k">number</span>; value: <span class="k">number</span> | <span class="k">null</span> };</span>
+<span class="l"></span>
+<span class="l"><span class="c">// A weighted mean of every question&#x27;s value.</span></span>
+<span class="l"><span class="k">function</span> <span class="f">jevEval</span>(questions: <span class="t">Question</span>[]): <span class="k">number</span> {</span>
+<span class="l">  <span class="k">let</span> weighted = <span class="s">0</span>;</span>
+<span class="l">  <span class="k">let</span> totalWeight = <span class="s">0</span>;</span>
+<span class="l">  <span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {</span>
+<span class="l">    <span class="k">if</span> (q.value === <span class="k">null</span>) <span class="k">continue</span>; <span class="c">// this question doesn&#x27;t apply</span></span>
+<span class="l">    weighted += q.weight * q.value;</span>
+<span class="l">    totalWeight += q.weight;</span>
+<span class="l">  }</span>
+<span class="l">  <span class="k">if</span> (totalWeight === <span class="s">0</span>) <span class="k">return</span> <span class="s">1</span>; <span class="c">// nothing applicable was left to fail</span></span>
+<span class="l">  <span class="k">return</span> weighted / totalWeight;</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="c">// A Score&#x27;s value is the expected level, counted from 0, over the top level.</span></span>
+<span class="l"><span class="k">function</span> <span class="f">scoreValue</span>(levels: <span class="k">string</span>[], answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;): <span class="k">number</span> {</span>
+<span class="l">  <span class="k">let</span> expected = <span class="s">0</span>;</span>
+<span class="l">  <span class="k">for</span> (<span class="k">const</span> [level, label] <span class="k">of</span> levels.<span class="f">entries</span>()) {</span>
+<span class="l">    expected += level * (answer[label] ?? <span class="s">0</span>);</span>
+<span class="l">  }</span>
+<span class="l">  <span class="k">return</span> expected / (levels.length - <span class="s">1</span>);</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">type</span> <span class="t">Credits</span> = <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span> | <span class="k">null</span>&gt;;</span>
+<span class="l"></span>
+<span class="l"><span class="c">// A Choice&#x27;s value is the credit Jev&#x27;s answer earns, averaged over the options</span></span>
+<span class="l"><span class="c">// that count. When the null options hold half the probability or more, the</span></span>
+<span class="l"><span class="c">// question doesn&#x27;t apply, and the value is null.</span></span>
+<span class="l"><span class="k">function</span> <span class="f">choiceValue</span>(</span>
+<span class="l">  credits: <span class="t">Credits</span>,</span>
+<span class="l">  answer: <span class="t">Record</span>&lt;<span class="k">string</span>, <span class="k">number</span>&gt;</span>
+<span class="l">): <span class="k">number</span> | <span class="k">null</span> {</span>
+<span class="l">  <span class="k">let</span> noneMass = <span class="s">0</span>;</span>
+<span class="l">  <span class="k">let</span> mass = <span class="s">0</span>;</span>
+<span class="l">  <span class="k">let</span> earned = <span class="s">0</span>;</span>
+<span class="l">  <span class="k">for</span> (<span class="k">const</span> [option, credit] <span class="k">of</span> <span class="t">Object</span>.<span class="f">entries</span>(credits)) {</span>
+<span class="l">    <span class="k">const</span> p = answer[option] ?? <span class="s">0</span>;</span>
+<span class="l">    <span class="k">if</span> (credit === <span class="k">null</span>) {</span>
+<span class="l">      noneMass += p;</span>
+<span class="l">      <span class="k">continue</span>;</span>
+<span class="l">    }</span>
+<span class="l">    mass += p;</span>
+<span class="l">    earned += p * credit;</span>
+<span class="l">  }</span>
+<span class="l">  <span class="k">if</span> (noneMass &gt;= <span class="s">0.5</span>) <span class="k">return</span> <span class="k">null</span>;</span>
+<span class="l">  <span class="k">return</span> earned / mass;</span>
+<span class="l">}</span>
+<span class="l"></span>
+<span class="l"><span class="k">const</span> missingCredits: <span class="t">Credits</span> = {</span>
+<span class="l">  left_it_out: <span class="s">1</span>,</span>
+<span class="l">  flagged_it_as_unknown: <span class="s">1</span>,</span>
+<span class="l">  hedged_it: <span class="s">0.5</span>,</span>
+<span class="l">  stated_it_as_fact: <span class="s">0</span>,</span>
+<span class="l">  nothing_missing: <span class="k">null</span>,</span>
+<span class="l">};</span>
+<span class="l"></span>
+<span class="l"><span class="k">const</span> questions: <span class="t">Question</span>[] = [</span>
+<span class="l">  { name: <span class="s">&#x27;facts appear in tool output&#x27;</span>, weight: <span class="s">2</span>, value: <span class="s">0.3</span> },</span>
+<span class="l">  { name: <span class="s">&#x27;tool values reported accurately&#x27;</span>, weight: <span class="s">1</span>, value: <span class="s">0.9</span> },</span>
+<span class="l">  {</span>
+<span class="l">    name: <span class="s">&#x27;how grounded&#x27;</span>,</span>
+<span class="l">    weight: <span class="s">1</span>,</span>
+<span class="l">    value: <span class="f">scoreValue</span>(</span>
+<span class="l">      [<span class="s">&#x27;Fabricated&#x27;</span>, <span class="s">&#x27;Mostly fabricated&#x27;</span>, <span class="s">&#x27;Mostly grounded&#x27;</span>, <span class="s">&#x27;Fully grounded&#x27;</span>],</span>
+<span class="l">      {</span>
+<span class="l">        <span class="t">Fabricated</span>: <span class="s">0.05</span>,</span>
+<span class="l">        <span class="s">&#x27;Mostly fabricated&#x27;</span>: <span class="s">0.3</span>,</span>
+<span class="l">        <span class="s">&#x27;Mostly grounded&#x27;</span>: <span class="s">0.55</span>,</span>
+<span class="l">        <span class="s">&#x27;Fully grounded&#x27;</span>: <span class="s">0.1</span>,</span>
+<span class="l">      }</span>
+<span class="l">    ),</span>
+<span class="l">  },</span>
+<span class="l">  {</span>
+<span class="l">    name: <span class="s">&#x27;missing information&#x27;</span>,</span>
+<span class="l">    weight: <span class="s">1</span>,</span>
+<span class="l">    value: <span class="f">choiceValue</span>(missingCredits, {</span>
+<span class="l">      left_it_out: <span class="s">0.05</span>,</span>
+<span class="l">      flagged_it_as_unknown: <span class="s">0.05</span>,</span>
+<span class="l">      hedged_it: <span class="s">0.25</span>,</span>
+<span class="l">      stated_it_as_fact: <span class="s">0.6</span>,</span>
+<span class="l">      nothing_missing: <span class="s">0.05</span>,</span>
+<span class="l">    }),</span>
+<span class="l">  },</span>
+<span class="l">];</span>
+<span class="l"></span>
+<span class="l"><span class="k">for</span> (<span class="k">const</span> q <span class="k">of</span> questions) {</span>
+<span class="l">  console.<span class="f">log</span>(q.name.<span class="f">padEnd</span>(<span class="s">32</span>), q.value === <span class="k">null</span> ? <span class="s">&#x27;n/a&#x27;</span> : q.value.<span class="f">toFixed</span>(<span class="s">3</span>));</span>
+<span class="l">}</span>
+<span class="l">console.<span class="f">log</span>(<span class="s">&#x27;JevEval&#x27;</span>.<span class="f">padEnd</span>(<span class="s">32</span>), <span class="f">jevEval</span>(questions).<span class="f">toFixed</span>(<span class="s">3</span>));</span>
+<span class="l"></span>
+<span class="l"><span class="c">// A second test case: an answer where the tools returned everything. The other</span></span>
+<span class="l"><span class="c">// three answers are kept the same, so only one question differs.</span></span>
+<span class="l"><span class="k">const</span> nothingMissing: <span class="t">Question</span>[] = [</span>
+<span class="l">  ...questions.<span class="f">slice</span>(<span class="s">0</span>, <span class="s">3</span>),</span>
+<span class="l">  {</span>
+<span class="l">    name: <span class="s">&#x27;missing information&#x27;</span>,</span>
+<span class="l">    weight: <span class="s">1</span>,</span>
+<span class="l">    value: <span class="f">choiceValue</span>(missingCredits, {</span>
+<span class="l">      left_it_out: <span class="s">0.05</span>,</span>
+<span class="l">      flagged_it_as_unknown: <span class="s">0.05</span>,</span>
+<span class="l">      hedged_it: <span class="s">0.1</span>,</span>
+<span class="l">      stated_it_as_fact: <span class="s">0.2</span>,</span>
+<span class="l">      nothing_missing: <span class="s">0.6</span>,</span>
+<span class="l">    }),</span>
+<span class="l">  },</span>
+<span class="l">];</span>
+<span class="l">console.<span class="f">log</span>(</span>
+<span class="l">  <span class="s">&#x27;JevEval, nothing missing&#x27;</span>.<span class="f">padEnd</span>(<span class="s">32</span>),</span>
+<span class="l">  <span class="f">jevEval</span>(nothingMissing).<span class="f">toFixed</span>(<span class="s">3</span>)</span>
+<span class="l">);</span></code></pre>
+
+<h2 id="check-yourself">Check yourself</h2>
+
+<p>Answer from memory first. Each explanation links back to where the idea was taught,
+and your browser's Back button returns you here.</p>
+
+<div class="quiz">
+  <p class="q">You write a Noul: "The assistant gave away the answer." A tutor that never gives answers gets what value?</p>
+  <ul class="options">
+    <li data-correct>Close to 0, because true means failure</li>
+    <li>Close to 1, because Jev reads the intent</li>
+    <li>About 0.5, because the question is ambiguous</li>
+    <li>An error, because negatives are rejected</li>
+  </ul>
+  <p class="why">The value is <code>P(true)</code>, whatever "true" means. A good tutor
+  makes this statement false, so it scores near 0 for doing its job.
+  <a class="review" href="#noul-phrasing">↑ Review: phrasing a Noul (stage 1)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">You write a Score's levels best first. What happens?</p>
+  <ul class="options">
+    <li data-correct>It scores upside down, with no warning</li>
+    <li>deepeval reorders the levels to worst first</li>
+    <li>A validation error stops the metric running</li>
+    <li>Jev notices and answers the other way round</li>
+  </ul>
+  <p class="why">Level 0 always maps to 0 and the top level to 1. Nothing can check the
+  order, because the order is where your meaning lives. In stage 4 it turned 0.567 into
+  0.433 and a pass into a fail.
+  <a class="review" href="#worst-first">↑ Review: levels best first (stage 4)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">Why does the Choice have <code>nothing_missing: null</code>?</p>
+  <ul class="options">
+    <li data-correct>So it drops out when it doesn't apply</li>
+    <li>So Jev skips asking that question at all</li>
+    <li>So the total always comes out higher</li>
+    <li>So that option counts double when chosen</li>
+  </ul>
+  <p class="why">Jev is still asked, and still answers. The null credit only changes how
+  the answer is scored: if the null options take half the probability or more, the
+  question stops counting. Dropping it raised the total in stage 7, but it can lower one
+  too — it depends on the other answers.
+  <a class="review" href="#applicable">↑ Review: when a Choice applies (stage 7)</a></p>
+</div>
+
+<div class="quiz">
+  <p class="q">A question drops out. What happens to its weight?</p>
+  <ul class="options">
+    <li data-correct>It leaves the denominator as well</li>
+    <li>It stays, and the value counts as 0</li>
+    <li>It stays, and the value counts as 1</li>
+    <li>It moves to the heaviest question left</li>
+  </ul>
+  <p class="why">Both sums skip it. Leaving the weight behind would treat "didn't happen"
+  as a failure — 0.413 instead of 0.517 in stage 7.
+  <a class="review" href="#denominator">↑ Review: the denominator (stage 7)</a></p>
+</div>
+
+<div class="quiz numeric" data-answer="0.491" data-tolerance="0.0015">
+  <p class="q">Change the weight of <code>how grounded</code> from 1 to 3. What's the
+  JevEval score for the docs' test case? Work it out on paper first, to three
+  decimals.</p>
+  <p class="why">(2 × 0.3 + 1 × 0.9 + 3 × 0.567 + 1 × 0.237) ÷ (2 + 1 + 3 + 1) = 3.437 ÷ 7
+  = 0.491. Now make the change in your file and run it: it should agree.
+  <a class="review" href="#weighted-mean">↑ Review: the weighted mean (stage 2)</a></p>
+</div>
+
+<div class="quiz numeric" data-answer="0.533" data-tolerance="0.0015">
+  <p class="q">Keep that weight of 3. What's the score for the nothing-missing test
+  case?</p>
+  <p class="why">The fourth question drops out, and its weight goes with it:
+  (2 × 0.3 + 1 × 0.9 + 3 × 0.567) ÷ (2 + 1 + 3) = 3.2 ÷ 6 = 0.533. Put the weight back to
+  1 afterwards — lesson 2 starts from the file above.
+  <a class="review" href="#denominator">↑ Review: the denominator (stage 7)</a></p>
+</div>
+
+<p class="quiz-score"></p>
+
+<h2>Read this before lesson 2</h2>
+
+<p><strong>Primary source:</strong>
+<a href="https://deepeval.com/docs/metrics-jev-eval">deepeval: JevEval</a>. Read the
+"Example" section, which traces the test case you just scored from the state Jev sees to
+the final 0.46. Every number in it should now be one you've computed.</p>
+
+<p>Lesson 2 replaces the made-up half of this file. One real call to Jev, through the
+OpenRouter decisions API you used in exercise 21, and a check of what its answer fields
+actually mean before anything is built on them.</p>
+
+<div class="ask">
+  <strong>I'm your teacher here — ask me things.</strong> If a number didn't match, if a
+  stage didn't do what it promised, or if you want to know why the expected level beats
+  the most likely one in more depth — just ask. Paste the exact output and we'll read it
+  together.
+</div>
+
+<nav class="footer-nav">
+  <a href="../reference/jev-eval-cheatsheet.html">Reference: JevEval cheat sheet</a>
+  <a href="../MISSION.md">Mission</a>
+  <a href="../RESOURCES.md">Resources</a>
+  <span>Next: lesson 2 — asking Jev for real</span>
+</nav>
+
+</body>
+</html>

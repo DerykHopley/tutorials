@@ -65,6 +65,48 @@
   text-decoration-thickness: 1px;
 }
 
+/* ---- numeric answer: same surfaces as an option button ---- */
+
+.quiz .entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.quiz .entry input {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  width: 7rem;
+  padding: 0.55rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--ink);
+}
+.quiz .entry input:focus { outline: none; border-color: var(--accent); }
+.quiz .entry input.correct { border-color: var(--ok); background: #eaf5ed; color: var(--ok); }
+.quiz .entry input.wrong { border-color: var(--no); }
+.quiz .entry button {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  padding: 0.55rem 0.9rem;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.quiz .entry button:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.quiz .entry button:disabled { cursor: default; color: var(--ink-faint); }
+.quiz .entry .feedback {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
 .quiz .why {
   margin: 0.9rem 0 0;
   padding-top: 0.8rem;

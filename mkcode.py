@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Turn real Rust source into the lesson stylesheet's span markup.
+"""Turn real Rust or TypeScript source into the lesson stylesheet's span markup.
 
 Authoring aid, not part of the build. Generating checkpoint markup from the
 file that was actually compiled beats hand-transcribing it: the listing cannot
 drift from the code, and the verbatim diff in the review pass then passes by
 construction.
 
-    python3 mkcode.py <file.rs> [first_line] [last_line] [--numbered]
+    python3 mkcode.py <file.rs|file.ts> [first_line] [last_line] [--numbered]
+
+The language comes from the file extension.
 """
 
 import html
@@ -19,6 +21,14 @@ KEYWORDS = {
     "true", "false", "dyn", "where", "crate",
     # Primitives, marked like keywords to match how the lessons were written by hand.
     "char", "str", "usize", "bool",
+}
+
+# TypeScript's primitive type names are marked like keywords too, for the same reason.
+TS_KEYWORDS = {
+    "as", "async", "await", "break", "const", "continue", "else", "export", "false", "for",
+    "from", "function", "if", "import", "in", "let", "new", "null", "of", "return", "true",
+    "type", "typeof", "undefined",
+    "boolean", "number", "string",
 }
 
 
@@ -35,7 +45,11 @@ def char_literal(line: str, i: int) -> str | None:
     return None
 
 
-def markup(line: str) -> str:
+def markup(line: str, ts: bool = False) -> str:
+    keywords = TS_KEYWORDS if ts else KEYWORDS
+    # Rust quotes strings with " only; TypeScript also uses ' and `, and has no
+    # char literals or lifetimes for a single quote to be confused with.
+    quotes = "\"'`" if ts else '"'
     stripped = line.lstrip()
     if stripped.startswith("//"):
         indent = line[: len(line) - len(stripped)]
@@ -44,19 +58,19 @@ def markup(line: str) -> str:
     out, i = [], 0
     while i < len(line):
         ch = line[i]
-        if ch == "'" and (lit := char_literal(line, i)):
+        if not ts and ch == "'" and (lit := char_literal(line, i)):
             # Must come before the string case: `'"'` is a char literal whose
             # content is a quote, and reading that quote as the start of a
             # string mangles the rest of the line.
             out.append(f'<span class="s">{html.escape(lit)}</span>')
             i += len(lit)
-        elif ch == '"':
+        elif ch in quotes:
             j = i + 1
             while j < len(line):
                 if line[j] == "\\":
                     j += 2
                     continue
-                if line[j] == '"':
+                if line[j] == ch:
                     j += 1
                     break
                 j += 1
@@ -69,8 +83,16 @@ def markup(line: str) -> str:
             j = i
             while j < len(line) and (line[j].isalnum() or line[j] == "_"):
                 j += 1
+                # A decimal point belongs to the number — but only when a digit
+                # follows it, so Rust's `0..n` stays a range.
+                if (
+                    ch.isdigit()
+                    and line[j : j + 1] == "."
+                    and line[j + 1 : j + 2].isdigit()
+                ):
+                    j += 1
             word, after = line[i:j], line[j : j + 1]
-            if word in KEYWORDS:
+            if word in keywords:
                 out.append(f'<span class="k">{html.escape(word)}</span>')
             elif after == "(" or line[j : j + 2] == "!(":
                 out.append(f'<span class="f">{html.escape(word)}</span>')
@@ -87,8 +109,8 @@ def markup(line: str) -> str:
     return "".join(out)
 
 
-def render(lines: list[str], numbered: bool = False) -> str:
-    rows = [markup(l) for l in lines]
+def render(lines: list[str], numbered: bool = False, ts: bool = False) -> str:
+    rows = [markup(l, ts) for l in lines]
     if numbered:
         rows = [f'<span class="l">{r}</span>' for r in rows]
     return "\n".join(rows)
@@ -102,4 +124,4 @@ if __name__ == "__main__":
         src.pop()
     a = int(args[1]) if len(args) > 1 else 1
     b = int(args[2]) if len(args) > 2 else len(src)
-    print(render(src[a - 1 : b], numbered))
+    print(render(src[a - 1 : b], numbered, ts=args[0].endswith(".ts")))

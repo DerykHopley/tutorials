@@ -9,6 +9,7 @@ subject.
 | Topic | Tutorial | Mission | Status |
 | --- | --- | --- | --- |
 | Rust | [text-editor-gui](./rust/text-editor-gui/) | [MISSION](./rust/text-editor-gui/MISSION.md) — learning Rust by building a code editor, from zero | Lessons 1–12 done; [roadmap](./rust/text-editor-gui/ROADMAP.md) |
+| AI | [socratic-tutor-evals](./ai/socratic-tutor-evals/) | [MISSION](./ai/socratic-tutor-evals/MISSION.md) — showing, with repeatable JevEval runs, that a Socratic tutor keeps its rules | Lesson 1 done; [roadmap](./ai/socratic-tutor-evals/ROADMAP.md) |
 
 ## Layout
 
